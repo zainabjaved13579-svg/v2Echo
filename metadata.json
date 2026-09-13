@@ -1,0 +1,10 @@
+{
+  "name": "Echo AI Chat Assistant",
+  "description": "Echo AI assistant with 15MB file upload & multimodal understanding, AI image remake & code remake functions, dedicated multi-file code generator, and responsive desktop & mobile themes.",
+  "requestFramePermissions": [
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
