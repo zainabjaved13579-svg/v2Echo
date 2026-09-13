@@ -6,7 +6,6 @@ import {
   MessageSquare,
   Atom,
   Download,
-  Menu,
   Languages
 } from 'lucide-react';
 import { ECHO_LOGO_URL } from '../data/constants';
@@ -15,7 +14,6 @@ interface EmptyStateProps {
   onSendMessage: (text: string) => void;
   onStartChat?: () => void;
   onOpenGetApp: () => void;
-  onToggleSidebar?: () => void;
   onOpenLanguageModal?: () => void;
   selectedLanguage?: string;
   useSearchGrounding: boolean;
@@ -28,7 +26,6 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   onSendMessage,
   onStartChat,
   onOpenGetApp,
-  onToggleSidebar,
   onOpenLanguageModal,
   selectedLanguage = 'auto',
   useSearchGrounding,
@@ -76,24 +73,9 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
 
       {/* Top Navigation Bar - Matching Image 2 */}
       <header className="relative z-20 w-full px-4 sm:px-10 py-3.5 sm:py-5 flex items-center justify-between">
-        {/* Left: Sidebar History Toggle + Echo Logo */}
+        {/* Left: Echo Logo & Brand Name (Tab is omitted on starting screen per user request) */}
         <div className="flex items-center gap-2 sm:gap-3">
-          {onToggleSidebar && (
-            <button
-              onClick={onToggleSidebar}
-              className="w-10 h-10 flex items-center justify-center rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100/80 active:bg-slate-200 transition-colors cursor-pointer touch-manipulation"
-              title="Open Chat History"
-              aria-label="Open Chat History"
-            >
-              <Menu className="w-5 h-5 sm:w-6 sm:h-6" />
-            </button>
-          )}
-
-          {/* Echo Brand with Image */}
-          <div
-            className="flex items-center gap-2 select-none cursor-pointer active:opacity-80 transition-opacity"
-            onClick={onToggleSidebar}
-          >
+          <div className="flex items-center gap-2 select-none">
             <img
               src={ECHO_LOGO_URL}
               alt="Echo AI"

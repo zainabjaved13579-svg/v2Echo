@@ -798,10 +798,6 @@ Please carefully examine, understand, and analyze this uploaded document/file an
                   if (window.innerWidth >= 1024) setIsSidebarOpen(true);
                 }}
                 onOpenGetApp={() => setIsDownloadModalOpen(true)}
-                onToggleSidebar={() => {
-                  setIsStartingScreen(false);
-                  setIsSidebarOpen(true);
-                }}
                 onOpenLanguageModal={() => setIsLanguageModalOpen(true)}
                 selectedLanguage={settings.selectedLanguage || 'auto'}
                 useSearchGrounding={currentSession.useSearchGrounding}
