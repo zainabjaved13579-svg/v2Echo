@@ -12,16 +12,21 @@ import { streamGeminiChat, getStoredApiKey } from './services/geminiService';
 import { autoSaveAiCodeBlocks, fileStorageService } from './services/fileStorageService';
 import { ChatHeader } from './components/ChatHeader';
 import { ChatSidebar } from './components/ChatSidebar';
+import { TopTabBar } from './components/TopTabBar';
 import { ChatMessageItem } from './components/ChatMessageItem';
 import { ChatInput } from './components/ChatInput';
 import { EmptyState } from './components/EmptyState';
 import { PersonaModal } from './components/PersonaModal';
 import { SettingsModal } from './components/SettingsModal';
 import { FileWorkspaceModal } from './components/FileWorkspaceModal';
+import { FileManagerModal } from './components/FileManagerModal';
 import { CodePreviewModal } from './components/CodePreviewModal';
 import { GenerateImageModal } from './components/GenerateImageModal';
 import { LanguageSelectorModal } from './components/LanguageSelectorModal';
 import { DownloadModal } from './components/DownloadModal';
+import { UserProfileModal } from './components/UserProfileModal';
+import { loadUserProfile, hasUserCompletedSetup, syncUserDataToCloud } from './services/userService';
+import { loadWorkspaceFiles } from './services/fileStorageService';
 import {
   isImageGenerationPrompt,
   isImageEditPrompt,
@@ -123,6 +128,33 @@ export default function App() {
   const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
   const [isStartingScreen, setIsStartingScreen] = useState<boolean>(true);
 
+  // User Profile & Onboarding State
+  const [currentUserProfile, setCurrentUserProfile] = useState(loadUserProfile);
+  const [isUserProfileModalOpen, setIsUserProfileModalOpen] = useState(false);
+
+  // Onboarding prompt for new users
+  useEffect(() => {
+    const hasSeenOnboarding = localStorage.getItem('echo_profile_onboarding_shown');
+    const isCompleted = hasUserCompletedSetup();
+    if (!hasSeenOnboarding && !isCompleted) {
+      const timer = setTimeout(() => {
+        setIsUserProfileModalOpen(true);
+        localStorage.setItem('echo_profile_onboarding_shown', 'true');
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, []);
+
+  // Automatic Cloud Sync for user data & files
+  useEffect(() => {
+    if (sessions.length > 0 && currentUserProfile) {
+      const timer = setTimeout(() => {
+        syncUserDataToCloud(currentUserProfile, sessions, loadWorkspaceFiles()).catch(() => {});
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [sessions, currentUserProfile]);
+
   const handleOpenImageEditor = (imgUrl: string, promptText?: string) => {
     setImageModalImage(imgUrl);
     setImageModalPrompt(promptText || '');
@@ -187,30 +219,70 @@ export default function App() {
     }
   }, [currentSessionId]);
 
+  const scrollRafRef = useRef<number | null>(null);
+
   // Auto-scroll when messages change or stream updates
-  const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
-    if (isAutoScrollRef.current && messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior });
+  const scrollToBottom = (behavior: ScrollBehavior = 'smooth', force = false) => {
+    if (!force && !isAutoScrollRef.current) return;
+
+    if (chatContainerRef.current) {
+      const container = chatContainerRef.current;
+      container.scrollTo({
+        top: container.scrollHeight + 300,
+        behavior
+      });
+    }
+
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior, block: 'end' });
     }
   };
 
-  useEffect(() => {
-    scrollToBottom('smooth');
-  }, [currentSession?.messages.length, isLoading]);
+  // Keep view smoothly locked to bottom during token streaming
+  const scheduleScrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
+    if (!isAutoScrollRef.current) return;
+    if (scrollRafRef.current) cancelAnimationFrame(scrollRafRef.current);
+    scrollRafRef.current = requestAnimationFrame(() => {
+      if (chatContainerRef.current) {
+        chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+      }
+    });
+  };
 
-  // User scrolling detection
+  // User scrolling detection - pause if scrolled up, resume if near bottom
   const handleScroll = () => {
     if (!chatContainerRef.current) return;
     const { scrollTop, scrollHeight, clientHeight } = chatContainerRef.current;
-    const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
-    isAutoScrollRef.current = isNearBottom;
+    const distanceToBottom = scrollHeight - scrollTop - clientHeight;
+    isAutoScrollRef.current = distanceToBottom < 120;
   };
 
-  // Helper to update active session
-  const updateCurrentSession = (updater: (prev: ChatSession) => ChatSession) => {
+  // Auto-scroll on session change, stream start/end, message count change
+  useEffect(() => {
+    if (!isStartingScreen && currentSession?.messages.length > 0) {
+      isAutoScrollRef.current = true;
+      scrollToBottom('auto', true);
+      const timer = setTimeout(() => {
+        scrollToBottom('smooth', true);
+      }, 70);
+      return () => clearTimeout(timer);
+    }
+  }, [currentSessionId, isStartingScreen]);
+
+  useEffect(() => {
+    if (!isStartingScreen) {
+      scrollToBottom('smooth');
+    }
+  }, [currentSession?.messages.length, isLoading]);
+
+  // Helper to update any session by specific ID
+  const updateSessionById = (
+    sessionId: string,
+    updater: (prev: ChatSession) => ChatSession
+  ) => {
     setSessions((prevSessions) =>
       prevSessions.map((session) => {
-        if (session.id === currentSession.id) {
+        if (session.id === sessionId) {
           return updater(session);
         }
         return session;
@@ -218,16 +290,34 @@ export default function App() {
     );
   };
 
-  // Create new chat
+  // Helper to update active session
+  const updateCurrentSession = (updater: (prev: ChatSession) => ChatSession) => {
+    updateSessionById(currentSession.id, updater);
+  };
+
+  // Create new chat (navigates to fresh starting screen)
   const handleNewChat = () => {
-    const newSession = createNewSession(settings);
-    setSessions((prev) => [newSession, ...prev]);
-    setCurrentSessionId(newSession.id);
+    setIsStartingScreen(true);
     setInput('');
-    setIsStartingScreen(false);
-    if (window.innerWidth >= 1024) {
-      setIsSidebarOpen(true);
-    }
+    setReplyTo(null);
+  };
+
+  // Close session tab
+  const handleCloseSessionTab = (sessionId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSessions((prev) => {
+      const filtered = prev.filter((s) => s.id !== sessionId);
+      if (filtered.length === 0) {
+        const fresh = createNewSession(settings);
+        setCurrentSessionId(fresh.id);
+        setIsStartingScreen(true);
+        return [fresh];
+      }
+      if (currentSessionId === sessionId) {
+        setCurrentSessionId(filtered[0].id);
+      }
+      return filtered;
+    });
   };
 
   // Select session
@@ -333,11 +423,6 @@ export default function App() {
     if (isLoading) return;
     if (!text.trim() && !image && !file) return;
 
-    setIsStartingScreen(false);
-    if (window.innerWidth >= 1024) {
-      setIsSidebarOpen(true);
-    }
-
     const userMessageId = `msg_user_${Date.now()}`;
     const modelMessageId = `msg_model_${Date.now() + 1}`;
 
@@ -364,10 +449,37 @@ export default function App() {
     };
 
     // Auto-generate session title from first prompt
-    const isFirstMessage = currentSession.messages.length === 0;
-    const sessionTitle = isFirstMessage
-      ? (file ? `Edit: ${file.name}` : promptText.slice(0, 36)) || 'New Conversation'
-      : currentSession.title;
+    const sessionTitle =
+      (file ? `Edit: ${file.name}` : promptText.slice(0, 36)) || 'New Conversation';
+
+    // If on Starting Screen ("Into the Unknown"), spawn a clean separate session / tab
+    const isFromStarting = isStartingScreen;
+    let targetSessionId = currentSession.id;
+    let targetSession = currentSession;
+    let baseHistory = currentSession.messages;
+
+    if (isFromStarting) {
+      const newSession = createNewSession(settings);
+      newSession.title = sessionTitle;
+      targetSessionId = newSession.id;
+      targetSession = newSession;
+      baseHistory = [];
+      setSessions((prev) => [newSession, ...prev]);
+      setCurrentSessionId(newSession.id);
+      setIsStartingScreen(false);
+    } else {
+      setIsStartingScreen(false);
+    }
+
+    if (window.innerWidth >= 1024) {
+      setIsSidebarOpen(true);
+    }
+
+    // Force auto-scroll to bottom immediately
+    isAutoScrollRef.current = true;
+    scrollToBottom('smooth', true);
+    setTimeout(() => scrollToBottom('smooth', true), 60);
+    setTimeout(() => scrollToBottom('smooth', true), 220);
 
     // Check if user requested to generate or draw an image (Auto-intent routing)
     if (!image && !file && isImageGenerationPrompt(promptText)) {
@@ -380,8 +492,8 @@ export default function App() {
         modelUsed: 'echo-imagen-flux'
       };
 
-      const updatedMessages = [...currentSession.messages, newUserMessage];
-      updateCurrentSession((s) => ({
+      const updatedMessages = [...baseHistory, newUserMessage];
+      updateSessionById(targetSessionId, (s) => ({
         ...s,
         title: sessionTitle,
         messages: [...updatedMessages, newModelMessage],
@@ -390,13 +502,14 @@ export default function App() {
 
       setIsLoading(true);
       isAutoScrollRef.current = true;
+      scrollToBottom('smooth', true);
 
       try {
         const startImgTime = performance.now();
         const imgResult = await generateAiImage({ prompt: promptText });
         const durationMs = Math.max(1, Math.round(performance.now() - startImgTime));
 
-        updateCurrentSession((s) => ({
+        updateSessionById(targetSessionId, (s) => ({
           ...s,
           messages: s.messages.map((m) =>
             m.id === modelMessageId
@@ -414,8 +527,9 @@ export default function App() {
           ),
           updatedAt: Date.now()
         }));
+        scrollToBottom('smooth', true);
       } catch (imgErr: any) {
-        updateCurrentSession((s) => ({
+        updateSessionById(targetSessionId, (s) => ({
           ...s,
           messages: s.messages.map((m) =>
             m.id === modelMessageId
@@ -430,6 +544,7 @@ export default function App() {
         }));
       } finally {
         setIsLoading(false);
+        scrollToBottom('smooth', true);
       }
       return;
     }
@@ -445,8 +560,8 @@ export default function App() {
         modelUsed: 'gemini-3.1-flash-image-preview'
       };
 
-      const updatedMessages = [...currentSession.messages, newUserMessage];
-      updateCurrentSession((s) => ({
+      const updatedMessages = [...baseHistory, newUserMessage];
+      updateSessionById(targetSessionId, (s) => ({
         ...s,
         title: sessionTitle,
         messages: [...updatedMessages, newModelMessage],
@@ -455,6 +570,7 @@ export default function App() {
 
       setIsLoading(true);
       isAutoScrollRef.current = true;
+      scrollToBottom('smooth', true);
 
       try {
         const startImgTime = performance.now();
@@ -465,7 +581,7 @@ export default function App() {
         });
         const durationMs = Math.max(1, Math.round(performance.now() - startImgTime));
 
-        updateCurrentSession((s) => ({
+        updateSessionById(targetSessionId, (s) => ({
           ...s,
           messages: s.messages.map((m) =>
             m.id === modelMessageId
@@ -483,8 +599,9 @@ export default function App() {
           ),
           updatedAt: Date.now()
         }));
+        scrollToBottom('smooth', true);
       } catch (editErr: any) {
-        updateCurrentSession((s) => ({
+        updateSessionById(targetSessionId, (s) => ({
           ...s,
           messages: s.messages.map((m) =>
             m.id === modelMessageId
@@ -499,6 +616,7 @@ export default function App() {
         }));
       } finally {
         setIsLoading(false);
+        scrollToBottom('smooth', true);
       }
       return;
     }
@@ -512,7 +630,7 @@ export default function App() {
       isStreaming: true,
       isThinking: true,
       thinkingText: '',
-      modelUsed: currentSession.model
+      modelUsed: targetSession.model
     };
 
     // Prepare message for Gemini with file context if uploaded (<15MB support)
@@ -545,10 +663,10 @@ Please carefully examine, understand, and analyze this uploaded document/file an
     }
 
     const messageForGemini = { ...newUserMessage, text: geminiFormattedUserText };
-    const updatedMessages = [...currentSession.messages, newUserMessage];
-    const messagesToSend = [...currentSession.messages, messageForGemini];
+    const updatedMessages = [...baseHistory, newUserMessage];
+    const messagesToSend = [...baseHistory, messageForGemini];
 
-    updateCurrentSession((s) => ({
+    updateSessionById(targetSessionId, (s) => ({
       ...s,
       title: sessionTitle,
       messages: [...updatedMessages, newModelMessage],
@@ -557,6 +675,8 @@ Please carefully examine, understand, and analyze this uploaded document/file an
 
     setIsLoading(true);
     isAutoScrollRef.current = true;
+    scrollToBottom('smooth', true);
+    setTimeout(() => scrollToBottom('smooth', true), 80);
 
     const controller = new AbortController();
     abortControllerRef.current = controller;
@@ -566,32 +686,34 @@ Please carefully examine, understand, and analyze this uploaded document/file an
     try {
       await streamGeminiChat({
         messages: messagesToSend,
-        systemInstruction: currentSession.customInstruction,
-        temperature: currentSession.temperature,
-        model: currentSession.model,
-        useSearchGrounding: currentSession.useSearchGrounding,
+        systemInstruction: targetSession.customInstruction,
+        temperature: targetSession.temperature,
+        model: targetSession.model,
+        useSearchGrounding: targetSession.useSearchGrounding,
         customApiKey: settings.customApiKey,
         signal: controller.signal,
         onThinking: (thinkingText, isThinking) => {
-          updateCurrentSession((s) => ({
+          updateSessionById(targetSessionId, (s) => ({
             ...s,
             messages: s.messages.map((m) =>
               m.id === modelMessageId ? { ...m, thinkingText, isThinking } : m
             )
           }));
+          scheduleScrollToBottom('smooth');
         },
         onChunk: (chunkText) => {
           streamText = chunkText;
-          updateCurrentSession((s) => ({
+          updateSessionById(targetSessionId, (s) => ({
             ...s,
             messages: s.messages.map((m) =>
               m.id === modelMessageId ? { ...m, text: chunkText, isThinking: false } : m
             )
           }));
+          scheduleScrollToBottom('smooth');
         },
         onDone: async (finalText, stats) => {
           // Auto-save any code blocks into the workspace files storage
-          autoSaveAiCodeBlocks(finalText, currentSession.id, modelMessageId);
+          autoSaveAiCodeBlocks(finalText, targetSessionId, modelMessageId);
 
           let modifiedContent: string | undefined = undefined;
           let modifiedFileName: string | undefined = undefined;
@@ -628,7 +750,7 @@ Please carefully examine, understand, and analyze this uploaded document/file an
             }
           }
 
-          updateCurrentSession((s) => ({
+          updateSessionById(targetSessionId, (s) => ({
             ...s,
             messages: s.messages.map((m) =>
               m.id === modelMessageId
@@ -647,10 +769,12 @@ Please carefully examine, understand, and analyze this uploaded document/file an
             ),
             updatedAt: Date.now()
           }));
+          scrollToBottom('smooth', true);
+          setTimeout(() => scrollToBottom('smooth', true), 100);
         },
         onError: (errMessage: string) => {
           console.error('Streaming error caught:', errMessage);
-          updateCurrentSession((s) => ({
+          updateSessionById(targetSessionId, (s) => ({
             ...s,
             messages: s.messages.map((m) =>
               m.id === modelMessageId
@@ -662,12 +786,13 @@ Please carefully examine, understand, and analyze this uploaded document/file an
                 : m
             )
           }));
+          scrollToBottom('smooth', true);
         }
       });
     } catch (err: any) {
       if (err.name !== 'AbortError') {
         console.error('Fatal chat stream error:', err);
-        updateCurrentSession((s) => ({
+        updateSessionById(targetSessionId, (s) => ({
           ...s,
           messages: s.messages.map((m) =>
             m.id === modelMessageId
@@ -680,10 +805,12 @@ Please carefully examine, understand, and analyze this uploaded document/file an
           ),
           updatedAt: Date.now()
         }));
+        scrollToBottom('smooth', true);
       }
     } finally {
       setIsLoading(false);
       abortControllerRef.current = null;
+      scrollToBottom('smooth', true);
     }
   };
 
@@ -757,16 +884,24 @@ Please carefully examine, understand, and analyze this uploaded document/file an
 
   return (
     <div className="flex h-full w-full bg-white text-slate-800 overflow-hidden select-none sm:select-auto font-['Plus_Jakarta_Sans',sans-serif]">
-      {/* Sidebar: Shown in chat view, hidden on starting screen */}
+      {/* Sidebar: Shown in chat view or toggled open */}
       <AnimatePresence>
-        {!isStartingScreen && (
+        {(!isStartingScreen || isSidebarOpen) && (
           <ChatSidebar
             isOpen={isSidebarOpen}
             onClose={() => setIsSidebarOpen(false)}
             sessions={sessions}
             currentSessionId={currentSession.id}
-            onSelectSession={handleSelectSession}
-            onNewChat={handleNewChat}
+            userProfile={currentUserProfile}
+            onOpenProfile={() => setIsUserProfileModalOpen(true)}
+            onSelectSession={(id) => {
+              handleSelectSession(id);
+              setIsStartingScreen(false);
+            }}
+            onNewChat={() => {
+              handleNewChat();
+              setIsStartingScreen(false);
+            }}
             onDeleteSession={handleDeleteSession}
             onRenameSession={handleRenameSession}
             onClearAllSessions={handleClearAllSessions}
@@ -799,6 +934,7 @@ Please carefully examine, understand, and analyze this uploaded document/file an
                 }}
                 onOpenGetApp={() => setIsDownloadModalOpen(true)}
                 onOpenLanguageModal={() => setIsLanguageModalOpen(true)}
+                onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
                 selectedLanguage={settings.selectedLanguage || 'auto'}
                 useSearchGrounding={currentSession.useSearchGrounding}
                 setUseSearchGrounding={(val) => {
@@ -825,6 +961,8 @@ Please carefully examine, understand, and analyze this uploaded document/file an
               {/* Header */}
               <ChatHeader
                 currentSession={currentSession}
+                userProfile={currentUserProfile}
+                onOpenProfile={() => setIsUserProfileModalOpen(true)}
                 onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
                 onNewChat={handleNewChat}
                 onClearMessages={handleClearMessages}
@@ -835,6 +973,7 @@ Please carefully examine, understand, and analyze this uploaded document/file an
                 onOpenImageGen={() => setIsImageModalOpen(true)}
                 onOpenGetApp={() => setIsDownloadModalOpen(true)}
                 onExportChat={handleExportChat}
+                onGoHome={() => setIsStartingScreen(true)}
               />
 
               {/* Scrollable Conversation Stream */}
@@ -885,6 +1024,7 @@ Please carefully examine, understand, and analyze this uploaded document/file an
                         key={msg.id}
                         message={msg}
                         language={settings.selectedLanguage || 'auto'}
+                        userProfile={currentUserProfile}
                         onRegenerate={handleRegenerate}
                         onEditPrompt={(text) => setInput(text)}
                         onPreviewCode={handlePreviewCode}
@@ -966,9 +1106,9 @@ Please carefully examine, understand, and analyze this uploaded document/file an
         onClearAllHistory={handleClearAllSessions}
       />
 
-      {/* File & Workspace Modal (Upload unzipped folder/files, hierarchical path tree, AI code edit, no preview) */}
+      {/* Simplified, Clean File Manager & AI Code Sandbox Modal */}
       {isWorkspaceOpen && (
-        <FileWorkspaceModal
+        <FileManagerModal
           isOpen={isWorkspaceOpen}
           onClose={() => {
             setIsWorkspaceOpen(false);
@@ -977,6 +1117,19 @@ Please carefully examine, understand, and analyze this uploaded document/file an
           initialSelectedFileId={workspaceSelectedFileId}
         />
       )}
+
+      {/* User Profile & Google Cloud Sync Modal */}
+      <UserProfileModal
+        isOpen={isUserProfileModalOpen}
+        onClose={() => setIsUserProfileModalOpen(false)}
+        profile={currentUserProfile}
+        onUpdateProfile={(updated) => {
+          setCurrentUserProfile(updated);
+        }}
+        sessions={sessions}
+        files={loadWorkspaceFiles()}
+        isFirstTimeSetup={!hasUserCompletedSetup()}
+      />
 
       {/* Standalone Code Live Preview Modal */}
       <CodePreviewModal

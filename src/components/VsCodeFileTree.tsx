@@ -450,34 +450,43 @@ export const VsCodeFileTree: React.FC<VsCodeFileTreeProps> = ({
               </span>
             </div>
 
-            {/* Actions on hover */}
+            {/* Actions on hover (Visible on mobile/touch, hover on desktop) */}
             <div
-              className="opacity-0 group-hover:opacity-100 flex items-center gap-0.5 shrink-0 transition-opacity"
+              className="opacity-80 sm:opacity-0 sm:group-hover:opacity-100 flex items-center gap-0.5 shrink-0 transition-opacity"
               onClick={(e) => e.stopPropagation()}
             >
               <button
                 type="button"
-                onClick={() => startCreatingIn(node.fullPath, 'file')}
-                className="p-1 text-slate-400 hover:text-white hover:bg-slate-700/60 rounded cursor-pointer"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  startCreatingIn(node.fullPath, 'file');
+                }}
+                className="p-1 text-slate-400 hover:text-white hover:bg-slate-700/60 rounded cursor-pointer touch-manipulation"
                 title="New File inside this folder"
               >
                 <FilePlus className="w-3 h-3" />
               </button>
               <button
                 type="button"
-                onClick={() => startCreatingIn(node.fullPath, 'folder')}
-                className="p-1 text-slate-400 hover:text-white hover:bg-slate-700/60 rounded cursor-pointer"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  startCreatingIn(node.fullPath, 'folder');
+                }}
+                className="p-1 text-slate-400 hover:text-white hover:bg-slate-700/60 rounded cursor-pointer touch-manipulation"
                 title="New Folder inside this folder"
               >
                 <FolderPlus className="w-3 h-3" />
               </button>
               <button
                 type="button"
-                onClick={(e) => onDeleteFolder(node.fullPath, e)}
-                className="p-1 text-slate-400 hover:text-rose-400 hover:bg-rose-500/15 rounded cursor-pointer"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDeleteFolder(node.fullPath, e);
+                }}
+                className="p-1 text-rose-400 hover:text-rose-300 hover:bg-rose-500/20 rounded cursor-pointer touch-manipulation"
                 title="Delete this folder"
               >
-                <Trash2 className="w-3 h-3" />
+                <Trash2 className="w-3.5 h-3.5 text-rose-400" />
               </button>
             </div>
           </div>
@@ -513,34 +522,45 @@ export const VsCodeFileTree: React.FC<VsCodeFileTreeProps> = ({
           </span>
         </div>
 
-        {/* File Actions on Hover */}
+        {/* File Actions (Visible on touch/mobile, hover on desktop) */}
         <div
-          className="opacity-0 group-hover:opacity-100 flex items-center gap-0.5 shrink-0 transition-opacity"
+          className="opacity-80 sm:opacity-0 sm:group-hover:opacity-100 flex items-center gap-0.5 shrink-0 transition-opacity"
           onClick={(e) => e.stopPropagation()}
         >
           <button
             type="button"
-            onClick={() => node.file && onDownloadFile(node.file)}
-            className="p-1 text-slate-400 hover:text-white hover:bg-slate-700/60 rounded cursor-pointer"
+            onClick={(e) => {
+              e.stopPropagation();
+              node.file && onDownloadFile(node.file);
+            }}
+            className="p-1 text-slate-400 hover:text-white hover:bg-slate-700/60 rounded cursor-pointer touch-manipulation"
             title="Download file"
           >
             <Download className="w-3 h-3" />
           </button>
           <button
             type="button"
-            onClick={() => node.file && onRenameFile(node.file)}
-            className="p-1 text-slate-400 hover:text-white hover:bg-slate-700/60 rounded cursor-pointer"
+            onClick={(e) => {
+              e.stopPropagation();
+              node.file && onRenameFile(node.file);
+            }}
+            className="p-1 text-slate-400 hover:text-white hover:bg-slate-700/60 rounded cursor-pointer touch-manipulation"
             title="Rename file"
           >
             <Edit3 className="w-3 h-3" />
           </button>
           <button
             type="button"
-            onClick={(e) => node.file && onDeleteFile(node.file.id, e)}
-            className="p-1 text-slate-400 hover:text-rose-400 hover:bg-rose-500/15 rounded cursor-pointer"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (node.file) {
+                onDeleteFile(node.file.id, e);
+              }
+            }}
+            className="p-1 text-rose-400 hover:text-rose-300 hover:bg-rose-500/20 rounded cursor-pointer touch-manipulation"
             title="Delete file"
           >
-            <Trash2 className="w-3 h-3" />
+            <Trash2 className="w-3.5 h-3.5 text-rose-400" />
           </button>
         </div>
       </div>

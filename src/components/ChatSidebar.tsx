@@ -13,9 +13,10 @@ import {
   Folder,
   HardDrive,
   Code2,
-  Download
+  Download,
+  User
 } from 'lucide-react';
-import { ChatSession } from '../types';
+import { ChatSession, UserProfile } from '../types';
 import { ECHO_LOGO_URL } from '../data/constants';
 
 interface ChatSidebarProps {
@@ -23,6 +24,8 @@ interface ChatSidebarProps {
   onClose: () => void;
   sessions: ChatSession[];
   currentSessionId: string;
+  userProfile?: UserProfile | null;
+  onOpenProfile?: () => void;
   onSelectSession: (id: string) => void;
   onNewChat: () => void;
   onDeleteSession: (id: string) => void;
@@ -40,6 +43,8 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
   onClose,
   sessions,
   currentSessionId,
+  userProfile,
+  onOpenProfile,
   onSelectSession,
   onNewChat,
   onDeleteSession,
@@ -96,27 +101,28 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
 
   // Reusable inner content
   const sidebarInnerContent = (
-    <div className="w-80 h-full flex flex-col shrink-0">
+    <div className="w-full lg:w-80 h-full flex flex-col shrink-0 min-w-0 overflow-hidden">
       {/* Brand Header */}
-      <div className="p-4 sm:p-5 border-b border-slate-200/80 flex items-center justify-between">
-        <div className="flex items-center gap-3">
+      <div className="p-4 sm:p-5 border-b border-slate-200/80 flex items-center justify-between shrink-0">
+        <div className="flex items-center gap-3 min-w-0">
           <img
             src={ECHO_LOGO_URL}
             alt="Echo AI Logo"
-            className="w-8 h-8 rounded-lg object-contain bg-white border border-slate-200 shadow-2xs"
+            className="w-8 h-8 rounded-lg object-contain bg-white border border-slate-200 shadow-2xs shrink-0"
           />
-          <div>
-            <h1 className="font-bold text-base text-slate-800 tracking-tight leading-tight flex items-center gap-1.5">
+          <div className="min-w-0">
+            <h1 className="font-bold text-base text-slate-800 tracking-tight leading-tight flex items-center gap-1.5 truncate">
               <span>Echo AI</span>
-              <span className="px-1.5 py-0.2 bg-indigo-100 text-indigo-700 text-[10px] font-bold rounded-sm">FAST</span>
+              <span className="px-1.5 py-0.2 bg-indigo-100 text-indigo-700 text-[10px] font-bold rounded-sm shrink-0">FAST</span>
             </h1>
-            <p className="text-[11px] text-slate-500 font-medium">Intelligent Assistant</p>
+            <p className="text-[11px] text-slate-500 font-medium truncate">Intelligent Assistant</p>
           </div>
         </div>
         <button
           onClick={onClose}
-          className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer"
+          className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 active:bg-slate-200 rounded-xl transition-colors cursor-pointer touch-manipulation shrink-0"
           title="Close sidebar"
+          aria-label="Close sidebar"
         >
           <X className="w-5 h-5" />
         </button>
@@ -296,26 +302,43 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
         </div>
       )}
 
-      {/* User Account / Settings Footer */}
-      <div className="p-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <img
-            src={ECHO_LOGO_URL}
-            alt="Echo AI"
-            className="w-8 h-8 rounded-full object-contain bg-white border border-slate-200 shadow-2xs"
-          />
-          <div>
-            <p className="text-xs font-semibold text-slate-800">Echo Assistant</p>
+      {/* User Profile / Settings Footer */}
+      <div className="p-3 sm:p-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between gap-2">
+        <button
+          type="button"
+          onClick={() => {
+            if (onOpenProfile) onOpenProfile();
+            if (window.innerWidth < 1024) onClose();
+          }}
+          className="flex items-center gap-2.5 min-w-0 text-left hover:opacity-80 transition-opacity cursor-pointer group flex-1"
+          title="Click to edit profile"
+        >
+          {(userProfile?.avatar || userProfile?.avatarUrl) ? (
+            <img
+              src={userProfile?.avatar || userProfile?.avatarUrl}
+              alt={userProfile.name}
+              className="w-8 h-8 rounded-full object-cover bg-white border border-slate-200 shadow-2xs shrink-0 group-hover:ring-2 group-hover:ring-indigo-400 transition-all"
+            />
+          ) : (
+            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-600 to-purple-600 text-white flex items-center justify-center font-bold text-xs shadow-2xs shrink-0">
+              {userProfile?.name ? userProfile.name.charAt(0).toUpperCase() : 'U'}
+            </div>
+          )}
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-bold text-slate-800 truncate flex items-center gap-1">
+              <span>{userProfile?.name || 'User Profile'}</span>
+              <Edit2 className="w-3 h-3 text-slate-400 group-hover:text-indigo-600 transition-colors" />
+            </p>
             <p className="text-[10px] text-emerald-600 font-medium flex items-center gap-1">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block animate-pulse"></span>
-              Active & Ready
+              Active Profile • Edit
             </p>
           </div>
-        </div>
+        </button>
         <button
           id="sidebar-settings-btn"
           onClick={onOpenSettings}
-          className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-200/80 transition-colors cursor-pointer"
+          className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-200/80 transition-colors cursor-pointer shrink-0"
           title="Settings & Model Config"
         >
           <SettingsIcon className="w-4 h-4" />
@@ -364,7 +387,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
             animate={{ x: 0 }}
             exit={{ x: '-100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 350 }}
-            className="fixed top-0 bottom-0 left-0 z-50 w-72 sm:w-80 bg-white border-r border-slate-200 flex flex-col shadow-2xl h-full lg:hidden"
+            className="fixed top-0 bottom-0 left-0 z-50 w-72 sm:w-80 max-w-[85vw] bg-white border-r border-slate-200 flex flex-col shadow-2xl h-full lg:hidden overflow-hidden"
           >
             {sidebarInnerContent}
           </motion.aside>

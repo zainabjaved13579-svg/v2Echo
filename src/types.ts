@@ -133,3 +133,16 @@ export interface AiEditHistoryItem {
   newContent: string;
   model: string;
 }
+
+export interface UserProfile {
+  id: string;
+  name: string;
+  email?: string;
+  avatar?: string;
+  avatarUrl?: string;
+  role?: string;
+  isGoogleConnected?: boolean;
+  googleId?: string;
+  createdAt: number;
+  lastSyncedAt?: number;
+}

@@ -150,19 +150,16 @@ function resolveGeminiModelId(modelName: string = 'echo-3.7-flash'): string {
   if (lower.includes('3.1-pro') || lower.includes('pro')) {
     return 'gemini-3.1-pro-preview';
   }
-  if (lower.includes('3.1-flash-lite') || lower.includes('lite')) {
-    return 'gemini-3.1-flash-lite';
-  }
   if (lower.includes('flash-latest')) {
     return 'gemini-flash-latest';
   }
-  if (lower.includes('3.7') || lower.includes('flash') || lower.includes('echo')) {
-    return 'gemini-3.7-flash';
+  if (lower.includes('3.1-flash-lite') || lower.includes('lite') || lower.includes('3.7') || lower.includes('flash') || lower.includes('echo')) {
+    return 'gemini-3.1-flash-lite';
   }
   if (lower.startsWith('gemini-')) {
     return lower;
   }
-  return 'gemini-3.7-flash';
+  return 'gemini-3.1-flash-lite';
 }
 
 /**

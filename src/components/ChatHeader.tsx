@@ -12,13 +12,16 @@ import {
   Code2,
   FolderCode,
   Image as ImageIcon,
-  MoreVertical
+  MoreVertical,
+  User
 } from 'lucide-react';
-import { ChatSession } from '../types';
+import { ChatSession, UserProfile } from '../types';
 import { ECHO_LOGO_URL } from '../data/constants';
 
 interface ChatHeaderProps {
   currentSession: ChatSession;
+  userProfile?: UserProfile;
+  onOpenProfile?: () => void;
   onToggleSidebar: () => void;
   onNewChat: () => void;
   onClearMessages: () => void;
@@ -29,10 +32,13 @@ interface ChatHeaderProps {
   onOpenImageGen: () => void;
   onOpenGetApp?: () => void;
   onExportChat: (format: 'markdown' | 'json') => void;
+  onGoHome?: () => void;
 }
 
 export const ChatHeader: React.FC<ChatHeaderProps> = ({
   currentSession,
+  userProfile,
+  onOpenProfile,
   onToggleSidebar,
   onNewChat,
   onClearMessages,
@@ -42,7 +48,8 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
   onOpenFileWorkspace,
   onOpenImageGen,
   onOpenGetApp,
-  onExportChat
+  onExportChat,
+  onGoHome
 }) => {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleInput, setTitleInput] = useState(currentSession.title);
@@ -62,8 +69,9 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
         <button
           id="sidebar-toggle-btn"
           onClick={onToggleSidebar}
-          className="p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors shrink-0"
+          className="p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 active:bg-slate-200 transition-colors shrink-0 touch-manipulation cursor-pointer"
           title="Toggle conversation list"
+          aria-label="Toggle conversation list"
         >
           <Menu className="w-5 h-5" />
         </button>
@@ -96,11 +104,26 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
           </div>
         ) : (
           <div className="flex items-center gap-2 min-w-0">
-            <img
-              src={ECHO_LOGO_URL}
-              alt="Echo"
-              className="w-6 h-6 rounded-lg object-contain bg-white border border-slate-200 shrink-0 shadow-2xs"
-            />
+            {onGoHome ? (
+              <button
+                type="button"
+                onClick={onGoHome}
+                className="flex items-center gap-1.5 p-1 -ml-1 rounded-lg hover:bg-slate-100 transition-colors cursor-pointer group shrink-0"
+                title="Go to 'Into the Unknown' Home"
+              >
+                <img
+                  src={ECHO_LOGO_URL}
+                  alt="Echo"
+                  className="w-6 h-6 rounded-lg object-contain bg-white border border-slate-200 shadow-2xs group-hover:scale-105 transition-transform"
+                />
+              </button>
+            ) : (
+              <img
+                src={ECHO_LOGO_URL}
+                alt="Echo"
+                className="w-6 h-6 rounded-lg object-contain bg-white border border-slate-200 shrink-0 shadow-2xs"
+              />
+            )}
             <h2 className="text-xs sm:text-sm md:text-base font-bold text-slate-900 truncate max-w-[110px] sm:max-w-[200px] md:max-w-[280px]">
               {currentSession.title}
             </h2>
@@ -170,6 +193,19 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
 
           {showMoreMenu && (
             <div className="absolute right-0 mt-2 w-48 rounded-2xl bg-white border border-slate-200 shadow-xl py-1.5 z-40 text-xs text-slate-700 font-medium animate-fadeIn">
+              {onOpenProfile && (
+                <button
+                  onClick={() => {
+                    setShowMoreMenu(false);
+                    onOpenProfile();
+                  }}
+                  className="w-full text-left px-3.5 py-2 hover:bg-slate-50 hover:text-indigo-600 flex items-center gap-2 transition-colors"
+                >
+                  <User className="w-4 h-4 text-indigo-500" />
+                  <span>Profile & Google Sync</span>
+                </button>
+              )}
+
               <button
                 onClick={() => {
                   setShowMoreMenu(false);

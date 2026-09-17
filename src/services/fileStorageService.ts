@@ -95,6 +95,140 @@ export function getLanguageFromFileName(filename: string): string {
   }
 }
 
+/**
+ * Resolves standard, official filename based on language and code content.
+ * e.g., HTML -> index.html, CSS -> style.css, JS -> script.js, Python -> main.py, Java -> Main.java, JSON -> package.json
+ */
+export function resolveOfficialCodeFileName(
+  rawLang: string,
+  codeContent: string,
+  explicitMeta?: string,
+  counter = 1
+): string {
+  // 1. Check if an explicit filename was provided in the code block meta or info string
+  if (explicitMeta && explicitMeta.trim()) {
+    const metaParts = explicitMeta.trim().split(/\s+/);
+    for (const part of metaParts) {
+      const clean = part.replace(/^[:=]+/, '').replace(/[^a-zA-Z0-9_\-\.\/]/g, '');
+      if (clean.includes('.') && clean.length > 2) {
+        const fileOnly = clean.split('/').pop();
+        if (fileOnly && fileOnly.includes('.')) {
+          return fileOnly;
+        }
+      }
+    }
+  }
+
+  // 2. Check the first 5 lines of code content for an explicit comment specifying filename
+  const lines = codeContent.split('\n').slice(0, 5);
+  for (const line of lines) {
+    const trimmed = line.trim();
+    // e.g. // index.html, <!-- index.html -->, /* style.css */, # main.py, // File: index.html
+    const commentMatch = trimmed.match(
+      /^(?:\/\/|#|<!--|\/\*)\s*(?:file(?:name)?\s*[:=]\s*)?([a-zA-Z0-9_\-]+\.[a-zA-Z0-9]+)/i
+    );
+    if (commentMatch && commentMatch[1]) {
+      return commentMatch[1];
+    }
+  }
+
+  // 3. Resolve by official convention and code content
+  const lang = (rawLang || '').toLowerCase().trim();
+  const ext = getExtensionFromLanguage(lang);
+
+  if (ext === 'html') {
+    return counter === 1 ? 'index.html' : `page_${counter}.html`;
+  }
+
+  if (ext === 'css' || ext === 'scss') {
+    return counter === 1 ? 'style.css' : `styles_${counter}.css`;
+  }
+
+  if (ext === 'js') {
+    if (/(?:require\s*\(\s*['"]express|import\s+express|process\.env|app\.listen)/i.test(codeContent)) {
+      return 'server.js';
+    }
+    if (/(?:React|useState|useEffect|import\s+React)/i.test(codeContent)) {
+      return counter === 1 ? 'App.jsx' : `Component_${counter}.jsx`;
+    }
+    return counter === 1 ? 'script.js' : `script_${counter}.js`;
+  }
+
+  if (ext === 'ts') {
+    if (/(?:require\s*\(\s*['"]express|import\s+express|process\.env|app\.listen)/i.test(codeContent)) {
+      return 'server.ts';
+    }
+    return counter === 1 ? 'main.ts' : `index_${counter}.ts`;
+  }
+
+  if (ext === 'tsx' || ext === 'jsx') {
+    return counter === 1 ? 'App.tsx' : `Component_${counter}.tsx`;
+  }
+
+  if (ext === 'py') {
+    if (/(?:from\s+flask|import\s+flask|from\s+fastapi|import\s+fastapi|from\s+django)/i.test(codeContent)) {
+      return 'app.py';
+    }
+    return counter === 1 ? 'main.py' : `script_${counter}.py`;
+  }
+
+  if (ext === 'java') {
+    const classMatch = codeContent.match(/public\s+class\s+([A-Za-z0-9_]+)/);
+    if (classMatch && classMatch[1]) {
+      return `${classMatch[1]}.java`;
+    }
+    return 'Main.java';
+  }
+
+  if (ext === 'c') {
+    return 'main.c';
+  }
+
+  if (ext === 'cpp') {
+    return 'main.cpp';
+  }
+
+  if (ext === 'json') {
+    if (/(?:"dependencies"|"devDependencies"|"scripts"|"peerDependencies")/i.test(codeContent)) {
+      return 'package.json';
+    }
+    if (/(?:"pack"|"pack_format")/i.test(codeContent)) {
+      return 'pack.mcmeta';
+    }
+    if (/(?:"manifest_version")/i.test(codeContent)) {
+      return 'manifest.json';
+    }
+    if (/(?:"compilerOptions")/i.test(codeContent)) {
+      return 'tsconfig.json';
+    }
+    return counter === 1 ? 'data.json' : `data_${counter}.json`;
+  }
+
+  if (ext === 'sql') {
+    if (/CREATE\s+TABLE/i.test(codeContent)) {
+      return 'schema.sql';
+    }
+    return 'query.sql';
+  }
+
+  if (ext === 'sh') {
+    if (/(?:npm\s+install|yarn|pip\s+install|apt-get|git\s+clone)/i.test(codeContent)) {
+      return 'setup.sh';
+    }
+    return 'run.sh';
+  }
+
+  if (ext === 'md') {
+    return 'README.md';
+  }
+
+  if (ext === 'svg') {
+    return 'icon.svg';
+  }
+
+  return `${ext || 'file'}${counter > 1 ? `_${counter}` : ''}.${ext || 'txt'}`;
+}
+
 // Load all workspace files from localStorage
 export function loadWorkspaceFiles(): WorkspaceFile[] {
   try {
@@ -102,9 +236,7 @@ export function loadWorkspaceFiles(): WorkspaceFile[] {
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) {
-        // Enforce user mandate: "no pre file should be added by ai"
-        // Only return files created or imported by user, or explicitly saved
-        return parsed.filter((f) => f && f.source !== 'ai-generated');
+        return parsed.filter((f) => f && typeof f === 'object' && f.id);
       }
     }
   } catch (err) {
@@ -189,12 +321,33 @@ export function autoSaveFile(
   return savedFile;
 }
 
-// Delete a file
-export function deleteWorkspaceFile(id: string): WorkspaceFile[] {
-  const files = loadWorkspaceFiles();
-  const filtered = files.filter((f) => f.id !== id);
-  saveWorkspaceFiles(filtered);
-  return filtered;
+// Delete a file safely by id, path, or filename
+export function deleteWorkspaceFile(idOrPath: string): WorkspaceFile[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_FILES);
+    let files: WorkspaceFile[] = [];
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        files = parsed;
+      }
+    } else {
+      files = loadWorkspaceFiles();
+    }
+    const filtered = files.filter(
+      (f) => f && f.id !== idOrPath && f.path !== idOrPath && f.name !== idOrPath
+    );
+    saveWorkspaceFiles(filtered);
+    return filtered;
+  } catch (err) {
+    console.error('Failed to delete workspace file:', err);
+    const files = loadWorkspaceFiles();
+    const filtered = files.filter(
+      (f) => f && f.id !== idOrPath && f.path !== idOrPath
+    );
+    saveWorkspaceFiles(filtered);
+    return filtered;
+  }
 }
 
 // Delete an entire folder and all its nested files
@@ -241,38 +394,18 @@ export function autoSaveAiCodeBlocks(
       /(###\s*section|section\s+[a-c]:|paper\s*pattern|question\s*paper|total\s*marks|attempt\s*any)/i.test(codeContent);
     if (isExamOrPattern) continue;
 
-    // Detect filename from comment or top of code block if present
+    // Detect official standard filename (e.g. index.html, style.css, script.js, main.py, package.json)
+    const ext = getExtensionFromLanguage(rawLang || 'txt');
+    const currentFiles = loadWorkspaceFiles();
+    const existingSessionFile = sessionId
+      ? currentFiles.find((f) => f.chatSessionId === sessionId && f.name.endsWith(`.${ext}`))
+      : null;
+
     let detectedName = '';
-    const firstLine = codeContent.split('\n')[0]?.trim() || '';
-    const fileCommentMatch = firstLine.match(/^(?:\/\/|#|<!--|\/\*)\s*([\w\-\.\/]+\.[a-zA-Z0-9]+)/);
-
-    if (commentOrFilename && commentOrFilename.includes('.')) {
-      detectedName = commentOrFilename.replace(/[^a-zA-Z0-9_\-\.\/]/g, '');
-    } else if (fileCommentMatch) {
-      detectedName = fileCommentMatch[1];
+    if (existingSessionFile && counter === 1) {
+      detectedName = existingSessionFile.name;
     } else {
-      const ext = getExtensionFromLanguage(rawLang || 'txt');
-      // If the current session already has a file with this extension, reuse it so iterative prompts modify the code!
-      const currentFiles = loadWorkspaceFiles();
-      const existingSessionFile = sessionId
-        ? currentFiles.find((f) => f.chatSessionId === sessionId && f.name.endsWith(`.${ext}`))
-        : null;
-
-      if (existingSessionFile && counter === 1) {
-        detectedName = existingSessionFile.name;
-      } else {
-        const baseName =
-          ext === 'html'
-            ? 'index'
-            : ext === 'css'
-            ? 'styles'
-            : ext === 'py'
-            ? 'main'
-            : ext === 'md'
-            ? 'document'
-            : 'script';
-        detectedName = `${baseName}${counter > 1 ? `_${counter}` : ''}.${ext}`;
-      }
+      detectedName = resolveOfficialCodeFileName(rawLang, codeContent, commentOrFilename, counter);
     }
 
     const lang = rawLang || getLanguageFromFileName(detectedName);
@@ -585,33 +718,7 @@ export function extractCodeFilesFromMarkdown(markdown: string): ExtractedCodeFil
       /(###\s*section|section\s+[a-c]:|paper\s*pattern|question\s*paper|total\s*marks|attempt\s*any)/i.test(codeContent);
     if (isExamOrPattern) continue;
 
-    let detectedName = '';
-    const firstLine = codeContent.split('\n')[0]?.trim() || '';
-    const fileCommentMatch = firstLine.match(/^(?:\/\/|#|<!--|\/\*)\s*([\w\-\.\/]+\.[a-zA-Z0-9]+)/);
-
-    if (commentOrFilename && commentOrFilename.includes('.')) {
-      detectedName = commentOrFilename.replace(/[^a-zA-Z0-9_\-\.\/]/g, '');
-    } else if (fileCommentMatch) {
-      detectedName = fileCommentMatch[1];
-    } else {
-      const ext = getExtensionFromLanguage(rawLang || 'txt');
-      const baseName =
-        ext === 'html'
-          ? 'index'
-          : ext === 'css'
-          ? 'styles'
-          : ext === 'py'
-          ? 'main'
-          : ext === 'json'
-          ? codeContent.includes('"pack"')
-            ? 'pack.mcmeta'
-            : 'data'
-          : ext === 'md'
-          ? 'README'
-          : 'script';
-      detectedName = `${baseName}${counter > 1 ? `_${counter}` : ''}.${ext}`;
-    }
-
+    const detectedName = resolveOfficialCodeFileName(rawLang, codeContent, commentOrFilename, counter);
     const cleanName = detectedName.split('/').pop() || detectedName;
     const parts = cleanName.split('.');
     const ext = parts.length > 1 ? parts.pop()?.toLowerCase() || '' : getExtensionFromLanguage(rawLang || 'txt');

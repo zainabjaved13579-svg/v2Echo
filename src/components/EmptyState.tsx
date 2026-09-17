@@ -6,8 +6,13 @@ import {
   MessageSquare,
   Atom,
   Download,
-  Languages
+  Languages,
+  FileCode,
+  Terminal,
+  Palette,
+  Menu
 } from 'lucide-react';
+import { motion } from 'motion/react';
 import { ECHO_LOGO_URL } from '../data/constants';
 
 interface EmptyStateProps {
@@ -15,6 +20,7 @@ interface EmptyStateProps {
   onStartChat?: () => void;
   onOpenGetApp: () => void;
   onOpenLanguageModal?: () => void;
+  onToggleSidebar?: () => void;
   selectedLanguage?: string;
   useSearchGrounding: boolean;
   setUseSearchGrounding: (val: boolean | ((prev: boolean) => boolean)) => void;
@@ -27,6 +33,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   onStartChat,
   onOpenGetApp,
   onOpenLanguageModal,
+  onToggleSidebar,
   selectedLanguage = 'auto',
   useSearchGrounding,
   setUseSearchGrounding,
@@ -73,8 +80,19 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
 
       {/* Top Navigation Bar - Matching Image 2 */}
       <header className="relative z-20 w-full px-4 sm:px-10 py-3.5 sm:py-5 flex items-center justify-between">
-        {/* Left: Echo Logo & Brand Name (Tab is omitted on starting screen per user request) */}
+        {/* Left: Echo Logo & Brand Name */}
         <div className="flex items-center gap-2 sm:gap-3">
+          {onToggleSidebar && (
+            <button
+              id="empty-state-sidebar-btn"
+              type="button"
+              onClick={onToggleSidebar}
+              className="p-1.5 -ml-1 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer touch-manipulation"
+              title="Open menu"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+          )}
           <div className="flex items-center gap-2 select-none">
             <img
               src={ECHO_LOGO_URL}
@@ -116,40 +134,114 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
 
       {/* Hero Center Section */}
       <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-3.5 sm:px-6 py-4 sm:py-6 max-w-4xl mx-auto w-full text-center">
-        {/* Announcement Pill - Compact, sleek & smaller */}
-        <div
+        {/* Announcement Pill - Compact, sleek with subtle float */}
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: [0, -3, 0] }}
+          transition={{
+            opacity: { duration: 0.5 },
+            y: { repeat: Infinity, duration: 4, ease: "easeInOut" }
+          }}
           onClick={onOpenGetApp}
-          className="group inline-flex items-center gap-1.5 px-3 py-1 sm:px-4 sm:py-1.5 rounded-full bg-white/80 hover:bg-white border border-blue-100/90 text-slate-600 hover:text-[#1d59f2] text-[11px] sm:text-xs transition-all mb-4 sm:mb-6 cursor-pointer max-w-[92%] sm:max-w-xl text-center leading-tight backdrop-blur-xs shadow-2xs active:scale-[0.99] touch-manipulation"
+          className="group inline-flex items-center gap-1.5 px-3 py-1 sm:px-4 sm:py-1.5 rounded-full bg-white/90 hover:bg-white border border-blue-100/90 text-slate-600 hover:text-[#1d59f2] text-[11px] sm:text-xs transition-all mb-4 sm:mb-6 cursor-pointer max-w-[92%] sm:max-w-xl text-center leading-tight backdrop-blur-xs shadow-2xs hover:shadow-xs active:scale-[0.99] touch-manipulation"
         >
-          <span className="text-[#3b71fe] text-xs shrink-0">✦</span>
+          <span className="text-[#3b71fe] text-xs shrink-0 animate-pulse">✦</span>
           <span className="truncate sm:whitespace-normal">
             Echo-V2.0 is live with multimodal &amp; deep reasoning upgrades.
           </span>
           <span className="text-[#3b71fe] font-semibold group-hover:translate-x-0.5 transition-transform ml-0.5 shrink-0">
             →
           </span>
-        </div>
+        </motion.div>
 
-        {/* Big Headline: "Into the Unknown" */}
-        <h1 className="text-4xl xs:text-5xl sm:text-6xl md:text-[68px] font-bold text-[#1a2538] tracking-tight mb-5 sm:mb-8 font-sans leading-[1.08]">
-          Into the<br className="sm:hidden" /> Unknown
-        </h1>
+        {/* Big Headline: "Into the Unknown" with Ambient Halo & Float Animation */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95, y: 15 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+          className="relative mb-5 sm:mb-7 select-none"
+        >
+          {/* Ambient Glowing Halo Orb */}
+          <motion.div
+            animate={{
+              scale: [1, 1.15, 1],
+              opacity: [0.35, 0.65, 0.35]
+            }}
+            transition={{ repeat: Infinity, duration: 5, ease: "easeInOut" }}
+            className="absolute -top-6 left-1/2 -translate-x-1/2 w-64 sm:w-96 h-28 sm:h-36 bg-gradient-to-r from-blue-300/40 via-indigo-300/30 to-sky-200/40 rounded-full blur-2xl sm:blur-3xl pointer-events-none -z-10"
+          />
 
-        {/* "Chat with Echo" Button */}
-        <div className="flex items-center justify-center">
-          <button
-            type="button"
-            onClick={() => handleSubmit()}
-            className="flex items-center gap-2 px-6 py-2.5 rounded-full bg-white hover:bg-slate-50 text-slate-700 hover:text-[#1d59f2] border border-slate-200 text-xs sm:text-sm font-medium transition-all shadow-2xs hover:shadow-xs active:scale-95 cursor-pointer touch-manipulation"
+          <motion.h1
+            animate={{ y: [0, -4, 0] }}
+            transition={{ repeat: Infinity, duration: 4.5, ease: "easeInOut" }}
+            className="text-4xl xs:text-5xl sm:text-6xl md:text-[68px] font-bold tracking-tight font-sans leading-[1.08]"
           >
-            <MessageSquare className="w-4 h-4 text-[#1d59f2]" />
-            <span>Chat with Echo</span>
-          </button>
-        </div>
+            <span className="bg-gradient-to-r from-[#111827] via-[#1d59f2] to-[#1e293b] bg-clip-text text-transparent">
+              Into the<br className="sm:hidden" /> Unknown
+            </span>
+          </motion.h1>
+        </motion.div>
+
+        {/* "Chat with Echo" Button & Quick Prompts */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+          className="flex flex-col items-center justify-center gap-3.5"
+        >
+          <div className="relative inline-flex items-center justify-center">
+            {/* Pulsing ring */}
+            <span className="absolute -inset-1 rounded-full bg-blue-400/25 animate-ping pointer-events-none opacity-40" />
+            <motion.button
+              type="button"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => handleSubmit()}
+              className="relative flex items-center gap-2 px-6 py-2.5 rounded-full bg-white hover:bg-slate-50 text-slate-700 hover:text-[#1d59f2] border border-slate-200 text-xs sm:text-sm font-medium transition-all shadow-2xs hover:shadow-xs cursor-pointer touch-manipulation"
+            >
+              <MessageSquare className="w-4 h-4 text-[#1d59f2]" />
+              <span>Chat with Echo</span>
+            </motion.button>
+          </div>
+
+          {/* Staggered Animated Quick Starter Prompts */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.3 }}
+            className="flex items-center justify-center gap-2 flex-wrap max-w-lg mx-auto pt-1"
+          >
+            {[
+              { label: 'index.html web page', icon: FileCode, prompt: 'Create a responsive index.html page with modern CSS and JavaScript' },
+              { label: 'main.py script', icon: Terminal, prompt: 'Write a clean main.py script with official structure and comments' },
+              { label: 'style.css layout', icon: Palette, prompt: 'Write an official style.css stylesheet with flexbox and animations' }
+            ].map((item, idx) => {
+              const IconComponent = item.icon;
+              return (
+                <motion.button
+                  key={idx}
+                  type="button"
+                  whileHover={{ y: -2, scale: 1.04 }}
+                  whileTap={{ scale: 0.96 }}
+                  onClick={() => onSendMessage(item.prompt)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/95 hover:bg-white text-slate-700 hover:text-[#1d59f2] text-xs font-medium border border-slate-200/90 shadow-2xs hover:shadow-xs transition-all cursor-pointer"
+                >
+                  <IconComponent className="w-3.5 h-3.5 text-slate-700" />
+                  <span>{item.label}</span>
+                </motion.button>
+              );
+            })}
+          </motion.div>
+        </motion.div>
       </div>
 
       {/* Bottom Search / Prompt Input Card Section (Docked niche/bottom right above footer) */}
-      <div className="relative z-10 w-full max-w-[760px] mx-auto px-3.5 sm:px-6 mb-2 sm:mb-4">
+      <motion.div
+        initial={{ opacity: 0, y: 15 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.25 }}
+        className="relative z-10 w-full max-w-[760px] mx-auto px-3.5 sm:px-6 mb-2 sm:mb-4"
+      >
         <div className="w-full bg-white rounded-2xl sm:rounded-3xl border border-slate-200/90 shadow-[0_10px_35px_rgba(30,64,175,0.06)] hover:shadow-[0_14px_45px_rgba(30,64,175,0.09)] transition-all p-3.5 sm:p-5 text-left space-y-3 sm:space-y-4">
           {/* Textarea Input - Min 16px to prevent iOS zoom */}
           <textarea
@@ -210,7 +302,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
             </button>
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Footer */}
       <footer className="relative z-10 py-3 sm:py-4 px-4 text-center text-[11px] text-slate-400 select-none">

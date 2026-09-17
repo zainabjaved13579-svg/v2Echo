@@ -250,6 +250,228 @@ I'm your versatile, human-like AI companion ready to collaborate on coding, crea
 What would you like to explore or build today?`;
   }
 
+  // Logical Thinking: Venn Diagram & Comparison Table Synthesis (English)
+  if (
+    ((lower.includes('venn') ||
+      lower.includes('ven diagram') ||
+      (lower.includes('diagram') && lower.includes('table')) ||
+      (lower.includes('smjao') && lower.includes('table')) ||
+      lower.includes('table ke sath')) &&
+      !isUrduScript &&
+      !isRomanUrdu &&
+      !isHindiScript &&
+      !isHinglish)
+  ) {
+    return `### 📊 Logical Venn Diagram & Comparative Analysis
+
+A **Venn Diagram** uses overlapping geometric regions (usually circles) to visualize mathematical and logical relationships, similarities, and distinct properties between two or more sets.
+
+![Venn Diagram Set Theory Diagram](https://upload.wikimedia.org/wikipedia/commons/e/ea/Venn_diagram_cork.svg)
+
+#### 📋 Structured Comparison Table
+
+| Dimension / Aspect | Set A (Only A) | Intersection ($A \\cap B$) | Set B (Only B) |
+| :--- | :--- | :--- | :--- |
+| **Definition** | Properties unique exclusively to first concept | Common traits shared equally by both | Properties unique exclusively to second concept |
+| **Operational Scope** | Independent domain logic | Shared interfaces & interoperability | Specialized external functionality |
+| **Behavioral Impact** | Specialized execution rules | Common invariants and protocols | Complementary operations |
+| **Logical Set Formula** | $A \\setminus B = A \\cap B^c$ | $A \\cap B$ | $B \\setminus A = B \\cap A^c$ |
+
+#### 💡 Key Takeaway
+The **Intersection ($A \\cap B$)** identifies convergence where requirements overlap, while the independent sets preserve specialized, unshared functionality.`;
+  }
+
+  // Prism & Light Dispersion Physics Explanation
+  if (lower.includes('prism') || (lower.includes('light') && lower.includes('spectrum'))) {
+    return `### 🌈 Dispersion of Light Through a Triangular Prism
+
+When a beam of composite **white light** enters a transparent optical triangular glass prism, it refracts (bends) and separates into its constituent spectral colors: **Red, Orange, Yellow, Green, Blue, Indigo, and Violet (ROYGBIV)**.
+
+#### 🔬 Physical Mechanism
+1. **Refraction at Surface 1**: Light travels from an optically rarer medium (air) into an optically denser medium (glass). Each wavelength slows down at a different speed.
+2. **Snell's Law & Wave Velocity**: Because refractive index $n = \\frac{c}{v}$, shorter wavelengths (Violet, $\\approx 400\\text{ nm}$) encounter a higher refractive index and deviate **the most**, while longer wavelengths (Red, $\\approx 700\\text{ nm}$) deviate **the least**.
+3. **Emergence at Surface 2**: As the rays exit back into air, refraction bends them away from the normal, further widening the angular dispersion into a brilliant continuous spectrum.
+
+#### 📊 Spectral Deviation Summary Table
+
+| Color Band | Approximate Wavelength (nm) | Speed in Glass ($v$) | Refractive Index ($n$) | Relative Angle of Deviation ($D$) |
+| :--- | :--- | :--- | :--- | :--- |
+| **Red** | $650 - 700$ nm | Highest | Lowest ($n \\approx 1.51$) | **Minimum Deviation** |
+| **Orange** | $590 - 640$ nm | Very High | Low | Low Deviation |
+| **Yellow** | $570 - 590$ nm | High | Moderate | Medium Deviation |
+| **Green** | $500 - 560$ nm | Moderate | Medium | Moderate Deviation |
+| **Blue** | $450 - 490$ nm | Low | High | High Deviation |
+| **Violet** | $400 - 440$ nm | Lowest | Highest ($n \\approx 1.53$) | **Maximum Deviation** |`;
+  }
+
+  // Rainbow Natural Optics Mechanism
+  if (lower.includes('rainbow') || lower.includes('qous e qazah') || lower.includes('dhanush')) {
+    return `### 🌦️ Formation of a Natural Rainbow
+
+A **rainbow** is an optical and meteorological phenomenon caused by the **refraction**, **internal reflection**, and **dispersion** of sunlight in billions of airborne raindrops acting as miniature prisms.
+
+#### 💧 Step-by-Step Physics in a Raindrop
+1. **Entry & Refraction**: Sunlight strikes the surface of spherical water droplets. As light enters water from air, it refracts and disperses into separate color wavelengths.
+2. **Total Internal Reflection**: The dispersed rays hit the back inner boundary of the water droplet. If the angle of incidence exceeds the critical angle ($\\approx 48^\\circ$), the light undergoes internal reflection.
+3. **Exit & Secondary Refraction**: As light leaves the droplet at the front surface, it refracts once more into the air toward the observer.
+4. **Observation Angle**: The primary rainbow is observed at an angle of approximately **$40^\\circ$ (Violet)** to **$42^\\circ$ (Red)** relative to the line from the sun to the observer's eyes.
+
+#### 📋 Rainbow Colors & Angles
+
+| Color | Droplet Exit Angle relative to Sunlight | Position in Primary Arc |
+| :--- | :--- | :--- |
+| **Red** | $42.3^\\circ$ | Outermost (Top) Arc |
+| **Orange / Yellow** | $41.8^\\circ - 41.5^\\circ$ | Middle Upper Arc |
+| **Green / Blue** | $41.0^\\circ - 40.7^\\circ$ | Middle Lower Arc |
+| **Violet** | $40.4^\\circ$ | Innermost (Bottom) Arc |`;
+  }
+
+  // Venn Diagram & Logical Comparison Request (Self-Generated Logical Thinking + Comparison Table)
+  if (
+    lower.includes('venn') ||
+    lower.includes('ven diagram') ||
+    lower.includes('venn diagram') ||
+    (lower.includes('table') && (lower.includes('samjhao') || lower.includes('smjao') || lower.includes('compare'))) ||
+    lower.includes('comparison table')
+  ) {
+    const isUrduHindi = isUrduScript || isRomanUrdu || isHindiScript || isHinglish;
+
+    if (isUrduHindi) {
+      return `### 🧠 منطقی سوچ اور وین ڈایاگرام (Venn Diagram & Comparison Table)
+
+وین ڈایاگرام (Venn Diagram) دراصل دو یا دو سے زائد سیٹس (Sets) کے درمیان مشترکہ (Intersection) اور منفرد (Unique) خصوصیات کو سمجھنے کے لیے استعمال کی جاتی ہے۔
+
+![وین ڈایاگرام تصویری خاکہ (Venn Diagram Visual)](https://upload.wikimedia.org/wikipedia/commons/e/ea/Venn_diagram_cork.svg)
+
+#### 2. جامع تقابلی جدول (Detailed Comparison Table)
+
+| خصوصیت / پیمانہ (Aspect) | صرف سیٹ A (Only Set A) | دونوں میں مشترک (Intersection $A \\cap B$) | صرف سیٹ B (Only Set B) |
+| :--- | :--- | :--- | :--- |
+| **بنیادی تعریف** | مخصوص خصوصیات جو صرف پہلے عنصر میں ہوں | وہ تمام صفات جو دونوں عناصر میں بیک وقت موجود ہوں | مخصوص خصوصیات جو صرف دوسرے عنصر میں ہوں |
+| **منطقی حیثیت** | $A - B$ یا $A \\setminus B$ | $A \\cap B$ (Intersection) | $B - A$ یا $B \\setminus A$ |
+| **مثال: پودے بمقابلہ جانور** | سیل وال (Cell Wall)، کلوروپلاسٹ، ضیائی تالیف (Photosynthesis) | ڈی این اے (DNA)، مائٹوکونڈریا، سیل میمبرین، افزائش نسل | نقل و حرکت (Locomotion)، اعصابی نظام، ہیٹروٹرافک خوراک |
+| **مثال: آن لائن بمقابلہ فزیکل** | کہیں سے بھی رسائی، خودکار شیڈول، کم اخراجات | باہمی گفتگو، اسائنمنٹس، سیکھنے کے اہداف | آمنے سامنے تعامل، ہینڈز آن لیبز، فوری تاثرات |
+
+#### 3. منطقی اصول (Key Logical Principles)
+1. **$A \\cup B$ (Union)**: سیٹ A اور سیٹ B کے تمام اجزاء کا مجموعہ۔
+2. **$A \\cap B$ (Intersection)**: صرف وہ اجزاء جو دونوں میں مشترک ہیں۔
+3. **منفرد فرق ($A \\setminus B$)**: وہ اجزاء جو صرف A میں ہیں اور B میں بالکل نہیں۔`;
+    }
+
+    return `### 🧠 Logical Thinking: Venn Diagram & Comparison Matrix
+
+A **Venn Diagram** is a foundational mathematical and logical tool developed by John Venn to visualize relationships, intersections, and distinct properties between multiple sets.
+
+![Venn Diagram Set Relationships Visual](https://upload.wikimedia.org/wikipedia/commons/e/ea/Venn_diagram_cork.svg)
+
+#### 2. Comprehensive Comparison Table
+
+| Dimension / Attribute | Exclusive to Set A | Intersection ($A \\cap B$) | Exclusive to Set B |
+| :--- | :--- | :--- | :--- |
+| **Set Notation** | $A \\setminus B$ (Relative Complement) | $A \\cap B$ (Mutual Intersection) | $B \\setminus A$ (Relative Complement) |
+| **Logical Condition** | True for A $\\land$ False for B | True for A $\\land$ True for B | False for A $\\land$ True for B |
+| **Example: Plants vs. Animals** | Cell wall, chloroplasts, autotrophic photosynthesis | DNA, cellular respiration, cell membrane | Locomotion, nervous system, heterotrophic ingestion |
+| **Example: SQL vs. NoSQL** | ACID transactions, fixed schema, relational joins | Data persistence, indexing, client SDKs | Dynamic JSON documents, horizontal sharding |
+
+#### 3. Formal Logical Breakdown
+- **Set Union ($A \\cup B$)**: Represents the complete domain of elements residing in either Set A, Set B, or both.
+- **Intersection ($A \\cap B$)**: The shared subset where conditions of both sets simultaneously hold true.
+- **Disjoint Subsets**: If $A \\cap B = \\emptyset$, the sets share zero common attributes and exist completely separate from one another.`;
+  }
+
+  // Real Photograph of Rainbow (when user asks for photo / pic / tasweer / real image)
+  if (lower.includes('rainbow') && (lower.includes('pic') || lower.includes('photo') || lower.includes('picture') || lower.includes('tasweer') || lower.includes('image') || lower.includes('real') || lower.includes('asli') || lower.includes('wallpaper'))) {
+    return `### 🌈 Authentic High-Resolution Photograph: Natural Double Rainbow
+
+Here is a verified, authentic real-world photograph of a natural double rainbow captured in crisp optical detail:
+
+![Vibrant Double Rainbow Over Landscape (Real Photograph)](/visuals/rainbow_real_photo.jpg)
+*Real-world optical photograph of a primary rainbow and secondary supernumerary arc with Alexander's dark band in between.*
+
+#### Atmospheric Optics Explained:
+1. **Primary Arc**: The intense inner arc is formed by **one internal reflection** within falling raindrops. Its angular radius is approximately $42^\\circ$ from the anti-solar point, with **red on the outside** and **violet on the inside**.
+2. **Alexander's Dark Band**: Notice the noticeably darker sky region between the two bows. Light rays reflected twice cannot exit into this angular zone between $42^\\circ$ and $50^\\circ$.
+3. **Secondary Arc**: The fainter outer arc at $51^\\circ$ is formed by **two internal reflections** inside the droplets. Because of the double reflection, its color order is reversed (**violet outside, red inside**).`;
+  }
+
+  // Optical Prism & Dispersion of Light
+  if (lower.includes('prism') && (lower.includes('light') || lower.includes('spectrum') || lower.includes('dispersion') || lower.includes('refraction') || lower.includes('diagram') || lower.includes('rainbow') || lower.includes('working') || lower.includes('samjhao') || lower.includes('batao') || lower.includes('pic') || lower.includes('photo'))) {
+    return `### 🌈 Dispersion of Light Through a Triangular Prism
+
+When a narrow beam of white light passes through a transparent triangular glass prism, it splits into a spectrum of its seven constituent colors: **Red, Orange, Yellow, Green, Blue, Indigo, and Violet (VIBGYOR / ROYGBIV)**.
+
+![Triangular Glass Prism & Visible Light Spectrum Working Diagram](/visuals/prism_working_diagram.svg)
+*Schematic working ray diagram illustrating refraction, Snell's law angle divergence, and the visible light spectrum.*
+
+![Dispersion of White Light Through a Glass Prism (Real Laboratory Photograph)](/visuals/prism_dispersion_photo.jpg)
+*Actual laboratory photograph of monochromatic laser and white light dispersion through optical-grade flint glass.*
+
+#### 1. The Physics Mechanism
+1. **Refraction at First Surface (Air to Glass)**:
+   - Light travels from a rarer medium (air, $n_1 \\approx 1.0$) to a denser medium (glass, $n_2 \\approx 1.5$).
+   - By **Snell's Law** ($n_1 \\sin \\theta_1 = n_2 \\sin \\theta_2$), the light slows down and bends toward the normal.
+2. **Wavelength-Dependent Refractive Index (Cauchy's Principle)**:
+   - The refractive index of glass is inversely related to wavelength ($\\lambda$):
+   $$n(\\lambda) = A + \\frac{B}{\\lambda^2}$$
+   - **Red light** has the longest visible wavelength ($\\approx 700\\text{ nm}$), so it experiences the lowest refractive index and bends the **least**.
+   - **Violet light** has the shortest visible wavelength ($\\approx 400\\text{ nm}$), so it experiences the highest refractive index and bends the **most**.
+3. **Emergence at Second Surface (Glass to Air)**:
+   - As the separated rays exit the glass into air, they bend **away from the normal**. Because the prism faces are non-parallel, the angular dispersion increases further, producing a visible rainbow spectrum.
+
+#### 2. Wavelength & Angle of Deviation Table
+
+| Color Band | Wavelength ($\\approx$) | Refractive Index ($n$) | Relative Deviation ($\\delta$) |
+| :--- | :--- | :--- | :--- |
+| **Red** | $\\sim 700\\text{ nm}$ | Lowest | Minimum deviation (Bends least) |
+| **Orange** | $\\sim 620\\text{ nm}$ | Low | Low deviation |
+| **Yellow** | $\\sim 580\\text{ nm}$ | Intermediate | Mean light wavelength |
+| **Green** | $\\sim 530\\text{ nm}$ | Medium | Moderate deviation |
+| **Blue** | $\\sim 470\\text{ nm}$ | High | High deviation |
+| **Indigo** | $\\sim 430\\text{ nm}$ | Higher | Very high deviation |
+| **Violet** | $\\sim 400\\text{ nm}$ | Highest | Maximum deviation (Bends most) |
+
+#### 3. Key Mathematical Formula
+The total angle of deviation $\\delta$ across a prism with refracting angle $A$ is given by:
+$$\\delta = i + e - A$$
+*(Where $i$ is the incident angle, $e$ is the emergence angle, and $A$ is the prism angle).*`;
+  }
+
+  // Rainbow Formation Mechanism
+  if (lower.includes('rainbow') && (lower.includes('formation') || lower.includes('how') || lower.includes('kese') || lower.includes('diagram') || lower.includes('working') || lower.includes('water') || lower.includes('droplet') || lower.includes('samjhao') || lower.includes('batao'))) {
+    return `### 🌧️🌈 How a Rainbow Forms (Refraction, Dispersion & Internal Reflection)
+
+A rainbow is an optical and meteorological phenomenon caused by the **refraction, dispersion, and internal reflection** of sunlight inside spherical water droplets (rain).
+
+![Rainbow Formation & Light Refraction Working Diagram](/visuals/rainbow_working_diagram.svg)
+*Accurate scientific ray-tracing diagram showing single internal reflection and ray divergence in a spherical water droplet.*
+
+![Vibrant Double Rainbow Over Landscape (Real Photograph)](/visuals/rainbow_real_photo.jpg)
+*Real photograph showing a natural double rainbow arc with distinct spectral separation.*
+
+#### 1. The Three-Step Process Inside a Raindrop
+1. **First Refraction & Dispersion (Entry)**:
+   - Sunlight enters a spherical raindrop at an angle.
+   - Light refracts (bends) and separates into constituent colors (dispersion) because violet light slows down more than red light.
+2. **Total Internal Reflection (Back Wall)**:
+   - The dispersed light strikes the inner rear boundary of the raindrop at an angle greater than the critical angle ($c \\approx 48.6^\\circ$).
+   - It reflects back through the interior of the droplet.
+3. **Second Refraction (Exit to Observer)**:
+   - The reflected light exits the front of the raindrop back into the air.
+   - It bends once more, emerging as an expanded conical cone of colored rays directed towards the observer's eye.
+
+#### 2. Key Viewing Parameters
+
+| Characteristic | Primary Rainbow | Secondary Rainbow |
+| :--- | :--- | :--- |
+| **Number of Internal Reflections** | 1 reflection | 2 reflections |
+| **Angular Subtense (Observer's Eye)** | $40^\\circ$ (Violet) to $42^\\circ$ (Red) | $50^\\circ$ (Red) to $53^\\circ$ (Violet) |
+| **Color Order (Top to Bottom)** | Red on outer edge, Violet on inner | Inverted: Violet on outer edge, Red on inner |
+| **Brightness & Contrast** | High intensity | Fainter (energy lost in second reflection) |
+
+#### 3. Why It Appears as an Arc
+The rainbow forms a circular cone with the observer's eye at the vertex and the anti-solar point at the center. The ground blocks the bottom half, so we perceive a semicircular arc!`;
+  }
+
   // Explicit Coding Requests: Provide advanced, production-ready, multi-file code
   if (isExplicitCodingRequest(userText)) {
     const isPython = lower.includes('python');

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
@@ -19,13 +19,15 @@ import {
   RefreshCw,
   Sparkles,
   Smartphone,
-  GraduationCap
+  GraduationCap,
+  X
 } from 'lucide-react';
 import {
   getExtensionFromLanguage,
   autoSaveFile,
   downloadSingleFileDirectly,
-  getLanguageFromFileName
+  getLanguageFromFileName,
+  resolveOfficialCodeFileName
 } from '../services/fileStorageService';
 import { remakeAiCode } from '../services/codeService';
 
@@ -91,6 +93,9 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
                       remarkPlugins={[remarkGfm, remarkMath]}
                       rehypePlugins={[rehypeRaw, rehypeKatex]}
                       components={{
+                        p({ children }: any) {
+                          return <div className="my-2 last:mb-0 leading-relaxed text-slate-800">{children}</div>;
+                        },
                         mark({ children }) {
                           return (
                             <mark className="bg-amber-100/90 text-amber-950 font-semibold px-1.5 py-0.5 rounded border-b border-amber-300/80 shadow-2xs inline-block my-0.5">
@@ -105,6 +110,11 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
                   </div>
                 </div>
               );
+            }
+
+            // Suppress raw ASCII art diagrams so they don't render as ugly text drawings
+            if (!inline && isRawAsciiDiagram(codeString)) {
+              return null;
             }
 
             if (!inline && (match || codeString.includes('\n'))) {
@@ -203,8 +213,11 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
               </h4>
             );
           },
-          p({ children }) {
-            return <p className="my-2.5 last:mb-0 leading-relaxed text-slate-700">{children}</p>;
+          p({ children }: any) {
+            return <div className="my-2.5 last:mb-0 leading-relaxed text-slate-700">{children}</div>;
+          },
+          img({ src, alt }: any) {
+            return <DiagramImageCard src={src} alt={alt} />;
           },
           strong({ children }) {
             return <strong className="font-bold text-slate-900">{children}</strong>;
@@ -225,6 +238,195 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
       >
         {processedContent}
       </ReactMarkdown>
+    </div>
+  );
+};
+
+/**
+ * Detects ASCII art diagrams (like text drawings of prism, rainbow, optics, etc.) to prevent ugly text rendering
+ */
+function isRawAsciiDiagram(code: string): boolean {
+  if (!code || code.length < 25) return false;
+  const lines = code.split('\n');
+  if (lines.length < 3) return false;
+
+  let graphicLineCount = 0;
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    // Lines that look like schematic drawings: e.g. \  |  /, / \ , |  |, +---+
+    if (
+      /^[\\/\s|_.+\-=#*~^<>():;@]+$/.test(trimmed) ||
+      /[\\/|]{2,}/.test(trimmed) ||
+      /\s*(\\|\/|\|)\s+(\\|\/|\|)/.test(trimmed) ||
+      /[┌┐└┘├┤┬┴┼─│═║╔╗╚╝]/.test(trimmed)
+    ) {
+      graphicLineCount++;
+    }
+  }
+
+  // Ensure actual programming code (JS, TS, HTML, CSS, Python, C++, etc.) is not flagged
+  const isActualProgram = /\b(const|let|var|function|import|export|class|def|return|interface|type|public|private|void|if\s*\(|for\s*\(|<[a-zA-Z0-9]+>)\b/.test(code);
+  return !isActualProgram && (graphicLineCount >= 4 || (graphicLineCount >= 3 && lines.length <= 8));
+}
+
+/**
+ * Diagram and Educational Image Card with Zoom, Download & High-Res View
+ */
+const DiagramImageCard: React.FC<{ src?: string; alt?: string }> = ({ src, alt }) => {
+  const [currentSrc, setCurrentSrc] = useState(src || '');
+  const [isZoomed, setIsZoomed] = useState(false);
+  const [hasError, setHasError] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (src) {
+      setCurrentSrc(src);
+      setHasError(false);
+    }
+  }, [src]);
+
+  if (!currentSrc || hasError) return null;
+
+  const handleDownload = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const a = document.createElement('a');
+    a.href = currentSrc;
+    a.download = `${(alt || 'diagram').replace(/[^a-zA-Z0-9_-]/g, '_')}.png`;
+    a.target = '_blank';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
+  const handleCopyLink = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await navigator.clipboard.writeText(currentSrc);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {}
+  };
+
+  const handleImageError = () => {
+    // If direct image URL failed (e.g. CORS/referrer limit), try our backend proxy
+    if (currentSrc && !currentSrc.startsWith('/api/diagram/proxy') && currentSrc.startsWith('http')) {
+      setCurrentSrc(`/api/diagram/proxy?url=${encodeURIComponent(currentSrc)}`);
+    } else {
+      setHasError(true);
+    }
+  };
+
+  return (
+    <div className="my-4 rounded-2xl overflow-hidden border border-slate-200 bg-white shadow-xs transition-all hover:shadow-md">
+      {/* Diagram Top Bar */}
+      <div className="px-3.5 py-2 bg-slate-50/90 border-b border-slate-100 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="w-2 h-2 rounded-full bg-indigo-600 shrink-0" />
+          <span className="text-xs font-bold text-slate-800 truncate">
+            {alt || 'Educational Working Diagram'}
+          </span>
+          <span className="px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 text-[10px] font-semibold border border-indigo-200 shrink-0">
+            Google Web Visual
+          </span>
+        </div>
+        <div className="flex items-center gap-1.5 shrink-0">
+          <button
+            type="button"
+            onClick={handleCopyLink}
+            className="p-1.5 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-slate-100 transition-colors"
+            title="Copy visual link"
+          >
+            {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+          </button>
+          <button
+            type="button"
+            onClick={handleDownload}
+            className="p-1.5 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-slate-100 transition-colors"
+            title="Download diagram image"
+          >
+            <Download className="w-3.5 h-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsZoomed(true)}
+            className="p-1.5 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-slate-100 transition-colors"
+            title="Zoom Full Screen"
+          >
+            <Eye className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </div>
+
+      {/* Diagram Picture Canvas */}
+      <div
+        className="relative bg-slate-950/95 flex items-center justify-center p-2 sm:p-4 cursor-pointer group"
+        onClick={() => setIsZoomed(true)}
+      >
+        <img
+          src={currentSrc}
+          alt={alt || 'Working Diagram'}
+          referrerPolicy="no-referrer"
+          onError={handleImageError}
+          className="max-h-96 w-auto max-w-full object-contain rounded-lg transition-transform duration-200 group-hover:scale-[1.01]"
+        />
+        <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+          <span className="px-3 py-1.5 rounded-full bg-black/80 text-white text-xs font-semibold backdrop-blur-sm flex items-center gap-1.5 shadow-lg">
+            <Eye className="w-3.5 h-3.5" /> Tap / Click to Full Zoom
+          </span>
+        </div>
+      </div>
+
+      {/* Caption description */}
+      <div className="px-3.5 py-2 bg-slate-50/70 border-t border-slate-100 text-[11px] text-slate-500 flex items-center justify-between gap-2">
+        <span className="truncate">{alt || 'Working architecture and mechanism diagram'}</span>
+        <span className="text-emerald-700 font-semibold shrink-0 flex items-center gap-1">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
+          Verified Educational Diagram
+        </span>
+      </div>
+
+      {/* Full screen zoom modal */}
+      {isZoomed && (
+        <div
+          className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-3 sm:p-6 animate-fadeIn"
+          onClick={() => setIsZoomed(false)}
+        >
+          <div
+            className="relative max-w-5xl max-h-[92vh] flex flex-col items-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setIsZoomed(false)}
+              className="absolute -top-11 right-0 text-white/80 hover:text-white p-1 cursor-pointer"
+              title="Close zoom"
+            >
+              <X className="w-6 h-6" />
+            </button>
+            <img
+              src={src}
+              alt={alt || 'Diagram'}
+              referrerPolicy="no-referrer"
+              className="max-h-[80vh] w-auto max-w-full object-contain rounded-2xl shadow-2xl bg-slate-900 border border-white/10"
+            />
+            <div className="mt-3 flex items-center gap-3">
+              <button
+                onClick={handleDownload}
+                className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold flex items-center gap-1.5 shadow-lg cursor-pointer"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Download High-Resolution</span>
+              </button>
+              <button
+                onClick={() => setIsZoomed(false)}
+                className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-semibold transition-colors cursor-pointer"
+              >
+                Close Preview
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -255,32 +457,8 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ language, meta, value, onPreview,
   const rawLang = (language || 'text').toLowerCase();
   const ext = getExtensionFromLanguage(rawLang);
 
-  // Detect filename from meta or top comment or convention
-  let filename = '';
-  if (meta && meta.includes('.')) {
-    filename = meta.trim().split(/\s+/)[0];
-  } else {
-    const firstLine = currentCode.split('\n')[0]?.trim() || '';
-    const fileCommentMatch = firstLine.match(/^(?:\/\/|#|<!--|\/\*)\s*([\w\-\.\/]+\.[a-zA-Z0-9]+)/);
-    if (fileCommentMatch) {
-      filename = fileCommentMatch[1].split('/').pop() || fileCommentMatch[1];
-    } else {
-      filename =
-        ext === 'html'
-          ? 'index.html'
-          : ext === 'css'
-          ? 'styles.css'
-          : ext === 'py'
-          ? 'main.py'
-          : ext === 'json'
-          ? currentCode.includes('"pack"')
-            ? 'pack.mcmeta'
-            : 'data.json'
-          : ext === 'md'
-          ? 'README.md'
-          : `script.${ext}`;
-    }
-  }
+  // Detect standard official filename (e.g. index.html, style.css, script.js, main.py, package.json)
+  const filename = resolveOfficialCodeFileName(rawLang, currentCode, meta);
 
   // Ensure clean filename
   const cleanName = filename.replace(/[^a-zA-Z0-9_\-\.]/g, '') || `file.${ext}`;
@@ -406,13 +584,13 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ language, meta, value, onPreview,
           )}
         </div>
 
-        {/* Action Controls: Remake, Download, Preview, Workspace, Copy */}
+        {/* Action Controls: Remake (Desktop only), Download, Preview, Workspace, Copy */}
         <div className="flex items-center gap-1.5 flex-wrap">
-          {/* AI Remake Code Button */}
+          {/* AI Remake Code Button - hidden on mobile as per user request: "jb mobile ke lye code dn to remake na ho bs preview ka and download ka option ho" */}
           <button
             type="button"
             onClick={() => setShowRemakeDrawer((prev) => !prev)}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold text-purple-200 hover:text-white bg-purple-950/80 hover:bg-purple-900 border border-purple-500/40 transition-all shadow-xs active:scale-95 cursor-pointer"
+            className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold text-purple-200 hover:text-white bg-purple-950/80 hover:bg-purple-900 border border-purple-500/40 transition-all shadow-xs active:scale-95 cursor-pointer"
             title="Remake and refactor this code with AI"
           >
             <Wand2 className="w-3.5 h-3.5 text-purple-400" />
@@ -423,17 +601,17 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ language, meta, value, onPreview,
           <button
             type="button"
             onClick={handleDownload}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold text-indigo-200 hover:text-white bg-indigo-950/80 hover:bg-indigo-900 border border-indigo-500/40 transition-all shadow-xs active:scale-95 cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 sm:px-2.5 sm:py-1 rounded-lg text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 sm:text-indigo-200 sm:hover:text-white sm:bg-indigo-950/80 sm:hover:bg-indigo-900 border border-indigo-400/50 sm:border-indigo-500/40 transition-all shadow-xs active:scale-95 cursor-pointer"
             title={`Download ${cleanName} with .${fileExtension} extension`}
           >
             {downloaded ? (
               <>
                 <Check className="w-3.5 h-3.5 text-emerald-400" />
-                <span className="text-emerald-400">Downloaded</span>
+                <span className="text-emerald-400 font-bold">Downloaded</span>
               </>
             ) : (
               <>
-                <Download className="w-3.5 h-3.5 text-indigo-400" />
+                <Download className="w-3.5 h-3.5 text-white sm:text-indigo-400" />
                 <span>Download<span className="hidden xs:inline"> .{fileExtension}</span></span>
               </>
             )}
@@ -444,10 +622,10 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ language, meta, value, onPreview,
             <button
               type="button"
               onClick={handlePreview}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold text-emerald-300 hover:text-white bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-500/40 transition-all shadow-xs active:scale-95 cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-1.5 sm:px-2.5 sm:py-1 rounded-lg text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 sm:text-emerald-300 sm:hover:text-white sm:bg-emerald-950/80 sm:hover:bg-emerald-900 border border-emerald-400/50 sm:border-emerald-500/40 transition-all shadow-xs active:scale-95 cursor-pointer"
               title="Preview rendered code"
             >
-              <Eye className="w-3.5 h-3.5 text-emerald-400" />
+              <Eye className="w-3.5 h-3.5 text-white sm:text-emerald-400" />
               <span>Preview</span>
             </button>
           )}
