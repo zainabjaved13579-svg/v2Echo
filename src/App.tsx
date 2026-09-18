@@ -28,6 +28,7 @@ import { loadUserProfile, hasUserCompletedSetup, syncUserDataToCloud } from './s
 import { loadWorkspaceFiles } from './services/fileStorageService';
 import { speechService, detectScriptLanguage } from './services/speechService';
 import { ECHO_LOGO_URL } from './data/constants';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 
 const STORAGE_KEY_SESSIONS = 'echo_ai_chat_sessions_v1';
 const STORAGE_KEY_SETTINGS = 'echo_ai_chat_settings_v1';
@@ -1015,6 +1016,9 @@ Please carefully examine, understand, and analyze this uploaded document/file an
         isOpen={isDownloadModalOpen}
         onClose={() => setIsDownloadModalOpen(false)}
       />
+
+      {/* Vercel Speed Insights */}
+      <SpeedInsights />
     </div>
   );
 }
