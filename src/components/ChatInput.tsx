@@ -7,7 +7,6 @@ import {
   X,
   Mic,
   MicOff,
-  Image as ImageIcon,
   FileCode,
   FileText,
   AlertCircle,
@@ -17,7 +16,7 @@ import {
 } from 'lucide-react';
 import { ImageAttachment, UploadedFileAttachment, SupportedLanguage } from '../types';
 import { getLanguageConfig } from '../data/languages';
-import { createSpeechRecognition } from '../services/speechService';
+import { createSpeechRecognition, speechService } from '../services/speechService';
 
 const MAX_FILE_SIZE_BYTES = 15 * 1024 * 1024; // 15MB limit
 
@@ -31,7 +30,7 @@ interface ChatInputProps {
   setUseSearchGrounding: (val: boolean | ((prev: boolean) => boolean)) => void;
   selectedLanguage: SupportedLanguage;
   onOpenLanguageModal: () => void;
-  onOpenImageGen: () => void;
+  onOpenImageGen?: () => void;
   onOpenFileWorkspace?: () => void;
   onChangeLanguage?: (lang: SupportedLanguage) => void;
   replyTo?: {
@@ -67,6 +66,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<any>(null);
+  const baseInputRef = useRef<string>('');
 
   const langConfig = getLanguageConfig(selectedLanguage);
 
@@ -78,15 +78,24 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     }
   }, [input]);
 
-  // Voice speech-to-text recording toggle (Supports English & Urdu accents)
+  // Voice speech-to-text recording toggle (Supports English & Urdu accents without text duplication)
   const toggleRecording = () => {
     if (isRecording) {
       if (recognitionRef.current) {
-        recognitionRef.current.stop();
+        try {
+          recognitionRef.current.stop();
+        } catch (e) {}
       }
       setIsRecording(false);
+      baseInputRef.current = input.trim();
       return;
     }
+
+    // Stop any ongoing AI speech playback so mic doesn't pick up speaker sound
+    speechService.stop();
+
+    // Snapshot existing text before voice dictation
+    baseInputRef.current = input.trim();
 
     // Determine speech recognition language (English or Urdu)
     const recLang = selectedLanguage === 'ur' ? 'ur' : selectedLanguage === 'hi' ? 'hi' : 'en';
@@ -94,12 +103,15 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     const recognition = createSpeechRecognition(
       recLang,
       (transcript) => {
-        setInput((prev) => (prev ? `${prev} ${transcript}` : transcript));
+        const base = baseInputRef.current;
+        const full = base ? `${base} ${transcript}` : transcript;
+        setInput(full);
       },
       () => {
         setIsRecording(false);
       },
-      () => {
+      (err) => {
+        console.warn('Speech recognition ended/error:', err);
         setIsRecording(false);
       }
     );
@@ -427,6 +439,38 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               title="Remove screenshot"
             >
               <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
+        {/* Active Voice Listening Banner with Animated Soundwave */}
+        {isRecording && (
+          <div className="mx-3 mt-2.5 p-2.5 bg-rose-50 border border-rose-200 rounded-xl flex items-center justify-between gap-3 animate-fadeIn shadow-2xs">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-7 h-7 rounded-lg bg-rose-600 text-white flex items-center justify-center shrink-0 animate-pulse">
+                <Mic className="w-4 h-4" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-bold text-rose-900 flex items-center gap-1.5">
+                  <span>Listening ({selectedLanguage === 'ur' ? 'اردو / Urdu' : 'English'})...</span>
+                  <span className="flex items-center gap-0.5">
+                    <span className="w-1 h-3 bg-rose-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <span className="w-1 h-4 bg-rose-600 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <span className="w-1 h-2 bg-rose-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                  </span>
+                </p>
+                <p className="text-[11px] text-rose-700 truncate">
+                  Speak now — words are recorded clearly without repetition.
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={toggleRecording}
+              className="px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold cursor-pointer shrink-0 active:scale-95 transition-all shadow-2xs"
+              title="Finish listening"
+            >
+              Done
             </button>
           </div>
         )}

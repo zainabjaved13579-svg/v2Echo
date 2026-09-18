@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Menu,
   Sparkles,
@@ -13,10 +13,12 @@ import {
   FolderCode,
   Image as ImageIcon,
   MoreVertical,
-  User
+  User,
+  VolumeX
 } from 'lucide-react';
 import { ChatSession, UserProfile } from '../types';
 import { ECHO_LOGO_URL } from '../data/constants';
+import { speechService } from '../services/speechService';
 
 interface ChatHeaderProps {
   currentSession: ChatSession;
@@ -29,7 +31,7 @@ interface ChatHeaderProps {
   onOpenSettings: () => void;
   onOpenFileManager: () => void;
   onOpenFileWorkspace?: () => void;
-  onOpenImageGen: () => void;
+  onOpenImageGen?: () => void;
   onOpenGetApp?: () => void;
   onExportChat: (format: 'markdown' | 'json') => void;
   onGoHome?: () => void;
@@ -54,6 +56,14 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleInput, setTitleInput] = useState(currentSession.title);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+
+  useEffect(() => {
+    const unsub = speechService.subscribe((state) => {
+      setIsSpeaking(state.isSpeaking);
+    });
+    return () => unsub();
+  }, []);
 
   const handleSaveTitle = () => {
     if (titleInput.trim()) {
@@ -143,6 +153,19 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
 
       {/* Right section: Responsive, clean, uncluttered action buttons */}
       <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+        {/* Stop Voice button when speech is playing */}
+        {isSpeaking && (
+          <button
+            id="header-stop-voice-btn"
+            onClick={() => speechService.stop()}
+            className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold animate-pulse transition-all active:scale-95 cursor-pointer shadow-xs"
+            title="Stop Gemini voice speech"
+          >
+            <VolumeX className="w-3.5 h-3.5 text-white" />
+            <span className="hidden xs:inline">Stop Voice</span>
+          </button>
+        )}
+
         {/* Get App Button */}
         {onOpenGetApp && (
           <button

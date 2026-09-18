@@ -10,7 +10,7 @@ import {
   Check,
   Key,
   Code2,
-  Image as ImageIcon
+  Volume2
 } from 'lucide-react';
 import { AppSettings } from '../types';
 import { AVAILABLE_MODELS } from '../data/personas';
@@ -184,13 +184,34 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             />
           </div>
 
-          {/* Dedicated API Keys Configuration (DeepSeek for Code & ChatGPT for Images) */}
+          {/* Voice & Auto-Speak Response Settings */}
+          <div className="p-4 rounded-2xl bg-indigo-50/50 border border-indigo-100/80 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center shrink-0">
+                <Volume2 className="w-4 h-4" />
+              </div>
+              <div>
+                <p className="font-semibold text-slate-800 text-xs">Auto-Speak AI Answers</p>
+                <p className="text-[11px] text-slate-500">AI automatically speaks out responses in natural human speech (English, Urdu, Hindi)</p>
+              </div>
+            </div>
+            <input
+              type="checkbox"
+              checked={formData.autoSpeakResponses}
+              onChange={(e) =>
+                setFormData({ ...formData, autoSpeakResponses: e.target.checked })
+              }
+              className="w-4 h-4 accent-indigo-600 rounded cursor-pointer"
+            />
+          </div>
+
+          {/* Dedicated API Keys Configuration (DeepSeek for Code & Gemini) */}
           <div className="space-y-3.5 p-4 rounded-2xl bg-gradient-to-br from-slate-50 via-indigo-50/30 to-purple-50/20 border border-slate-200 shadow-2xs">
             <div className="flex items-center gap-2 pb-1 border-b border-slate-200/80">
               <Key className="w-4 h-4 text-indigo-600" />
               <div>
                 <h3 className="text-xs font-bold text-slate-900">Custom AI Engine API Keys</h3>
-                <p className="text-[11px] text-slate-500">Enable DeepSeek for code generation and ChatGPT / OpenAI for images</p>
+                <p className="text-[11px] text-slate-500">Enable DeepSeek for high-speed code generation & reasoning</p>
               </div>
             </div>
 
@@ -217,32 +238,6 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               />
               <p className="text-[10px] text-slate-400">
                 Used to generate, remake, and edit multi-file code via DeepSeek V3 / Coder.
-              </p>
-            </div>
-
-            {/* OpenAI / ChatGPT API Key */}
-            <div className="space-y-1.5 pt-1">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-semibold text-slate-800 flex items-center gap-1.5">
-                  <ImageIcon className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>OpenAI / ChatGPT API Key</span>
-                  <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-emerald-100 text-emerald-800 font-medium">
-                    🎨 ChatGPT & DALL-E 3 Images
-                  </span>
-                </label>
-                {formData.openaiApiKey && (
-                  <span className="text-[10px] text-emerald-600 font-medium">Configured</span>
-                )}
-              </div>
-              <input
-                type="password"
-                placeholder="sk-proj-..."
-                value={formData.openaiApiKey || ''}
-                onChange={(e) => setFormData({ ...formData, openaiApiKey: e.target.value })}
-                className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 font-mono text-slate-800"
-              />
-              <p className="text-[10px] text-slate-400">
-                Used to synthesize photorealistic images using OpenAI DALL-E 3 and ChatGPT image models.
               </p>
             </div>
 

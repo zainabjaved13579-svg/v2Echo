@@ -3,7 +3,7 @@ import path from 'path';
 import fs from 'fs';
 import dotenv from 'dotenv';
 import { GoogleGenAI } from '@google/genai';
-import { generateEchoFallbackResponse } from './src/services/echoEngine.ts';
+import { generateEchoFallbackResponse } from './src/services/echoEngine';
 
 dotenv.config();
 
@@ -666,9 +666,9 @@ app.post('/api/chat/stream', async (req, res) => {
   const isBasicGreeting = /^(hi|hello|hey|salam|assalam|aoa|hola|sup|good morning|good evening|good afternoon)[\s!.]*$/i.test(lastUserText);
   if (isBasicGreeting) {
     const greetingReplies = [
-      "Hello! I'm Echo AI, your principal AI software architect and coding assistant. What can I build, code, or create for you today?",
-      "Hi there! Echo AI is ready. Whether you need full-stack web code, bug fixes, or AI image generation, let's get started!",
-      "Hey! Echo AI here, running fast and ready. What project or code are we working on?"
+      "Hello! I'm Echo AI, your principal AI software architect and coding assistant. What can I build, code, or solve for you today?",
+      "Hi there! Echo AI is ready. Whether you need full-stack web code, bug fixes, or rapid answers, let's get started!",
+      "Hey! Echo AI here, running fast and ready. What project or question are we working on?"
     ];
     const reply = greetingReplies[Math.floor(Math.random() * greetingReplies.length)];
     const words = reply.split(' ');
@@ -732,7 +732,15 @@ CODING & MULTI-FILE PROJECT STANDARDS (CRITICAL):
    - At the end, provide brief, crystal-clear setup/execution instructions.
 
 4. ACCURACY & INTELLECT:
-   - Think deeply, eliminate bugs, handle edge cases, and ensure clean modern architecture.`;
+   - Think deeply, eliminate bugs, handle edge cases, and ensure clean modern architecture.
+
+5. LANGUAGE & NATURAL CONVERSATION EXCELLENCE:
+   - Match the user's language naturally and fluently:
+     • If the user writes in English, reply in polished, articulate, professional English.
+     • If the user writes in Urdu script (اردو), reply in fluent, grammatically accurate Urdu Nastaliq.
+     • If the user writes in Roman Urdu (e.g. "kese ho", "batao", "mujhe yeh chahiye"), reply in clean, natural Roman Urdu that is easy to read and understand.
+     • If the user writes in Hindi, reply in fluent, respectful Hindi.
+   - Speak with warmth, polite intelligence, clarity, and precision. Answers should sound melodious, natural, and clear when read aloud via voice speech synthesis. Avoid robotic phrases.`;
       const combinedInstruction = effectiveSystemInstruction && typeof effectiveSystemInstruction === 'string' && effectiveSystemInstruction.trim()
         ? `${baseOwnerInstruction}\n\n${effectiveSystemInstruction.trim()}`
         : baseOwnerInstruction;
@@ -2689,11 +2697,41 @@ Return ONLY the prompt text, no quotes, no markdown.`;
   });
 });
 
-// Fast Human-like TTS Voice endpoint with auto Urdu/English detection & real studio voice
+// Helper: Convert raw 16-bit Mono Linear PCM to standard WAV buffer for instant browser audio playback
+function pcmToWavBuffer(pcmBuffer: Buffer, sampleRate = 24000, numChannels = 1, bitsPerSample = 16): Buffer {
+  const byteRate = sampleRate * numChannels * (bitsPerSample / 8);
+  const blockAlign = numChannels * (bitsPerSample / 8);
+  const dataSize = pcmBuffer.length;
+  const header = Buffer.alloc(44);
+
+  // 'RIFF' chunk
+  header.write('RIFF', 0);
+  header.writeUInt32LE(dataSize + 36, 4);
+  header.write('WAVE', 8);
+
+  // 'fmt ' subchunk
+  header.write('fmt ', 12);
+  header.writeUInt32LE(16, 16); // 16 for PCM format
+  header.writeUInt16LE(1, 20); // 1 = Linear PCM
+  header.writeUInt16LE(numChannels, 22);
+  header.writeUInt32LE(sampleRate, 24);
+  header.writeUInt32LE(byteRate, 28);
+  header.writeUInt16LE(blockAlign, 32);
+  header.writeUInt16LE(bitsPerSample, 34);
+
+  // 'data' subchunk
+  header.write('data', 36);
+  header.writeUInt32LE(dataSize, 40);
+
+  return Buffer.concat([header, pcmBuffer]);
+}
+
+// Fast Human-like TTS Voice endpoint with Official Gemini TTS (gemini-3.1-flash-tts-preview) & Studio Fallback
 const handleTts = async (req: express.Request, res: express.Response) => {
   try {
     const rawText = (((req.query.text || req.body?.text) as string) || '').trim();
     const reqLang = (((req.query.lang || req.body?.lang) as string) || 'auto').toLowerCase();
+    const reqVoice = (((req.query.voice || req.body?.voice) as string) || 'Kore');
 
     if (!rawText) {
       res.status(400).send('Text is required');
@@ -2731,7 +2769,66 @@ const handleTts = async (req: express.Request, res: express.Response) => {
       targetLang = isUrdu ? 'ur' : 'en';
     }
 
-    // Split into sentences / clauses
+    const customApiKey =
+      (req.headers['x-gemini-api-key'] as string) ||
+      (req.headers['x-gemni-api-key'] as string) ||
+      (req.query?.apiKey as string) ||
+      req.body?.apiKey ||
+      '';
+    const apiKey =
+      customApiKey ||
+      process.env.GEMNI_API_KEY ||
+      process.env.GEMINI_API_KEY ||
+      process.env.VITE_GEMNI_API_KEY ||
+      process.env.VITE_GEMINI_API_KEY;
+
+    // 1. PRIMARY: Gemini Official Human Studio Voice (gemini-3.1-flash-tts-preview)
+    if (apiKey) {
+      try {
+        const ai = new GoogleGenAI({
+          apiKey,
+          httpOptions: { headers: { 'User-Agent': 'aistudio-build' } }
+        });
+
+        const validVoices = ['Kore', 'Puck', 'Zephyr', 'Charon', 'Fenrir'];
+        const chosenVoice = validVoices.find((v) => v.toLowerCase() === reqVoice.toLowerCase()) || 'Kore';
+
+        // Limit speech slice for low-latency generation (up to 1200 chars)
+        const speechSnippet = clean.slice(0, 1200);
+
+        const ttsResponse = await ai.models.generateContent({
+          model: 'gemini-3.1-flash-tts-preview',
+          contents: [{ parts: [{ text: speechSnippet }] }],
+          config: {
+            responseModalities: ['AUDIO'],
+            speechConfig: {
+              voiceConfig: {
+                prebuiltVoiceConfig: { voiceName: chosenVoice }
+              }
+            }
+          }
+        });
+
+        const base64Audio = ttsResponse.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+        if (base64Audio) {
+          const rawPcm = Buffer.from(base64Audio, 'base64');
+          const wavAudio = pcmToWavBuffer(rawPcm, 24000, 1, 16);
+
+          res.setHeader('Content-Type', 'audio/wav');
+          res.setHeader('Content-Length', wavAudio.length);
+          res.setHeader('Cache-Control', 'public, max-age=86400');
+          res.setHeader('X-TTS-Engine', 'gemini-3.1-flash-tts-preview');
+          res.setHeader('X-Voice-Name', chosenVoice);
+          res.setHeader('X-Detected-Language', targetLang);
+          res.send(wavAudio);
+          return;
+        }
+      } catch (geminiTtsErr: any) {
+        console.warn('Gemini 3.1 Flash TTS fallback notice:', geminiTtsErr?.message || geminiTtsErr);
+      }
+    }
+
+    // 2. SECONDARY FALLBACK: Google Studio Voice Stream
     const segments: string[] = [];
     const rawSentences = clean.split(/(?<=[.!؟۔\n,])/);
 
@@ -2746,10 +2843,8 @@ const handleTts = async (req: express.Request, res: express.Response) => {
     }
     if (currentSegment) segments.push(currentSegment);
 
-    // Support up to 10 segments for natural long voice playback
     const activeSegments = segments.slice(0, 10);
 
-    // Fetch segments in parallel for fast low-latency streaming
     const fetchPromises = activeSegments
       .filter((s) => s.trim())
       .map(async (seg) => {

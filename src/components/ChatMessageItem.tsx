@@ -48,14 +48,12 @@ interface ChatMessageItemProps {
   onOpenFileWorkspace?: (fileId?: string) => void;
   onOpenFileInManager?: (fileId?: string) => void;
   onReply?: (message: ChatMessage) => void;
-  onEditImage?: (imageUrl: string, prompt?: string) => void;
 }
 
 const GeneratedVisualCard: React.FC<{
   imgUrl: string;
   prompt?: string;
-  onEditImage?: (imageUrl: string, prompt?: string) => void;
-}> = ({ imgUrl, prompt, onEditImage }) => {
+}> = ({ imgUrl, prompt }) => {
   const [src, setSrc] = useState(imgUrl);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
@@ -158,20 +156,6 @@ const GeneratedVisualCard: React.FC<{
         {!isLoading && !hasError && (
           <>
             <div className="absolute top-2.5 right-2.5 flex items-center gap-1.5 opacity-0 group-hover/genimg:opacity-100 transition-opacity">
-              {onEditImage && (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onEditImage(src, prompt);
-                  }}
-                  className="p-2 rounded-xl bg-purple-600/90 hover:bg-purple-600 text-white text-xs backdrop-blur-md flex items-center gap-1.5 shadow-lg border border-purple-400/40 transition-all active:scale-95 cursor-pointer"
-                  title="Edit this visual with text prompts (gemini-3.1-flash-image-preview)"
-                >
-                  <Sparkles className="w-3.5 h-3.5" />
-                  <span className="text-[11px] font-medium">Edit Image</span>
-                </button>
-              )}
               <button
                 type="button"
                 onClick={handleDownload}
@@ -207,18 +191,6 @@ const GeneratedVisualCard: React.FC<{
               className="max-h-[80vh] w-auto rounded-2xl object-contain shadow-2xl border border-white/10"
             />
             <div className="mt-3 flex items-center gap-3">
-              {onEditImage && (
-                <button
-                  onClick={() => {
-                    setIsZoomed(false);
-                    onEditImage(src, prompt);
-                  }}
-                  className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold flex items-center gap-2 shadow-lg cursor-pointer transition-all active:scale-95"
-                >
-                  <Sparkles className="w-4 h-4" />
-                  <span>Edit Image with Gemini</span>
-                </button>
-              )}
               <button
                 onClick={handleDownload}
                 className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center gap-2 shadow-lg cursor-pointer"
@@ -249,8 +221,7 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
   onPreviewCode,
   onOpenFileWorkspace,
   onOpenFileInManager,
-  onReply,
-  onEditImage
+  onReply
 }) => {
   const activeProfile = userProfile || loadUserProfile();
   const userName = activeProfile?.name && activeProfile.name.trim() ? activeProfile.name.trim() : 'You';
@@ -622,20 +593,6 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
                       <Maximize2 className="w-3.5 h-3.5" />
                       <span>View</span>
                     </button>
-                    {onEditImage && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const src = message.image?.dataUrl || `data:${message.image?.mimeType};base64,${message.image?.base64}`;
-                          onEditImage(src, message.image?.name || 'Edit this image');
-                        }}
-                        className="p-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold flex items-center gap-1 shadow-md pointer-events-auto transition-colors cursor-pointer"
-                        title="Edit this image with text prompts (gemini-3.1-flash-image-preview)"
-                      >
-                        <Sparkles className="w-3.5 h-3.5" />
-                        <span>Edit with Gemini</span>
-                      </button>
-                    )}
                   </div>
                   {message.image.name && (
                     <div className="px-2.5 py-1 bg-slate-900/75 backdrop-blur-xs text-[10px] text-white flex items-center gap-1.5 font-medium">
@@ -656,7 +613,6 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
                       key={idx}
                       imgUrl={imgUrl}
                       prompt={message.generatedImagePrompt}
-                      onEditImage={onEditImage}
                     />
                   ))}
                 </div>
@@ -950,6 +906,79 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
                     <Reply className="w-3.5 h-3.5 text-slate-500" />
                     <span className="hidden sm:inline font-medium">Reply</span>
                   </button>
+                )}
+
+                {/* 4. Speaker Button: Read aloud with human Gemini voice */}
+                {!isUser && (
+                  <button
+                    id={`speak-msg-${message.id}`}
+                    onClick={handleToggleSpeech}
+                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs transition-all active:scale-95 cursor-pointer touch-manipulation shadow-2xs ${
+                      isSpeakingThis
+                        ? 'bg-indigo-600 text-white font-semibold shadow-xs ring-2 ring-indigo-300 animate-pulse'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200/80'
+                    }`}
+                    title={isSpeakingThis ? 'Stop speaking' : 'Read aloud with human Gemini voice'}
+                    aria-label={isSpeakingThis ? 'Stop voice' : 'Listen with Gemini voice'}
+                  >
+                    {isSpeakingThis ? (
+                      <>
+                        <VolumeX className="w-3.5 h-3.5 text-white" />
+                        <span className="font-semibold text-white">Stop Voice</span>
+                      </>
+                    ) : (
+                      <>
+                        <Volume2 className="w-3.5 h-3.5 text-indigo-600" />
+                        <span className="hidden sm:inline font-medium">Listen Voice</span>
+                      </>
+                    )}
+                  </button>
+                )}
+
+                {/* 5. Translate & Listen (Urdu <-> English) */}
+                {!isUser && (
+                  <button
+                    id={`translate-speak-msg-${message.id}`}
+                    onClick={handleTranslateAndSpeak}
+                    disabled={isTranslating}
+                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs transition-all active:scale-95 cursor-pointer touch-manipulation shadow-2xs ${
+                      isSpeakingTranslation
+                        ? 'bg-emerald-600 text-white font-semibold ring-2 ring-emerald-300 animate-pulse'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200/80'
+                    }`}
+                    title={
+                      isSpeakingTranslation
+                        ? 'Stop voice'
+                        : detectedIsUrdu
+                        ? 'Translate to English & Speak'
+                        : 'Translate to Urdu (اردو) & Speak'
+                    }
+                  >
+                    <Languages className="w-3.5 h-3.5 text-emerald-600" />
+                    <span className="hidden sm:inline font-medium">
+                      {isTranslating
+                        ? 'Translating...'
+                        : isSpeakingTranslation
+                        ? 'Stop Voice'
+                        : detectedIsUrdu
+                        ? 'English Voice'
+                        : 'اردو Voice'}
+                    </span>
+                  </button>
+                )}
+
+                {/* Active Speaking Indicator */}
+                {(isSpeakingThis || isSpeakingTranslation) && (
+                  <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-700 text-[11px] font-medium animate-fadeIn ml-auto">
+                    <span className="flex items-center gap-0.5">
+                      <span className="w-1 h-2 bg-indigo-600 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                      <span className="w-1 h-3.5 bg-indigo-600 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                      <span className="w-1 h-1.5 bg-indigo-600 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                    </span>
+                    <span className="font-medium">
+                      {isSpeakingTranslation ? 'Gemini Translation Voice' : 'Gemini Voice'}
+                    </span>
+                  </div>
                 )}
               </div>
             )}

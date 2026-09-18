@@ -21,18 +21,12 @@ import { SettingsModal } from './components/SettingsModal';
 import { FileWorkspaceModal } from './components/FileWorkspaceModal';
 import { FileManagerModal } from './components/FileManagerModal';
 import { CodePreviewModal } from './components/CodePreviewModal';
-import { GenerateImageModal } from './components/GenerateImageModal';
 import { LanguageSelectorModal } from './components/LanguageSelectorModal';
 import { DownloadModal } from './components/DownloadModal';
 import { UserProfileModal } from './components/UserProfileModal';
 import { loadUserProfile, hasUserCompletedSetup, syncUserDataToCloud } from './services/userService';
 import { loadWorkspaceFiles } from './services/fileStorageService';
-import {
-  isImageGenerationPrompt,
-  isImageEditPrompt,
-  generateAiImage,
-  editAiImage
-} from './services/imageService';
+import { speechService, detectScriptLanguage } from './services/speechService';
 import { ECHO_LOGO_URL } from './data/constants';
 
 const STORAGE_KEY_SESSIONS = 'echo_ai_chat_sessions_v1';
@@ -45,7 +39,7 @@ const DEFAULT_SETTINGS: AppSettings = {
   defaultPersonaId: 'general',
   enableSearchGrounding: false,
   selectedLanguage: 'auto',
-  autoSpeakResponses: false,
+  autoSpeakResponses: true,
   ttsSpeed: 1.0,
   ttsPitch: 1.0
 };
@@ -120,10 +114,6 @@ export default function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isPersonaModalOpen, setIsPersonaModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
-  const [isImageModalOpen, setIsImageModalOpen] = useState(false);
-  const [imageModalImage, setImageModalImage] = useState<string | undefined>();
-  const [imageModalPrompt, setImageModalPrompt] = useState<string>('');
-  const [imageModalTab, setImageModalTab] = useState<'create' | 'edit'>('create');
   const [isLanguageModalOpen, setIsLanguageModalOpen] = useState(false);
   const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
   const [isStartingScreen, setIsStartingScreen] = useState<boolean>(true);
@@ -154,13 +144,6 @@ export default function App() {
       return () => clearTimeout(timer);
     }
   }, [sessions, currentUserProfile]);
-
-  const handleOpenImageEditor = (imgUrl: string, promptText?: string) => {
-    setImageModalImage(imgUrl);
-    setImageModalPrompt(promptText || '');
-    setImageModalTab('edit');
-    setIsImageModalOpen(true);
-  };
 
   // Reply tracking state
   const [replyTo, setReplyTo] = useState<{
@@ -481,146 +464,6 @@ export default function App() {
     setTimeout(() => scrollToBottom('smooth', true), 60);
     setTimeout(() => scrollToBottom('smooth', true), 220);
 
-    // Check if user requested to generate or draw an image (Auto-intent routing)
-    if (!image && !file && isImageGenerationPrompt(promptText)) {
-      const newModelMessage: ChatMessage = {
-        id: modelMessageId,
-        role: 'model',
-        text: 'Generating your visual with neural diffusion...',
-        timestamp: Date.now() + 1,
-        isStreaming: true,
-        modelUsed: 'echo-imagen-flux'
-      };
-
-      const updatedMessages = [...baseHistory, newUserMessage];
-      updateSessionById(targetSessionId, (s) => ({
-        ...s,
-        title: sessionTitle,
-        messages: [...updatedMessages, newModelMessage],
-        updatedAt: Date.now()
-      }));
-
-      setIsLoading(true);
-      isAutoScrollRef.current = true;
-      scrollToBottom('smooth', true);
-
-      try {
-        const startImgTime = performance.now();
-        const imgResult = await generateAiImage({ prompt: promptText });
-        const durationMs = Math.max(1, Math.round(performance.now() - startImgTime));
-
-        updateSessionById(targetSessionId, (s) => ({
-          ...s,
-          messages: s.messages.map((m) =>
-            m.id === modelMessageId
-              ? {
-                  ...m,
-                  text: imgResult.quotaNotice
-                    ? `Here is your visual for **"${imgResult.prompt}"**:\n\n> ℹ️ *${imgResult.quotaNotice}*`
-                    : `Here is your visual for **"${imgResult.prompt}"**:`,
-                  generatedImages: imgResult.images,
-                  generatedImagePrompt: imgResult.prompt,
-                  isStreaming: false,
-                  stats: { durationMs, charsCount: 0, charsPerSec: 0 }
-                }
-              : m
-          ),
-          updatedAt: Date.now()
-        }));
-        scrollToBottom('smooth', true);
-      } catch (imgErr: any) {
-        updateSessionById(targetSessionId, (s) => ({
-          ...s,
-          messages: s.messages.map((m) =>
-            m.id === modelMessageId
-              ? {
-                  ...m,
-                  text: '',
-                  error: 'Image generation could not complete. Please try another prompt.',
-                  isStreaming: false
-                }
-              : m
-          )
-        }));
-      } finally {
-        setIsLoading(false);
-        scrollToBottom('smooth', true);
-      }
-      return;
-    }
-
-    // Check if user requested to edit an attached image with text instruction (gemini-3.1-flash-image-preview)
-    if (image && isImageEditPrompt(promptText)) {
-      const newModelMessage: ChatMessage = {
-        id: modelMessageId,
-        role: 'model',
-        text: 'Transforming your image with Gemini...',
-        timestamp: Date.now() + 1,
-        isStreaming: true,
-        modelUsed: 'gemini-3.1-flash-image-preview'
-      };
-
-      const updatedMessages = [...baseHistory, newUserMessage];
-      updateSessionById(targetSessionId, (s) => ({
-        ...s,
-        title: sessionTitle,
-        messages: [...updatedMessages, newModelMessage],
-        updatedAt: Date.now()
-      }));
-
-      setIsLoading(true);
-      isAutoScrollRef.current = true;
-      scrollToBottom('smooth', true);
-
-      try {
-        const startImgTime = performance.now();
-        const imgSrc = image.dataUrl || `data:${image.mimeType};base64,${image.base64}`;
-        const editResult = await editAiImage({
-          image: imgSrc,
-          prompt: promptText
-        });
-        const durationMs = Math.max(1, Math.round(performance.now() - startImgTime));
-
-        updateSessionById(targetSessionId, (s) => ({
-          ...s,
-          messages: s.messages.map((m) =>
-            m.id === modelMessageId
-              ? {
-                  ...m,
-                  text: editResult.quotaNotice
-                    ? `Here is your edited visual for **"${editResult.prompt}"**:\n\n> ℹ️ *${editResult.quotaNotice}*`
-                    : `Here is your edited visual for **"${editResult.prompt}"**:`,
-                  generatedImages: editResult.images,
-                  generatedImagePrompt: editResult.prompt,
-                  isStreaming: false,
-                  stats: { durationMs, charsCount: 0, charsPerSec: 0 }
-                }
-              : m
-          ),
-          updatedAt: Date.now()
-        }));
-        scrollToBottom('smooth', true);
-      } catch (editErr: any) {
-        updateSessionById(targetSessionId, (s) => ({
-          ...s,
-          messages: s.messages.map((m) =>
-            m.id === modelMessageId
-              ? {
-                  ...m,
-                  text: '',
-                  error: 'Image editing could not complete. Please try another instruction or format.',
-                  isStreaming: false
-                }
-              : m
-          )
-        }));
-      } finally {
-        setIsLoading(false);
-        scrollToBottom('smooth', true);
-      }
-      return;
-    }
-
     // Normal High-Speed Chat Streaming Mode (with code generation or file rewrite)
     const newModelMessage: ChatMessage = {
       id: modelMessageId,
@@ -771,6 +614,25 @@ Please carefully examine, understand, and analyze this uploaded document/file an
           }));
           scrollToBottom('smooth', true);
           setTimeout(() => scrollToBottom('smooth', true), 100);
+
+          // Auto-speak response if enabled or active (natural human voice in English / Urdu / Hindi)
+          if (settings.autoSpeakResponses && finalText && finalText.trim()) {
+            try {
+              const detectedLang = settings.selectedLanguage === 'auto'
+                ? detectScriptLanguage(finalText)
+                : settings.selectedLanguage || 'auto';
+
+              speechService.speak(finalText, {
+                language: detectedLang,
+                speed: settings.ttsSpeed || 1.0,
+                pitch: settings.ttsPitch || 1.0,
+                voiceName: settings.ttsVoice,
+                messageId: modelMessageId
+              });
+            } catch (ttsErr) {
+              console.warn('Auto-speak response notice:', ttsErr);
+            }
+          }
         },
         onError: (errMessage: string) => {
           console.error('Streaming error caught:', errMessage);
@@ -945,7 +807,6 @@ Please carefully examine, understand, and analyze this uploaded document/file an
                   }));
                 }}
                 onOpenFileWorkspace={() => setIsWorkspaceOpen(true)}
-                onOpenImageGen={() => setIsImageModalOpen(true)}
               />
             </motion.div>
           ) : (
@@ -970,7 +831,6 @@ Please carefully examine, understand, and analyze this uploaded document/file an
                 onOpenSettings={() => setIsSettingsModalOpen(true)}
                 onOpenFileManager={() => handleOpenFileManager()}
                 onOpenFileWorkspace={() => setIsWorkspaceOpen(true)}
-                onOpenImageGen={() => setIsImageModalOpen(true)}
                 onOpenGetApp={() => setIsDownloadModalOpen(true)}
                 onExportChat={handleExportChat}
                 onGoHome={() => setIsStartingScreen(true)}
@@ -1030,7 +890,6 @@ Please carefully examine, understand, and analyze this uploaded document/file an
                         onPreviewCode={handlePreviewCode}
                         onOpenFileWorkspace={() => setIsWorkspaceOpen(true)}
                         onOpenFileInManager={handleOpenFileManager}
-                        onEditImage={handleOpenImageEditor}
                         onReply={(targetMsg) =>
                           setReplyTo({
                             id: targetMsg.id,
@@ -1064,7 +923,6 @@ Please carefully examine, understand, and analyze this uploaded document/file an
                 }}
                 selectedLanguage={settings.selectedLanguage || 'auto'}
                 onOpenLanguageModal={() => setIsLanguageModalOpen(true)}
-                onOpenImageGen={() => setIsImageModalOpen(true)}
                 onOpenFileWorkspace={() => setIsWorkspaceOpen(true)}
                 onChangeLanguage={(lang) => {
                   setSettings((prev) => ({ ...prev, selectedLanguage: lang }));
@@ -1139,23 +997,6 @@ Please carefully examine, understand, and analyze this uploaded document/file an
         language={previewModalState.language}
         filename={previewModalState.filename}
         onOpenFileManager={handleOpenFileManager}
-      />
-
-      {/* Dedicated Working AI Image Generator & Editor Modal */}
-      <GenerateImageModal
-        isOpen={isImageModalOpen}
-        onClose={() => {
-          setIsImageModalOpen(false);
-          setImageModalImage(undefined);
-          setImageModalPrompt('');
-          setImageModalTab('create');
-        }}
-        initialImage={imageModalImage}
-        initialPrompt={imageModalPrompt}
-        initialTab={imageModalTab}
-        onInsertToChat={(imageUrl, prompt) => {
-          handleSendMessage(`Visual Asset: ${prompt}\n\n![${prompt}](${imageUrl})`);
-        }}
       />
 
       {/* Human Voice Language Selector Modal */}

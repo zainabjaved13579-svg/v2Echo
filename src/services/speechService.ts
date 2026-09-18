@@ -1,4 +1,5 @@
 import { SupportedLanguage, getLanguageConfig } from '../data/languages';
+import { getStoredApiKey } from './geminiService';
 
 // Helper: Clean markdown text for human-like speech output
 export function cleanTextForSpeech(text: string): string {
@@ -242,13 +243,14 @@ class SpeechService {
     return voices.find((v) => v.default) || voices[0] || null;
   }
 
-  // Play real human studio audio stream from /api/tts
+  // Play real human studio audio stream from /api/tts (Gemini 3.1 Flash TTS or high-fidelity fallback)
   private async playNativeAudio(
     clean: string,
     lang: string,
     options: {
       messageId?: string;
       speed?: number;
+      voiceName?: string;
       onStart?: () => void;
       onEnd?: () => void;
       onError?: (err: any) => void;
@@ -258,14 +260,21 @@ class SpeechService {
       this.currentMessageId = options.messageId || 'adhoc';
       this.isPaused = false;
 
+      const apiKey = getStoredApiKey();
+      const voice = options.voiceName || 'Kore';
+
       let audioSrc = '';
-      if (clean.length < 400) {
-        audioSrc = `/api/tts?lang=${encodeURIComponent(lang)}&text=${encodeURIComponent(clean)}`;
+      if (clean.length < 350 && !apiKey) {
+        audioSrc = `/api/tts?lang=${encodeURIComponent(lang)}&text=${encodeURIComponent(clean)}&voice=${encodeURIComponent(voice)}`;
       } else {
+        const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+        if (apiKey) {
+          headers['x-gemini-api-key'] = apiKey;
+        }
         const response = await fetch('/api/tts', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: clean, lang })
+          headers,
+          body: JSON.stringify({ text: clean, lang, voice, apiKey })
         });
         if (!response.ok) throw new Error('Failed to fetch audio stream');
         const blob = await response.blob();
@@ -476,7 +485,7 @@ export const speechService = new SpeechService();
 // Speech-to-text recognition helper
 export function createSpeechRecognition(
   langCode: string,
-  onResult: (transcript: string) => void,
+  onResult: (transcript: string, isFinal: boolean) => void,
   onEnd: () => void,
   onError: (err: any) => void
 ) {
@@ -490,8 +499,9 @@ export function createSpeechRecognition(
   }
 
   const recognition = new SpeechRecognition();
-  recognition.continuous = false;
+  recognition.continuous = true;
   recognition.interimResults = true;
+  recognition.maxAlternatives = 1;
 
   // Language mapping
   let recognitionLang = 'en-US';
@@ -503,22 +513,33 @@ export function createSpeechRecognition(
 
   recognition.lang = recognitionLang;
 
+  let accumulatedFinal = '';
+
   recognition.onresult = (event: any) => {
-    let finalTranscript = '';
+    let interim = '';
+    let newlyFinal = '';
     for (let i = event.resultIndex; i < event.results.length; ++i) {
-      if (event.results[i].isFinal) {
-        finalTranscript += event.results[i][0].transcript;
+      const res = event.results[i];
+      if (res.isFinal) {
+        newlyFinal += (newlyFinal ? ' ' : '') + res[0].transcript.trim();
       } else {
-        finalTranscript += event.results[i][0].transcript;
+        interim += res[0].transcript;
       }
     }
-    if (finalTranscript) {
-      onResult(finalTranscript);
+    if (newlyFinal) {
+      accumulatedFinal = (accumulatedFinal ? accumulatedFinal + ' ' : '') + newlyFinal;
+    }
+    const currentTotal = (accumulatedFinal + (interim ? ' ' + interim : '')).trim();
+    if (currentTotal) {
+      onResult(currentTotal, Boolean(newlyFinal && !interim));
     }
   };
 
   recognition.onerror = (event: any) => {
-    console.error('Speech recognition error:', event.error);
+    if (event.error === 'no-speech' || event.error === 'aborted') {
+      return;
+    }
+    console.warn('Speech recognition notice:', event.error);
     onError(event);
   };
 
