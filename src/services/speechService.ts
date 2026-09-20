@@ -482,7 +482,7 @@ class SpeechService {
 
 export const speechService = new SpeechService();
 
-// Speech-to-text recognition helper
+// Speech-to-text recognition helper with smart voice throttle, debounce, and duplicate phrase filtering
 export function createSpeechRecognition(
   langCode: string,
   onResult: (transcript: string, isFinal: boolean) => void,
@@ -500,7 +500,8 @@ export function createSpeechRecognition(
 
   const recognition = new SpeechRecognition();
   recognition.continuous = true;
-  recognition.interimResults = true;
+  // Set interimResults false by default to prevent double-echo triggers, but compute cleanly if browser supports
+  recognition.interimResults = false;
   recognition.maxAlternatives = 1;
 
   // Language mapping
@@ -514,24 +515,79 @@ export function createSpeechRecognition(
   recognition.lang = recognitionLang;
 
   let accumulatedFinal = '';
+  let lastFinalText = '';
+  let lastFinalTimestamp = 0;
+
+  // Smart deduplication helper: removes immediate consecutive duplicates (e.g. "hello echo hello echo")
+  const deduplicateTranscript = (text: string): string => {
+    if (!text) return '';
+    const clean = text.replace(/\s+/g, ' ').trim();
+    const words = clean.split(' ');
+    if (words.length <= 1) return clean;
+
+    // 1. Check if the entire sentence was repeated twice: "A B C A B C"
+    const halfLen = Math.floor(words.length / 2);
+    for (let len = halfLen; len >= 1; len--) {
+      const firstHalf = words.slice(0, len).join(' ').toLowerCase();
+      const secondHalf = words.slice(len, len * 2).join(' ').toLowerCase();
+      if (firstHalf === secondHalf && len * 2 === words.length) {
+        return words.slice(0, len).join(' ');
+      }
+    }
+
+    // 2. Remove immediate duplicate consecutive tokens (e.g., "hello hello" -> "hello")
+    const filtered: string[] = [];
+    for (let i = 0; i < words.length; i++) {
+      if (i === 0 || words[i].toLowerCase() !== words[i - 1].toLowerCase()) {
+        filtered.push(words[i]);
+      }
+    }
+    return filtered.join(' ');
+  };
 
   recognition.onresult = (event: any) => {
     let interim = '';
     let newlyFinal = '';
+    const now = Date.now();
+
     for (let i = event.resultIndex; i < event.results.length; ++i) {
       const res = event.results[i];
-      if (res.isFinal) {
-        newlyFinal += (newlyFinal ? ' ' : '') + res[0].transcript.trim();
-      } else {
-        interim += res[0].transcript;
+      if (res && res[0]) {
+        const chunk = (res[0].transcript || '').trim();
+        if (!chunk) continue;
+
+        if (res.isFinal) {
+          // Throttle identical speech chunks within 800ms
+          const isIdentical = chunk.toLowerCase() === lastFinalText.toLowerCase();
+          const isTooRapid = now - lastFinalTimestamp < 800;
+
+          if (isIdentical && isTooRapid) {
+            continue;
+          }
+
+          lastFinalText = chunk;
+          lastFinalTimestamp = now;
+          newlyFinal += (newlyFinal ? ' ' : '') + chunk;
+        } else {
+          interim += (interim ? ' ' : '') + chunk;
+        }
       }
     }
+
     if (newlyFinal) {
-      accumulatedFinal = (accumulatedFinal ? accumulatedFinal + ' ' : '') + newlyFinal;
+      // Append only if not already ending with this phrase
+      const trimmedFinal = newlyFinal.trim();
+      const currentTrimmed = accumulatedFinal.trim();
+      if (!currentTrimmed.toLowerCase().endsWith(trimmedFinal.toLowerCase())) {
+        accumulatedFinal = (accumulatedFinal ? accumulatedFinal + ' ' : '') + trimmedFinal;
+      }
     }
-    const currentTotal = (accumulatedFinal + (interim ? ' ' + interim : '')).trim();
-    if (currentTotal) {
-      onResult(currentTotal, Boolean(newlyFinal && !interim));
+
+    const rawTotal = (accumulatedFinal + (interim ? ' ' + interim : '')).trim();
+    const cleanTotal = deduplicateTranscript(rawTotal);
+
+    if (cleanTotal) {
+      onResult(cleanTotal, Boolean(newlyFinal && !interim));
     }
   };
 

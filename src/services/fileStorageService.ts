@@ -766,10 +766,10 @@ export async function exportAllFilesAsZip(files: WorkspaceFile[]): Promise<void>
 
   // Add a manifest file
   const manifest = {
-    project: 'Echo AI Workspace',
+    project: 'Sapphire AI Workspace',
     exportedAt: new Date().toISOString(),
     totalFiles: files.length,
-    owner: 'Echo AI',
+    owner: 'Sapphire AI',
     files: files.map((f) => ({
       name: f.name,
       path: f.path,
@@ -784,7 +784,7 @@ export async function exportAllFilesAsZip(files: WorkspaceFile[]): Promise<void>
   const url = URL.createObjectURL(content);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `echo_workspace_export_${new Date().toISOString().slice(0, 10)}.zip`;
+  a.download = `sapphire_workspace_export_${new Date().toISOString().slice(0, 10)}.zip`;
   a.click();
   URL.revokeObjectURL(url);
 }

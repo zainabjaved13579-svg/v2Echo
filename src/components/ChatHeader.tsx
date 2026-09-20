@@ -17,7 +17,7 @@ import {
   VolumeX
 } from 'lucide-react';
 import { ChatSession, UserProfile } from '../types';
-import { ECHO_LOGO_URL } from '../data/constants';
+import { SAPPHIRE_LOGO_URL, SAPPHIRE_APP_NAME } from '../data/constants';
 import { speechService } from '../services/speechService';
 
 interface ChatHeaderProps {
@@ -122,15 +122,15 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
                 title="Go to 'Into the Unknown' Home"
               >
                 <img
-                  src={ECHO_LOGO_URL}
-                  alt="Echo"
+                  src={SAPPHIRE_LOGO_URL}
+                  alt={SAPPHIRE_APP_NAME}
                   className="w-6 h-6 rounded-lg object-contain bg-white border border-slate-200 shadow-2xs group-hover:scale-105 transition-transform"
                 />
               </button>
             ) : (
               <img
-                src={ECHO_LOGO_URL}
-                alt="Echo"
+                src={SAPPHIRE_LOGO_URL}
+                alt={SAPPHIRE_APP_NAME}
                 className="w-6 h-6 rounded-lg object-contain bg-white border border-slate-200 shrink-0 shadow-2xs"
               />
             )}

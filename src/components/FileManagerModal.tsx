@@ -19,7 +19,10 @@ import {
   Folder,
   Search,
   Zap,
-  ArrowRight
+  ArrowRight,
+  Upload,
+  Camera,
+  FolderPlus
 } from 'lucide-react';
 import { WorkspaceFile } from '../types';
 import {
@@ -29,7 +32,8 @@ import {
   deleteWorkspaceFile,
   buildLivePreviewBundle,
   getLanguageFromFileName,
-  exportAllFilesAsZip
+  exportAllFilesAsZip,
+  importZipArchive
 } from '../services/fileStorageService';
 import { streamEchoChat } from '../services/geminiService';
 
@@ -67,6 +71,66 @@ export const FileManagerModal: React.FC<FileManagerModalProps> = ({
   const [deleteConfirmFile, setDeleteConfirmFile] = useState<{ id: string; name: string } | null>(null);
 
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const multiFileInputRef = useRef<HTMLInputElement>(null);
+  const folderInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+
+  // Upload multiple files handler
+  const handleUploadMultipleFiles = async (fileList: FileList | null) => {
+    if (!fileList || fileList.length === 0) return;
+    setAiStatusMessage(`Uploading ${fileList.length} file(s)...`);
+
+    const newFiles: WorkspaceFile[] = [];
+    const now = Date.now();
+
+    for (let i = 0; i < fileList.length; i++) {
+      const file = fileList[i];
+      const lower = file.name.toLowerCase();
+
+      if (lower.endsWith('.zip')) {
+        try {
+          const zipExtracted = await importZipArchive(file);
+          newFiles.push(...zipExtracted);
+        } catch (zipErr) {
+          console.error('Failed to extract zip in FileManager:', zipErr);
+        }
+      } else {
+        try {
+          let content = '';
+          if (file.type.startsWith('image/')) {
+            content = await new Promise<string>((resolve) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve(reader.result as string);
+              reader.readAsDataURL(file);
+            });
+          } else {
+            content = await file.text();
+          }
+
+          const relPath = (file as any).webkitRelativePath || file.name;
+          const cleanPath = relPath.startsWith('/') ? `/workspace${relPath}` : `/workspace/${relPath}`;
+          const saved = autoSaveFile({
+            name: file.name,
+            path: cleanPath,
+            content,
+            language: getLanguageFromFileName(file.name),
+            source: 'imported'
+          });
+          newFiles.push(saved);
+        } catch (readErr) {
+          console.error(`Error reading ${file.name}:`, readErr);
+        }
+      }
+    }
+
+    const updated = loadWorkspaceFiles();
+    setFiles(updated);
+    if (newFiles.length > 0) {
+      setSelectedFileId(newFiles[0].id);
+    }
+    setAiStatusMessage(`Successfully uploaded ${newFiles.length} file(s) into workspace!`);
+    setTimeout(() => setAiStatusMessage(''), 4000);
+  };
 
   // Sync files on open
   useEffect(() => {
@@ -498,15 +562,41 @@ export const FileManagerModal: React.FC<FileManagerModalProps> = ({
                 <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
                   Files ({files.length})
                 </span>
-                <button
-                  type="button"
-                  onClick={handleCreateBlankFile}
-                  className="flex items-center gap-1 px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold rounded-lg transition-colors cursor-pointer"
-                  title="Create new file"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>New</span>
-                </button>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => multiFileInputRef.current?.click()}
+                    className="p-1 text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer"
+                    title="Upload multiple files (Images, Docs, Zip)"
+                  >
+                    <Upload className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => folderInputRef.current?.click()}
+                    className="p-1 text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer"
+                    title="Upload whole folder (Entire directory structure)"
+                  >
+                    <FolderPlus className="w-3.5 h-3.5 text-amber-600" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => cameraInputRef.current?.click()}
+                    className="p-1 text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer"
+                    title="Open Camera on mobile/web to snap & add photo"
+                  >
+                    <Camera className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleCreateBlankFile}
+                    className="flex items-center gap-1 px-2 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold rounded-lg transition-colors cursor-pointer"
+                    title="Create new blank file"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>New</span>
+                  </button>
+                </div>
               </div>
               <div className="relative">
                 <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" />
@@ -849,6 +939,44 @@ export const FileManagerModal: React.FC<FileManagerModalProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Hidden Multi-file and Camera File Inputs */}
+      <input
+        type="file"
+        ref={multiFileInputRef}
+        multiple
+        accept="*/*"
+        className="hidden"
+        onChange={(e) => {
+          handleUploadMultipleFiles(e.target.files);
+          if (multiFileInputRef.current) multiFileInputRef.current.value = '';
+        }}
+      />
+      {/* Folder Upload Input */}
+      <input
+        type="file"
+        ref={folderInputRef}
+        // @ts-ignore
+        webkitdirectory=""
+        directory=""
+        multiple
+        className="hidden"
+        onChange={(e) => {
+          handleUploadMultipleFiles(e.target.files);
+          if (folderInputRef.current) folderInputRef.current.value = '';
+        }}
+      />
+      <input
+        type="file"
+        ref={cameraInputRef}
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        onChange={(e) => {
+          handleUploadMultipleFiles(e.target.files);
+          if (cameraInputRef.current) cameraInputRef.current.value = '';
+        }}
+      />
 
       {/* Delete Confirmation Modal */}
       {deleteConfirmFile && (

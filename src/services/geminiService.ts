@@ -529,8 +529,18 @@ export async function streamEchoChat({
             return;
           }
           if (data.text) {
-            accumulatedText = data.text;
-            onChunk(accumulatedText);
+            // Fast typewriter streaming effect for json responses
+            const fullText = data.text;
+            const step = Math.max(3, Math.ceil(fullText.length / 45));
+            let curr = '';
+            for (let i = 0; i < fullText.length; i += step) {
+              if (signal?.aborted) return;
+              curr = fullText.slice(0, i + step);
+              onChunk(curr);
+              await new Promise((r) => setTimeout(r, 12));
+            }
+            accumulatedText = fullText;
+            onChunk(fullText);
             const durationMs = Math.max(1, Math.round(performance.now() - startTime));
             const charsCount = accumulatedText.length;
             const charsPerSec = Math.round((charsCount / (durationMs / 1000)));
@@ -598,8 +608,8 @@ export async function streamEchoChat({
         if (signal?.aborted) return;
         streamed += words[i];
         onChunk(streamed);
-        if (i % 6 === 0 && i < words.length - 1) {
-          await new Promise((resolve) => setTimeout(resolve, 2));
+        if (i % 2 === 0 && i < words.length - 1) {
+          await new Promise((resolve) => setTimeout(resolve, 6));
         }
       }
 

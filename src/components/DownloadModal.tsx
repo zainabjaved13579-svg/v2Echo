@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   X,
   Smartphone,
@@ -18,7 +18,13 @@ import {
   HardDrive
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ECHO_LOGO_URL } from '../data/constants';
+import {
+  SAPPHIRE_LOGO_URL,
+  SAPPHIRE_APP_NAME,
+  ANDROID_APK_URL,
+  ANDROID_APK_DIRECT_DOWNLOAD,
+  WINDOWS_EXE_URL
+} from '../data/constants';
 
 interface DownloadModalProps {
   isOpen: boolean;
@@ -29,16 +35,35 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose })
   const [activeTab, setActiveTab] = useState<'all' | 'android' | 'windows' | 'qr' | 'pwa'>('all');
   const [downloadingPlatform, setDownloadingPlatform] = useState<string | null>(null);
   const [copiedEmail, setCopiedEmail] = useState(false);
+  const [windowsAutoPrompted, setWindowsAutoPrompted] = useState(false);
+
+  // Auto-download for Windows users when modal opens
+  useEffect(() => {
+    if (!isOpen || windowsAutoPrompted) return;
+    if (typeof navigator === 'undefined') return;
+
+    const isWindows = /Windows|Win32|Win64|WOW64/i.test(navigator.userAgent || '');
+    if (isWindows) {
+      setWindowsAutoPrompted(true);
+      setActiveTab('windows');
+      // Gentle auto-trigger for Windows download
+      const timer = setTimeout(() => {
+        handleTriggerDownload('windows', WINDOWS_EXE_URL);
+      }, 700);
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen, windowsAutoPrompted]);
 
   if (!isOpen) return null;
 
-  const APK_DOWNLOAD_URL = 'https://web2apkpro.com/public_download.php?project_id=22151&token=b5beb40122';
-  const EXE_DOWNLOAD_URL = 'https://drive.google.com/uc?export=download&confirm=t&id=1_xlUnq7dHKWI2SRySfSC-7F6nucLncRY';
+  const APK_DOWNLOAD_URL = ANDROID_APK_URL;
+  const APK_DIRECT_URL = ANDROID_APK_DIRECT_DOWNLOAD;
+  const EXE_DOWNLOAD_URL = WINDOWS_EXE_URL;
   const SUPPORT_EMAIL = 'shaheerh328@gmail.com';
 
   const handleTriggerDownload = (platform: 'android' | 'windows', url: string) => {
     setDownloadingPlatform(platform);
-    // Simulate brief secure handshake animation then open direct link
+    // Simulate brief secure handshake animation then trigger download
     setTimeout(() => {
       const link = document.createElement('a');
       link.href = url;
@@ -50,7 +75,7 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose })
       setTimeout(() => {
         setDownloadingPlatform(null);
       }, 1500);
-    }, 600);
+    }, 500);
   };
 
   const handleCopyEmail = async () => {
@@ -104,13 +129,13 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose })
               <motion.img
                 whileHover={{ rotate: [0, -10, 10, 0] }}
                 transition={{ duration: 0.5 }}
-                src={ECHO_LOGO_URL}
-                alt="Echo AI"
+                src={SAPPHIRE_LOGO_URL}
+                alt={SAPPHIRE_APP_NAME}
                 className="w-12 h-12 rounded-2xl object-contain bg-slate-900 border border-blue-500/30 p-1 shadow-lg shadow-blue-500/15"
               />
               <div className="text-left">
                 <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white flex items-center gap-2">
-                  <span>Get Echo AI</span>
+                  <span>Get {SAPPHIRE_APP_NAME}</span>
                   <span className="text-xs px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-semibold">
                     Free
                   </span>
@@ -210,7 +235,7 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose })
 
                       <div>
                         <h3 className="font-bold text-lg text-white group-hover:text-emerald-300 transition-colors">
-                          Echo for Android
+                          Sapphire for Android
                         </h3>
                         <div className="flex items-center gap-2 text-xs text-slate-400 mt-0.5">
                           <span>Version 2.0.1</span>
@@ -235,25 +260,35 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose })
                       </div>
                     </div>
 
-                    <div className="pt-5 mt-2">
+                    <div className="pt-5 mt-2 flex flex-col gap-2">
                       <button
                         type="button"
-                        onClick={() => handleTriggerDownload('android', APK_DOWNLOAD_URL)}
+                        onClick={() => handleTriggerDownload('android', APK_DIRECT_URL)}
                         disabled={downloadingPlatform === 'android'}
                         className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold text-xs sm:text-sm transition-all shadow-lg shadow-emerald-600/25 active:scale-95 cursor-pointer disabled:opacity-75"
                       >
                         {downloadingPlatform === 'android' ? (
                           <>
                             <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                            <span>Starting APK Download...</span>
+                            <span>Starting Direct APK Download...</span>
                           </>
                         ) : (
                           <>
                             <Download className="w-4 h-4" />
-                            <span>Download Android APK (28 MB)</span>
+                            <span>Download Android APK (Direct)</span>
                           </>
                         )}
                       </button>
+
+                      <a
+                        href={APK_DOWNLOAD_URL}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-semibold transition-colors"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        <span>Open in Google Drive</span>
+                      </a>
                     </div>
                   </motion.div>
                 )}
@@ -276,7 +311,7 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose })
 
                       <div>
                         <h3 className="font-bold text-lg text-white group-hover:text-blue-300 transition-colors">
-                          Echo for Windows
+                          Sapphire for Windows
                         </h3>
                         <div className="flex items-center gap-2 text-xs text-slate-400 mt-0.5">
                           <span>Version 2.0.1</span>
@@ -386,7 +421,7 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose })
                     <ol className="list-decimal list-inside text-slate-300 space-y-1 pl-1">
                       <li>Tap the Share button in Safari</li>
                       <li>Scroll down and tap <strong>Add to Home Screen</strong></li>
-                      <li>Launch Echo directly from your home screen</li>
+                      <li>Launch Sapphire directly from your home screen</li>
                     </ol>
                   </div>
 
@@ -396,7 +431,7 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose })
                     </p>
                     <ol className="list-decimal list-inside text-slate-300 space-y-1 pl-1">
                       <li>Click the Install icon in the address bar (or menu)</li>
-                      <li>Select <strong>Install Echo AI</strong></li>
+                      <li>Select <strong>Install Sapphire AI</strong></li>
                       <li>Launch as an independent desktop window anytime</li>
                     </ol>
                   </div>
@@ -429,7 +464,7 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose })
             </div>
 
             <a
-              href={`https://mail.google.com/mail/?view=cm&fs=1&to=${SUPPORT_EMAIL}&su=Echo%20AI%20App%20Inquiry&body=Hello%20Developer%2C%0A%0AI%20am%20using%20Echo%20AI%20and...`}
+              href={`https://mail.google.com/mail/?view=cm&fs=1&to=${SUPPORT_EMAIL}&su=Sapphire%20AI%20App%20Inquiry&body=Hello%20Developer%2C%0A%0AI%20am%20using%20Sapphire%20AI%20and...`}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 transition-colors cursor-pointer border border-slate-700/60 font-medium"

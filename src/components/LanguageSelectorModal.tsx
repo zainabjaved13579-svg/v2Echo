@@ -58,7 +58,7 @@ export const LanguageSelectorModal: React.FC<LanguageSelectorModalProps> = ({
                 </span>
               </h2>
               <p className="text-xs text-slate-500">
-                Choose how Echo AI communicates with you — in natural, warm, and fluent human tone.
+                Choose how Sapphire AI communicates with you — in natural, warm, and fluent human tone.
               </p>
             </div>
           </div>
@@ -183,7 +183,7 @@ export const LanguageSelectorModal: React.FC<LanguageSelectorModalProps> = ({
         {/* Footer */}
         <div className="px-6 py-4 border-t border-slate-200 bg-slate-50/80 flex items-center justify-between">
           <p className="text-xs text-slate-500">
-            Echo AI auto-adapts to your speech and responds in a human conversational manner.
+            Sapphire AI auto-adapts to your speech and responds in the same language.
           </p>
           <button
             onClick={onClose}

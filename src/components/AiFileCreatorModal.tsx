@@ -93,7 +93,7 @@ export const AiFileCreatorModal: React.FC<AiFileCreatorModalProps> = ({
     const activePath = fullPath;
     const activeLang = detectedLang;
 
-    const systemInstruction = `You are Echo AI Code Creator.
+    const systemInstruction = `You are Sapphire AI Code Creator.
 Your task is to write ONLY the exact, pure, complete source code for a file named "${activeFileName}" at path "${activePath}".
 Do NOT include conversational chatter or long explanations. Output the complete code directly in clean code blocks or raw code suitable for ${activeLang}. Make sure it is fully working, modern, and production ready without any placeholders.`;
 
@@ -106,7 +106,7 @@ ${prompt.trim()}`;
       messages: [{ id: 'req_1', role: 'user', text: userQuery, timestamp: Date.now() }],
       systemInstruction,
       temperature: 0.3,
-      model: 'echo-3.7-flash',
+      model: 'sapphire-3.7-flash',
       useSearchGrounding: false,
       customApiKey: getStoredApiKey(),
       onChunk: (chunk) => {
@@ -192,7 +192,7 @@ ${prompt.trim()}`;
                 </span>
               </div>
               <p className="text-xs text-slate-400">
-                Tell Echo AI what you need and it will write and create the file directly into your workspace.
+                Tell Sapphire AI what you need and it will write and create the file directly into your workspace.
               </p>
             </div>
           </div>
@@ -286,7 +286,7 @@ ${prompt.trim()}`;
             <label className="text-xs font-semibold text-slate-300 flex items-center justify-between">
               <span>Describe what the code should do:</span>
               <span className="text-[11px] text-slate-400 font-normal">
-                Echo AI will generate and create the file automatically
+                Sapphire AI will generate and create the file automatically
               </span>
             </label>
             <div className="relative rounded-xl bg-slate-950 border border-slate-700 focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500 transition-all p-3">
@@ -299,7 +299,7 @@ ${prompt.trim()}`;
               />
               <div className="flex items-center justify-between pt-2 border-t border-slate-800/80">
                 <span className="text-[11px] text-slate-400">
-                  Powered by Echo AI Engine • Instant Creation
+                  Powered by Sapphire AI Engine • Instant Creation
                 </span>
                 <button
                   type="button"
@@ -387,7 +387,7 @@ ${prompt.trim()}`;
 
         {/* Footer */}
         <div className="px-5 py-2.5 bg-slate-950 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
-          <div>Echo AI File Workspace</div>
+          <div>Sapphire AI File Workspace</div>
           <button
             onClick={onClose}
             className="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-medium transition-colors"

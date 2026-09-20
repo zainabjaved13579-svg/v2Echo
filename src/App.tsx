@@ -24,22 +24,27 @@ import { CodePreviewModal } from './components/CodePreviewModal';
 import { LanguageSelectorModal } from './components/LanguageSelectorModal';
 import { DownloadModal } from './components/DownloadModal';
 import { UserProfileModal } from './components/UserProfileModal';
+import { AndroidShortcutModal } from './components/AndroidShortcutModal';
+import { Auth } from './components/Auth';
+import { onAuthStateChanged, signOut, User } from 'firebase/auth';
+import { auth } from './services/firebase';
+import { syncTabToFirestore, deleteTabFromFirestore } from './services/tabFirestoreService';
 import { loadUserProfile, hasUserCompletedSetup, syncUserDataToCloud } from './services/userService';
 import { loadWorkspaceFiles } from './services/fileStorageService';
 import { speechService, detectScriptLanguage } from './services/speechService';
-import { ECHO_LOGO_URL } from './data/constants';
+import { SAPPHIRE_LOGO_URL } from './data/constants';
 
-const STORAGE_KEY_SESSIONS = 'echo_ai_chat_sessions_v1';
-const STORAGE_KEY_SETTINGS = 'echo_ai_chat_settings_v1';
-const STORAGE_KEY_CURRENT = 'echo_ai_chat_current_session_id';
+const STORAGE_KEY_SESSIONS = 'sapphire_ai_chat_sessions_v1';
+const STORAGE_KEY_SETTINGS = 'sapphire_ai_chat_settings_v1';
+const STORAGE_KEY_CURRENT = 'sapphire_ai_chat_current_session_id';
 
 const DEFAULT_SETTINGS: AppSettings = {
-  defaultModel: 'echo-3.7-flash',
+  defaultModel: 'sapphire-3.7-flash',
   defaultTemperature: 0.7,
   defaultPersonaId: 'general',
   enableSearchGrounding: false,
   selectedLanguage: 'auto',
-  autoSpeakResponses: true,
+  autoSpeakResponses: false,
   ttsSpeed: 1.0,
   ttsPitch: 1.0
 };
@@ -48,13 +53,13 @@ function createNewSession(settings: AppSettings): ChatSession {
   const initialPersona = PERSONAS.find((p) => p.id === settings.defaultPersonaId) || PERSONAS[0];
   const now = Date.now();
   return {
-    id: `session_${now}_${Math.random().toString(36).substring(2, 7)}`,
-    title: 'New Conversation',
+    id: `${now}`,
+    title: 'New Chat',
     messages: [],
     personaId: initialPersona.id,
     customInstruction: initialPersona.systemInstruction,
     temperature: settings.defaultTemperature,
-    model: settings.defaultModel || 'echo-3.7-flash',
+    model: settings.defaultModel || 'sapphire-3.7-flash',
     useSearchGrounding: settings.enableSearchGrounding,
     createdAt: now,
     updatedAt: now
@@ -116,7 +121,30 @@ export default function App() {
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isLanguageModalOpen, setIsLanguageModalOpen] = useState(false);
   const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
+  const [isAndroidShortcutModalOpen, setIsAndroidShortcutModalOpen] = useState(false);
   const [isStartingScreen, setIsStartingScreen] = useState<boolean>(true);
+
+  // Firebase Authentication State
+  const [authUser, setAuthUser] = useState<User | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
+
+  // Monitor Firebase Auth State
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setAuthUser(user);
+      setAuthLoading(false);
+      if (user) {
+        // Sync profile with Firebase user info
+        setCurrentUserProfile((prev) => ({
+          ...prev,
+          name: user.displayName || prev.name,
+          email: user.email || prev.email,
+          avatar: user.photoURL || prev.avatar
+        }));
+      }
+    });
+    return () => unsubscribe();
+  }, []);
 
   // User Profile & Onboarding State
   const [currentUserProfile, setCurrentUserProfile] = useState(loadUserProfile);
@@ -278,22 +306,36 @@ export default function App() {
     updateSessionById(currentSession.id, updater);
   };
 
-  // Create new chat (navigates to fresh starting screen)
+  // Create new chat (creates a fresh session tab with unique Date.now() ID and navigates)
   const handleNewChat = () => {
-    setIsStartingScreen(true);
+    const fresh = createNewSession(settings);
+    setSessions((prev) => [fresh, ...prev]);
+    setCurrentSessionId(fresh.id);
+    setIsStartingScreen(false);
     setInput('');
     setReplyTo(null);
+
+    // Sync to Firestore if authenticated
+    if (authUser?.uid) {
+      syncTabToFirestore(authUser.uid, fresh);
+    }
   };
 
-  // Close session tab
+  // Close session tab - if all closed, creates a fresh new tab
   const handleCloseSessionTab = (sessionId: string, e: React.MouseEvent) => {
     e.stopPropagation();
+    if (authUser?.uid) {
+      deleteTabFromFirestore(authUser.uid, sessionId);
+    }
     setSessions((prev) => {
       const filtered = prev.filter((s) => s.id !== sessionId);
       if (filtered.length === 0) {
         const fresh = createNewSession(settings);
         setCurrentSessionId(fresh.id);
-        setIsStartingScreen(true);
+        setIsStartingScreen(false);
+        if (authUser?.uid) {
+          syncTabToFirestore(authUser.uid, fresh);
+        }
         return [fresh];
       }
       if (currentSessionId === sessionId) {
@@ -314,11 +356,18 @@ export default function App() {
 
   // Delete session
   const handleDeleteSession = (id: string) => {
+    if (authUser?.uid) {
+      deleteTabFromFirestore(authUser.uid, id);
+    }
     setSessions((prev) => {
       const filtered = prev.filter((s) => s.id !== id);
       if (filtered.length === 0) {
         const fresh = createNewSession(settings);
         setCurrentSessionId(fresh.id);
+        setIsStartingScreen(false);
+        if (authUser?.uid) {
+          syncTabToFirestore(authUser.uid, fresh);
+        }
         return [fresh];
       }
       if (currentSessionId === id) {
@@ -744,6 +793,39 @@ Please carefully examine, understand, and analyze this uploaded document/file an
   const activePersona =
     PERSONAS.find((p) => p.id === currentSession.personaId) || PERSONAS[0];
 
+  // Route protection: If auth state is initializing, show sleek branded loader
+  if (authLoading) {
+    return (
+      <div className="min-h-screen w-full flex flex-col items-center justify-center bg-slate-950 text-white select-none">
+        <div className="relative">
+          <div className="w-16 h-16 rounded-2xl bg-slate-900 border border-slate-800 p-2 shadow-2xl flex items-center justify-center">
+            <img
+              src={SAPPHIRE_LOGO_URL}
+              alt="Sapphire"
+              className="w-full h-full object-contain rounded-xl animate-pulse"
+            />
+          </div>
+          <div className="absolute -inset-1 rounded-2xl bg-indigo-500/20 blur-sm pointer-events-none -z-10" />
+        </div>
+        <div className="mt-4 flex items-center gap-2 text-xs text-slate-400 font-medium">
+          <div className="w-3.5 h-3.5 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin" />
+          <span>Connecting to Sapphire Cloud...</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Route protection: If user is not authenticated, render Login Screen
+  if (!authUser) {
+    return (
+      <Auth
+        onLoginSuccess={(user) => {
+          setAuthUser(user);
+        }}
+      />
+    );
+  }
+
   return (
     <div className="flex h-full w-full bg-white text-slate-800 overflow-hidden select-none sm:select-auto font-['Plus_Jakarta_Sans',sans-serif]">
       {/* Sidebar: Shown in chat view or toggled open */}
@@ -777,6 +859,26 @@ Please carefully examine, understand, and analyze this uploaded document/file an
 
       {/* Main Chat View */}
       <main className="flex-1 flex flex-col h-full min-w-0 relative bg-white overflow-hidden">
+        {/* Top Tab Bar: Navigation, Home Pill, Dynamic Session Tabs, Android Shortcut, and Profile */}
+        <TopTabBar
+          isStartingScreen={isStartingScreen}
+          onSelectStartingScreen={() => setIsStartingScreen(true)}
+          sessions={sessions}
+          currentSessionId={currentSession.id}
+          onSelectSession={(id) => {
+            handleSelectSession(id);
+            setIsStartingScreen(false);
+          }}
+          onCloseSession={handleCloseSessionTab}
+          onNewChat={handleNewChat}
+          onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
+          isSidebarOpen={isSidebarOpen}
+          userProfile={currentUserProfile}
+          onOpenProfile={() => setIsUserProfileModalOpen(true)}
+          onOpenAndroidShortcut={() => setIsAndroidShortcutModalOpen(true)}
+          onSignOut={() => signOut(auth)}
+        />
+
         <AnimatePresence mode="wait" initial={false}>
           {isStartingScreen ? (
             /* Starting Screen: DeepSeek Style "Into the Unknown" with Get App (APK/EXE), Search Box, and NO API Option */
@@ -846,13 +948,13 @@ Please carefully examine, understand, and analyze this uploaded document/file an
                   <div className="flex-1 flex flex-col items-center justify-center p-6 text-center max-w-xl mx-auto my-auto animate-fadeIn">
                     <div className="w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center mb-3 shadow-2xs">
                       <img
-                        src={ECHO_LOGO_URL}
-                        alt="Echo AI"
+                        src={SAPPHIRE_LOGO_URL}
+                        alt="Sapphire AI"
                         className="w-7 h-7 rounded-xl object-contain"
                       />
                     </div>
                     <h2 className="text-xl font-bold text-slate-800 tracking-tight">
-                      What can Echo help you with?
+                      What can Sapphire help you with?
                     </h2>
                     <p className="text-xs text-slate-500 mt-1 max-w-sm">
                       Ask questions, solve problems, generate code, or upload files and images.
@@ -1014,6 +1116,12 @@ Please carefully examine, understand, and analyze this uploaded document/file an
       <DownloadModal
         isOpen={isDownloadModalOpen}
         onClose={() => setIsDownloadModalOpen(false)}
+      />
+
+      {/* Android Hardware & Navigation Bar Shortcut Modal */}
+      <AndroidShortcutModal
+        isOpen={isAndroidShortcutModalOpen}
+        onClose={() => setIsAndroidShortcutModalOpen(false)}
       />
     </div>
   );

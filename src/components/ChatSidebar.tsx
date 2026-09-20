@@ -17,7 +17,7 @@ import {
   User
 } from 'lucide-react';
 import { ChatSession, UserProfile } from '../types';
-import { ECHO_LOGO_URL } from '../data/constants';
+import { SAPPHIRE_LOGO_URL, SAPPHIRE_APP_NAME } from '../data/constants';
 
 interface ChatSidebarProps {
   isOpen: boolean;
@@ -106,14 +106,14 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
       <div className="p-4 sm:p-5 border-b border-slate-200/80 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-3 min-w-0">
           <img
-            src={ECHO_LOGO_URL}
-            alt="Echo AI Logo"
+            src={SAPPHIRE_LOGO_URL}
+            alt={`${SAPPHIRE_APP_NAME} Logo`}
             className="w-8 h-8 rounded-lg object-contain bg-white border border-slate-200 shadow-2xs shrink-0"
           />
           <div className="min-w-0">
             <h1 className="font-bold text-base text-slate-800 tracking-tight leading-tight flex items-center gap-1.5 truncate">
-              <span>Echo AI</span>
-              <span className="px-1.5 py-0.2 bg-indigo-100 text-indigo-700 text-[10px] font-bold rounded-sm shrink-0">FAST</span>
+              <span>{SAPPHIRE_APP_NAME}</span>
+              <span className="px-1.5 py-0.2 bg-indigo-100 text-indigo-700 text-[10px] font-bold rounded-sm shrink-0">AI</span>
             </h1>
             <p className="text-[11px] text-slate-500 font-medium truncate">Intelligent Assistant</p>
           </div>

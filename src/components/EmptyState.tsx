@@ -13,7 +13,7 @@ import {
   Menu
 } from 'lucide-react';
 import { motion } from 'motion/react';
-import { ECHO_LOGO_URL } from '../data/constants';
+import { SAPPHIRE_LOGO_URL, SAPPHIRE_APP_NAME } from '../data/constants';
 
 interface EmptyStateProps {
   onSendMessage: (text: string) => void;
@@ -95,12 +95,12 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
           )}
           <div className="flex items-center gap-2 select-none">
             <img
-              src={ECHO_LOGO_URL}
-              alt="Echo AI"
+              src={SAPPHIRE_LOGO_URL}
+              alt={SAPPHIRE_APP_NAME}
               className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl object-contain bg-white shadow-2xs border border-blue-100"
             />
             <span className="text-2xl sm:text-[26px] font-bold tracking-tight text-[#1d59f2] font-sans">
-              echo
+              sapphire
             </span>
           </div>
         </div>
@@ -147,7 +147,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
         >
           <span className="text-[#3b71fe] text-xs shrink-0 animate-pulse">✦</span>
           <span className="truncate sm:whitespace-normal">
-            Echo-V2.0 is live with multimodal &amp; deep reasoning upgrades.
+            Sapphire-V2.0 is live with multimodal &amp; deep reasoning upgrades.
           </span>
           <span className="text-[#3b71fe] font-semibold group-hover:translate-x-0.5 transition-transform ml-0.5 shrink-0">
             →
@@ -200,7 +200,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
               className="relative flex items-center gap-2 px-6 py-2.5 rounded-full bg-white hover:bg-slate-50 text-slate-700 hover:text-[#1d59f2] border border-slate-200 text-xs sm:text-sm font-medium transition-all shadow-2xs hover:shadow-xs cursor-pointer touch-manipulation"
             >
               <MessageSquare className="w-4 h-4 text-[#1d59f2]" />
-              <span>Chat with Echo</span>
+              <span>Chat with Sapphire</span>
             </motion.button>
           </div>
 
@@ -248,7 +248,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
             value={promptText}
             onChange={(e) => setPromptText(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Ask Echo..."
+            placeholder="Ask Sapphire..."
             rows={2}
             autoFocus
             className="w-full bg-transparent text-base sm:text-[17px] text-slate-800 placeholder-slate-400 resize-none focus:outline-none leading-relaxed font-sans min-h-[48px] sm:min-h-[56px]"
@@ -306,7 +306,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
 
       {/* Footer */}
       <footer className="relative z-10 py-3 sm:py-4 px-4 text-center text-[11px] text-slate-400 select-none">
-        Echo can make mistakes. Verify critical information.
+        Sapphire can make mistakes. Verify critical information.
       </footer>
     </div>
   );

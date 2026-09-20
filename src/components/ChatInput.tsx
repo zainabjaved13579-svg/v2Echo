@@ -3,6 +3,9 @@ import {
   Send,
   Square,
   Globe,
+  PlusCircle,
+  Camera,
+  ImageIcon,
   Paperclip,
   X,
   Mic,
@@ -65,6 +68,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   const [isRecording, setIsRecording] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<any>(null);
   const baseInputRef = useRef<string>('');
 
@@ -315,6 +320,37 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         }}
       />
 
+      {/* Image Upload Input */}
+      <input
+        type="file"
+        ref={imageInputRef}
+        accept="image/*"
+        className="hidden"
+        onChange={async (e) => {
+          const file = e.target.files?.[0];
+          if (file) {
+            await processGeneralFile(file);
+          }
+          if (imageInputRef.current) imageInputRef.current.value = '';
+        }}
+      />
+
+      {/* Direct Mobile Camera Input */}
+      <input
+        type="file"
+        ref={cameraInputRef}
+        accept="image/*"
+        capture="environment"
+        className="hidden"
+        onChange={async (e) => {
+          const file = e.target.files?.[0];
+          if (file) {
+            await processGeneralFile(file);
+          }
+          if (cameraInputRef.current) cameraInputRef.current.value = '';
+        }}
+      />
+
       <div
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
@@ -500,19 +536,43 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         <div className="px-2.5 sm:px-3 pb-2.5 pt-1.5 flex items-center justify-between gap-1.5 border-t border-slate-100">
           {/* Left tools: Upload File, File Manager, Language Accent, Search */}
           <div className="flex items-center gap-1 sm:gap-1.5 overflow-x-auto no-scrollbar py-0.5 max-w-[calc(100%-85px)] sm:max-w-none">
-            {/* Upload File Button (<15MB support) */}
+            {/* Upload File Button (<15MB support) with Plus-Circle */}
             <button
               id="upload-file-btn"
               type="button"
               onClick={handleTriggerFileUpload}
               className="p-1.5 sm:px-2.5 sm:py-1 rounded-xl bg-slate-100 hover:bg-indigo-50 text-slate-700 hover:text-indigo-600 border border-slate-200 text-xs font-semibold transition-all flex items-center gap-1.5 active:scale-95 cursor-pointer shadow-2xs shrink-0"
-              title="Upload file under 15MB (Code, HTML, JS, Python, Text, PDF, Image) for AI analysis & remake"
+              title="Upload file under 15MB (Code, HTML, JS, Python, Text, PDF) for AI analysis & remake"
             >
-              <Paperclip className="w-3.5 h-3.5 text-indigo-600" />
-              <span className="hidden xs:inline">Upload</span>
+              <PlusCircle className="w-3.5 h-3.5 text-indigo-600" />
+              <span className="hidden xs:inline">Upload File</span>
               <span className="text-[10px] px-1 py-0.2 rounded bg-indigo-100 text-indigo-700 font-mono font-bold">
                 &lt;15MB
               </span>
+            </button>
+
+            {/* Upload Image Button */}
+            <button
+              id="upload-image-btn"
+              type="button"
+              onClick={() => imageInputRef.current?.click()}
+              className="p-1.5 sm:px-2.5 sm:py-1 rounded-xl bg-slate-100 hover:bg-indigo-50 text-slate-700 hover:text-indigo-600 border border-slate-200 text-xs font-semibold transition-all flex items-center gap-1.5 active:scale-95 cursor-pointer shadow-2xs shrink-0"
+              title="Upload image / photo"
+            >
+              <ImageIcon className="w-3.5 h-3.5 text-indigo-600" />
+              <span className="hidden sm:inline">Upload Image</span>
+            </button>
+
+            {/* Mobile / Device Camera Button */}
+            <button
+              id="camera-capture-btn"
+              type="button"
+              onClick={() => cameraInputRef.current?.click()}
+              className="p-1.5 sm:px-2 sm:py-1 rounded-xl bg-slate-100 hover:bg-indigo-50 text-slate-700 hover:text-indigo-600 border border-slate-200 text-xs font-semibold transition-all flex items-center gap-1.5 active:scale-95 cursor-pointer shadow-2xs shrink-0"
+              title="Open camera to take photo directly"
+            >
+              <Camera className="w-3.5 h-3.5 text-indigo-600" />
+              <span className="hidden md:inline">Camera</span>
             </button>
 
             {/* Quick File Manager button */}
@@ -623,7 +683,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       </div>
 
       <div className="mt-1.5 text-center text-[10px] text-slate-400 font-medium">
-        Echo AI • Multimodal & Intelligent Assistant
+        Sapphire AI • Multimodal & Intelligent Assistant
       </div>
     </div>
   );

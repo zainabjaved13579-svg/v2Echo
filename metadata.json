@@ -1,6 +1,6 @@
 {
-  "name": "Echo AI Chat Assistant",
-  "description": "Echo AI assistant with 15MB file upload & multimodal understanding, AI image remake & code remake functions, dedicated multi-file code generator, and responsive desktop & mobile themes.",
+  "name": "Sapphire AI Assistant",
+  "description": "Sapphire AI assistant with 15MB file upload & multimodal understanding, AI code & folder zip/unzip generation, Android shortcut launcher, and responsive voice intelligence.",
   "requestFramePermissions": [
     "microphone"
   ],

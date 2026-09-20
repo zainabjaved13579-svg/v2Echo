@@ -61,7 +61,9 @@ export interface ChatMessage {
   text: string;
   timestamp: number;
   image?: ImageAttachment;
+  images?: ImageAttachment[];
   attachedFile?: UploadedFileAttachment;
+  attachedFiles?: UploadedFileAttachment[];
   generatedImages?: string[];
   generatedImagePrompt?: string;
   attachedFileId?: string;
