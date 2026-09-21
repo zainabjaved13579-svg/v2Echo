@@ -28,7 +28,7 @@ import {
 import { motion } from 'motion/react';
 import { ChatMessage, SupportedLanguage, UserProfile } from '../types';
 import { MarkdownRenderer } from './MarkdownRenderer';
-import { ECHO_LOGO_URL } from '../data/constants';
+import { SAPPHIRE_LOGO_URL } from '../data/constants';
 import { speechService, detectScriptLanguage, translateText } from '../services/speechService';
 import { getLanguageConfig } from '../data/languages';
 import {
@@ -454,8 +454,8 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
             ) : (
               <div className="relative">
                 <img
-                  src={ECHO_LOGO_URL}
-                  alt="Echo AI"
+                  src={SAPPHIRE_LOGO_URL}
+                  alt="Sapphire AI"
                   className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg object-contain bg-white border border-slate-200 shadow-2xs"
                 />
                 {message.isStreaming && (
@@ -471,7 +471,7 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <span className="font-semibold text-xs sm:text-sm text-slate-800">
-                  {isUser ? userName : 'Echo AI'}
+                  {isUser ? userName : 'Sapphire AI'}
                 </span>
                 {!isUser && message.modelUsed && (
                   <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100 font-medium">
@@ -794,7 +794,7 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
               <div className="mt-3 p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-sm flex items-start gap-3">
                 <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
                 <div className="flex-1">
-                  <p className="font-medium text-rose-900">Echo Notice</p>
+                  <p className="font-medium text-rose-900">Sapphire Notice</p>
                   <p className="text-xs text-rose-700 mt-0.5">{message.error}</p>
                   {onRegenerate && (
                     <button
@@ -803,7 +803,7 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
                       className="mt-2 text-xs flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-medium transition-colors shadow-xs"
                     >
                       <RotateCcw className="w-3 h-3" />
-                      Retry with Echo
+                      Retry with Sapphire
                     </button>
                   )}
                 </div>

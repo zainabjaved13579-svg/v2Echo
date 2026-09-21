@@ -19,6 +19,11 @@ interface SidebarProps {
   onOpenFileWorkspace?: () => void;
   onOpenGetApp?: () => void;
   onOpenVoiceStudio?: () => void;
+  onOpenCodex?: () => void;
+  onOpenProjects?: () => void;
+  onOpenArtifacts?: () => void;
+  onOpenCustomize?: () => void;
+  activeNavTab?: string;
 }
 
 export const Sidebar: React.FC<SidebarProps> = (props) => {

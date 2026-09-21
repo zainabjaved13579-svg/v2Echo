@@ -389,7 +389,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               </div>
               <div className="min-w-0">
                 <span className="text-[11px] font-bold text-indigo-900 block">
-                  Replying to {replyTo.role === 'model' ? 'Echo AI' : 'You'}
+                  Replying to {replyTo.role === 'model' ? 'Sapphire AI' : 'You'}
                 </span>
                 <p className="text-[11px] text-slate-600 truncate max-w-[220px] sm:max-w-lg italic">
                   "{replyTo.text.slice(0, 120)}"

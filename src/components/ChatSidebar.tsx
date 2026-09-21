@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
-  Sparkles,
   Plus,
+  Layers,
+  Box,
+  Sliders,
+  Folder,
   MessageSquare,
   Search,
   Trash2,
@@ -10,11 +13,10 @@ import {
   Check,
   X,
   Settings as SettingsIcon,
-  Folder,
-  HardDrive,
   Code2,
   Download,
-  User
+  Key,
+  Shield
 } from 'lucide-react';
 import { ChatSession, UserProfile } from '../types';
 import { SAPPHIRE_LOGO_URL, SAPPHIRE_APP_NAME } from '../data/constants';
@@ -36,6 +38,11 @@ interface ChatSidebarProps {
   onOpenFileWorkspace?: () => void;
   onOpenGetApp?: () => void;
   onOpenVoiceStudio?: () => void;
+  onOpenCodex?: () => void;
+  onOpenProjects?: () => void;
+  onOpenArtifacts?: () => void;
+  onOpenCustomize?: () => void;
+  activeNavTab?: string;
 }
 
 export const ChatSidebar: React.FC<ChatSidebarProps> = ({
@@ -54,13 +61,16 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
   onOpenFileManager,
   onOpenFileWorkspace,
   onOpenGetApp,
-  onOpenVoiceStudio
+  onOpenCodex,
+  onOpenProjects,
+  onOpenArtifacts,
+  onOpenCustomize,
+  activeNavTab = 'chat'
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState('');
 
-  // Track responsive screen size for desktop vs mobile behavior
   const [isDesktop, setIsDesktop] = useState(() =>
     typeof window !== 'undefined' ? window.innerWidth >= 1024 : false
   );
@@ -99,211 +109,284 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
     onDeleteSession(id);
   };
 
-  // Reusable inner content
+  const isGuest = !userProfile?.email || userProfile.name === 'Guest User';
+
   const sidebarInnerContent = (
-    <div className="w-full lg:w-80 h-full flex flex-col shrink-0 min-w-0 overflow-hidden">
+    <div className="w-full lg:w-72 h-full flex flex-col shrink-0 min-w-0 overflow-hidden bg-black text-slate-200 border-r border-slate-800/80 select-none">
       {/* Brand Header */}
-      <div className="p-4 sm:p-5 border-b border-slate-200/80 flex items-center justify-between shrink-0">
-        <div className="flex items-center gap-3 min-w-0">
+      <div className="p-4 border-b border-slate-800/80 flex items-center justify-between shrink-0">
+        <div className="flex items-center gap-2.5 min-w-0">
           <img
             src={SAPPHIRE_LOGO_URL}
             alt={`${SAPPHIRE_APP_NAME} Logo`}
-            className="w-8 h-8 rounded-lg object-contain bg-white border border-slate-200 shadow-2xs shrink-0"
+            className="w-7 h-7 rounded-lg object-contain bg-slate-900 border border-slate-800 shadow-md shrink-0"
           />
           <div className="min-w-0">
-            <h1 className="font-bold text-base text-slate-800 tracking-tight leading-tight flex items-center gap-1.5 truncate">
+            <h1 className="font-bold text-sm text-white tracking-tight leading-tight flex items-center gap-1.5 truncate">
               <span>{SAPPHIRE_APP_NAME}</span>
-              <span className="px-1.5 py-0.2 bg-indigo-100 text-indigo-700 text-[10px] font-bold rounded-sm shrink-0">AI</span>
+              <span className="px-1.5 py-0.2 bg-blue-500/20 text-blue-400 text-[10px] font-mono rounded-sm shrink-0 border border-blue-500/30">
+                PRO
+              </span>
             </h1>
-            <p className="text-[11px] text-slate-500 font-medium truncate">Intelligent Assistant</p>
+            <p className="text-[10px] text-slate-400 font-medium truncate">AI Architect Workspace</p>
           </div>
         </div>
         <button
           onClick={onClose}
-          className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 active:bg-slate-200 rounded-xl transition-colors cursor-pointer touch-manipulation shrink-0"
+          className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-900 rounded-lg transition-colors cursor-pointer"
           title="Close sidebar"
           aria-label="Close sidebar"
         >
-          <X className="w-5 h-5" />
+          <X className="w-4 h-4" />
         </button>
       </div>
 
-      {/* New Chat & File Hub Buttons */}
-      <div className="p-4 space-y-2">
+      {/* Main Required Sidebar Menu Options:
+          1. + New
+          2. Projects
+          3. Artifacts
+          4. Codex (Powered by Google AI Studio Engine)
+          5. Customize
+      */}
+      <div className="p-3 space-y-1 border-b border-slate-800/80">
+        {/* 1. + New */}
         <button
-          id="sidebar-new-chat-btn"
+          id="sidebar-new-btn"
           onClick={() => {
             onNewChat();
             if (window.innerWidth < 1024) onClose();
           }}
-          className="w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-colors shadow-xs active:scale-[0.99] cursor-pointer"
+          className="w-full py-2 px-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-semibold flex items-center gap-2.5 transition-all shadow-xs border border-slate-800 active:scale-[0.99] cursor-pointer"
         >
-          <Plus className="w-4 h-4" />
-          <span>New Chat</span>
+          <Plus className="w-4 h-4 text-blue-400" />
+          <span className="font-medium text-white">New</span>
         </button>
 
-        {/* Files Button */}
-        {onOpenFileWorkspace && (
-          <button
-            id="sidebar-workspace-btn"
-            onClick={() => {
-              onOpenFileWorkspace();
-              if (window.innerWidth < 1024) onClose();
-            }}
-            className="w-full py-2 px-3.5 bg-indigo-50/70 hover:bg-indigo-100/80 border border-indigo-200/80 rounded-xl text-xs font-semibold text-indigo-900 flex items-center justify-between transition-all shadow-2xs active:scale-[0.99] cursor-pointer"
-            title="Open Files"
-          >
-            <div className="flex items-center gap-2">
-              <Folder className="w-3.5 h-3.5 text-indigo-600" />
-              <span>Files</span>
-            </div>
-            <span className="px-1.5 py-0.5 rounded-full bg-indigo-200/70 text-indigo-800 text-[9px] font-bold">
-              EXPLORER
-            </span>
-          </button>
-        )}
+        {/* 2. Projects (Workspace) */}
+        <button
+          id="sidebar-projects-btn"
+          onClick={() => {
+            if (onOpenProjects) onOpenProjects();
+            else if (onOpenFileWorkspace) onOpenFileWorkspace();
+            if (window.innerWidth < 1024) onClose();
+          }}
+          className={`w-full py-2 px-3 rounded-xl text-xs font-medium flex items-center justify-between transition-all cursor-pointer ${
+            activeNavTab === 'projects'
+              ? 'bg-blue-600/20 text-blue-400 border border-blue-500/40 font-semibold'
+              : 'text-slate-300 hover:bg-slate-900/90 hover:text-white border border-transparent'
+          }`}
+          title="Projects & Workspace"
+        >
+          <div className="flex items-center gap-2.5">
+            <Folder className="w-4 h-4 text-blue-400" />
+            <span>Projects</span>
+          </div>
+          <span className="text-[9px] font-mono text-slate-500 uppercase">Workspace</span>
+        </button>
+
+        {/* 3. Artifacts */}
+        <button
+          id="sidebar-artifacts-btn"
+          onClick={() => {
+            if (onOpenArtifacts) onOpenArtifacts();
+            else if (onOpenFileManager) onOpenFileManager();
+            if (window.innerWidth < 1024) onClose();
+          }}
+          className={`w-full py-2 px-3 rounded-xl text-xs font-medium flex items-center justify-between transition-all cursor-pointer ${
+            activeNavTab === 'artifacts'
+              ? 'bg-blue-600/20 text-blue-400 border border-blue-500/40 font-semibold'
+              : 'text-slate-300 hover:bg-slate-900/90 hover:text-white border border-transparent'
+          }`}
+          title="Generated Artifacts"
+        >
+          <div className="flex items-center gap-2.5">
+            <Box className="w-4 h-4 text-purple-400" />
+            <span>Artifacts</span>
+          </div>
+          <span className="text-[9px] font-mono text-purple-400/80">Files</span>
+        </button>
+
+        {/* 4. Codex (App tab powered by Google AI Studio Engine) */}
+        <button
+          id="sidebar-codex-app-btn"
+          onClick={() => {
+            if (onOpenCodex) onOpenCodex();
+            if (window.innerWidth < 1024) onClose();
+          }}
+          className={`w-full py-2 px-3 rounded-xl text-xs font-semibold flex items-center justify-between transition-all cursor-pointer ${
+            activeNavTab === 'codex'
+              ? 'bg-blue-600 text-white shadow-md'
+              : 'bg-blue-950/40 hover:bg-blue-900/50 text-blue-300 border border-blue-800/50'
+          }`}
+          title="Codex: Full App Builder (Google AI Studio Engine)"
+        >
+          <div className="flex items-center gap-2.5">
+            <Code2 className="w-4 h-4 text-blue-300" />
+            <span className="tracking-wide">Codex</span>
+          </div>
+          <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-blue-500/30 text-blue-200 border border-blue-400/40">
+            AI STUDIO
+          </span>
+        </button>
+
+        {/* 5. Customize */}
+        <button
+          id="sidebar-customize-btn"
+          onClick={() => {
+            if (onOpenCustomize) onOpenCustomize();
+            else onOpenSettings();
+            if (window.innerWidth < 1024) onClose();
+          }}
+          className={`w-full py-2 px-3 rounded-xl text-xs font-medium flex items-center justify-between transition-all cursor-pointer ${
+            activeNavTab === 'customize'
+              ? 'bg-blue-600/20 text-blue-400 border border-blue-500/40 font-semibold'
+              : 'text-slate-300 hover:bg-slate-900/90 hover:text-white border border-transparent'
+          }`}
+          title="Customize Sapphire AI parameters"
+        >
+          <div className="flex items-center gap-2.5">
+            <Sliders className="w-4 h-4 text-slate-400" />
+            <span>Customize</span>
+          </div>
+        </button>
       </div>
 
-      {/* Search Chats Input */}
-      {sessions.length > 2 && (
-        <div className="px-4 pb-2">
-          <div className="relative">
-            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              placeholder="Search conversations..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-white border border-slate-200 rounded-xl pl-8 pr-3 py-1.5 text-xs text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 shadow-2xs"
-            />
+      {/* Guest Mode Banner or Conversation List */}
+      {isGuest ? (
+        <div className="p-4 m-3 rounded-2xl bg-slate-900/80 border border-slate-800 text-center space-y-2">
+          <div className="w-8 h-8 rounded-full bg-slate-800 text-slate-400 mx-auto flex items-center justify-center">
+            <Shield className="w-4 h-4" />
           </div>
+          <p className="text-xs font-semibold text-slate-300">Guest Mode Active</p>
+          <p className="text-[10px] text-slate-500 leading-relaxed">
+            Chat history is disabled with zero data persistence. Sign in with Google to sync across devices.
+          </p>
         </div>
-      )}
-
-      {/* Conversation List */}
-      <div className="flex-1 overflow-y-auto px-4 py-1 space-y-1">
-        <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-2 py-1.5 flex items-center justify-between">
-          <span>Recent Activity ({sessions.length})</span>
-          {sessions.length > 1 && (
-            <button
-              onClick={onClearAllSessions}
-              className="text-[10px] text-slate-400 hover:text-rose-600 transition-colors font-medium cursor-pointer"
-              title="Clear all conversation history"
-            >
-              Clear All
-            </button>
-          )}
-        </div>
-
-        {filteredSessions.length === 0 ? (
-          <div className="py-8 text-center text-xs text-slate-400 px-4">
-            {searchQuery ? 'No matching conversations' : 'No conversations yet. Start a new chat!'}
-          </div>
-        ) : (
-          filteredSessions.map((session) => {
-            const isActive = session.id === currentSessionId;
-            const isEditing = editingId === session.id;
-
-            return (
-              <div
-                key={session.id}
-                id={`session-item-${session.id}`}
-                onClick={() => {
-                  onSelectSession(session.id);
-                  if (window.innerWidth < 1024) onClose();
-                }}
-                className={`group relative flex items-center justify-between p-3 rounded-xl text-sm font-medium cursor-pointer transition-all ${
-                  isActive
-                    ? 'bg-indigo-50 text-indigo-700 border border-indigo-100 shadow-2xs'
-                    : 'hover:bg-slate-100/90 text-slate-600 hover:text-slate-800 border border-transparent'
-                }`}
-              >
-                <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                  <MessageSquare
-                    className={`w-3.5 h-3.5 shrink-0 ${
-                      isActive ? 'text-indigo-600' : 'text-slate-400 group-hover:text-slate-500'
-                    }`}
-                  />
-                  {isEditing ? (
-                    <input
-                      type="text"
-                      value={editTitle}
-                      onChange={(e) => setEditTitle(e.target.value)}
-                      onClick={(e) => e.stopPropagation()}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') handleSaveRename(session.id, e as any);
-                        if (e.key === 'Escape') handleCancelRename(e as any);
-                      }}
-                      autoFocus
-                      className="bg-white text-slate-800 px-2 py-0.5 rounded border border-indigo-500 text-xs w-full focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                    />
-                  ) : (
-                    <span className="truncate">{session.title}</span>
-                  )}
-                </div>
-
-                {/* Actions (Rename, Delete) */}
-                <div className="flex items-center gap-1 shrink-0">
-                  {isEditing ? (
-                    <>
-                      <button
-                        onClick={(e) => handleSaveRename(session.id, e)}
-                        className="p-1 text-emerald-600 hover:bg-emerald-50 rounded cursor-pointer"
-                      >
-                        <Check className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={handleCancelRename}
-                        className="p-1 text-slate-400 hover:bg-slate-200 rounded cursor-pointer"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    </>
-                  ) : (
-                    <div className="opacity-0 group-hover:opacity-100 flex items-center gap-0.5 transition-opacity">
-                      <button
-                        onClick={(e) => handleStartRename(session, e)}
-                        className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-200 rounded cursor-pointer"
-                        title="Rename"
-                      >
-                        <Edit2 className="w-3 h-3" />
-                      </button>
-                      <button
-                        onClick={(e) => handleDelete(session.id, e)}
-                        className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded cursor-pointer"
-                        title="Delete conversation"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </button>
-                    </div>
-                  )}
-                </div>
+      ) : (
+        <>
+          {/* Search Chats */}
+          {sessions.length > 2 && (
+            <div className="px-3 pt-3 pb-1">
+              <div className="relative">
+                <Search className="w-3.5 h-3.5 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder="Search chats..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-8 pr-3 py-1.5 text-xs text-slate-300 placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                />
               </div>
-            );
-          })
-        )}
-      </div>
-
-      {/* Quick App Download Banner */}
-      {onOpenGetApp && (
-        <div className="p-3 border-t border-slate-200/80 bg-blue-50/40">
-          <button
-            onClick={onOpenGetApp}
-            className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl bg-white hover:bg-blue-50/80 text-blue-700 border border-blue-200 shadow-2xs hover:shadow-xs transition-all text-xs font-semibold cursor-pointer group"
-          >
-            <div className="flex items-center gap-2">
-              <Download className="w-4 h-4 text-[#3b71fe] group-hover:scale-110 transition-transform" />
-              <span>Get App (APK &amp; EXE)</span>
             </div>
-            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-blue-100 text-blue-800">
-              v2.0
-            </span>
-          </button>
-        </div>
+          )}
+
+          {/* Conversation List */}
+          <div className="flex-1 overflow-y-auto px-3 py-2 space-y-1">
+            <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider px-2 py-1 flex items-center justify-between">
+              <span>Chats ({sessions.length})</span>
+              {sessions.length > 1 && (
+                <button
+                  onClick={onClearAllSessions}
+                  className="text-[10px] text-slate-500 hover:text-rose-400 transition-colors font-medium cursor-pointer"
+                  title="Clear all"
+                >
+                  Clear All
+                </button>
+              )}
+            </div>
+
+            {filteredSessions.length === 0 ? (
+              <div className="py-6 text-center text-xs text-slate-600 px-3">
+                {searchQuery ? 'No matching chats' : 'Workspace is ready. Start a new chat!'}
+              </div>
+            ) : (
+              filteredSessions.map((session) => {
+                const isActive = session.id === currentSessionId && activeNavTab === 'chat';
+                const isEditing = editingId === session.id;
+
+                return (
+                  <div
+                    key={session.id}
+                    id={`session-item-${session.id}`}
+                    onClick={() => {
+                      onSelectSession(session.id);
+                      if (window.innerWidth < 1024) onClose();
+                    }}
+                    className={`group relative flex items-center justify-between p-2.5 rounded-xl text-xs font-medium cursor-pointer transition-all ${
+                      isActive
+                        ? 'bg-slate-900 text-white border border-slate-700 shadow-sm font-semibold'
+                        : 'hover:bg-slate-900/60 text-slate-400 hover:text-slate-200 border border-transparent'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <MessageSquare
+                        className={`w-3.5 h-3.5 shrink-0 ${
+                          isActive ? 'text-blue-400' : 'text-slate-500'
+                        }`}
+                      />
+                      {isEditing ? (
+                        <input
+                          type="text"
+                          value={editTitle}
+                          onChange={(e) => setEditTitle(e.target.value)}
+                          onClick={(e) => e.stopPropagation()}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleSaveRename(session.id, e as any);
+                            if (e.key === 'Escape') handleCancelRename(e as any);
+                          }}
+                          autoFocus
+                          className="bg-slate-950 text-white px-1.5 py-0.5 rounded border border-blue-500 text-xs w-full focus:outline-none"
+                        />
+                      ) : (
+                        <span className="truncate">{session.title}</span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-1 shrink-0">
+                      {isEditing ? (
+                        <>
+                          <button
+                            onClick={(e) => handleSaveRename(session.id, e)}
+                            className="p-1 text-emerald-400 hover:bg-slate-800 rounded cursor-pointer"
+                          >
+                            <Check className="w-3 h-3" />
+                          </button>
+                          <button
+                            onClick={handleCancelRename}
+                            className="p-1 text-slate-500 hover:bg-slate-800 rounded cursor-pointer"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </>
+                      ) : (
+                        <div className="opacity-0 group-hover:opacity-100 flex items-center gap-0.5 transition-opacity">
+                          <button
+                            onClick={(e) => handleStartRename(session, e)}
+                            className="p-1 text-slate-500 hover:text-slate-300 rounded cursor-pointer"
+                            title="Rename"
+                          >
+                            <Edit2 className="w-3 h-3" />
+                          </button>
+                          <button
+                            onClick={(e) => handleDelete(session.id, e)}
+                            className="p-1 text-slate-500 hover:text-rose-400 rounded cursor-pointer"
+                            title="Delete"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </>
       )}
 
-      {/* User Profile / Settings Footer */}
-      <div className="p-3 sm:p-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between gap-2">
+      {/* User Profile & Settings Footer */}
+      <div className="p-3 border-t border-slate-800/80 bg-black/90 flex items-center justify-between gap-2 shrink-0">
         <button
           type="button"
           onClick={() => {
@@ -311,35 +394,34 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
             if (window.innerWidth < 1024) onClose();
           }}
           className="flex items-center gap-2.5 min-w-0 text-left hover:opacity-80 transition-opacity cursor-pointer group flex-1"
-          title="Click to edit profile"
+          title="User Profile"
         >
-          {(userProfile?.avatar || userProfile?.avatarUrl) ? (
+          {userProfile?.avatar ? (
             <img
-              src={userProfile?.avatar || userProfile?.avatarUrl}
+              src={userProfile.avatar}
               alt={userProfile.name}
-              className="w-8 h-8 rounded-full object-cover bg-white border border-slate-200 shadow-2xs shrink-0 group-hover:ring-2 group-hover:ring-indigo-400 transition-all"
+              className="w-7 h-7 rounded-lg object-cover bg-slate-900 border border-slate-800 shrink-0"
             />
           ) : (
-            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-600 to-purple-600 text-white flex items-center justify-center font-bold text-xs shadow-2xs shrink-0">
-              {userProfile?.name ? userProfile.name.charAt(0).toUpperCase() : 'U'}
+            <div className="w-7 h-7 rounded-lg bg-slate-800 text-slate-300 flex items-center justify-center font-bold text-xs border border-slate-700 shrink-0">
+              {isGuest ? 'G' : userProfile?.name?.charAt(0).toUpperCase() || 'U'}
             </div>
           )}
           <div className="min-w-0 flex-1">
-            <p className="text-xs font-bold text-slate-800 truncate flex items-center gap-1">
-              <span>{userProfile?.name || 'User Profile'}</span>
-              <Edit2 className="w-3 h-3 text-slate-400 group-hover:text-indigo-600 transition-colors" />
+            <p className="text-xs font-semibold text-slate-200 truncate flex items-center gap-1">
+              <span>{userProfile?.name || 'Guest User'}</span>
             </p>
-            <p className="text-[10px] text-emerald-600 font-medium flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block animate-pulse"></span>
-              Active Profile • Edit
+            <p className="text-[10px] text-slate-500 truncate">
+              {isGuest ? 'Zero persistence' : 'Google Auth Active'}
             </p>
           </div>
         </button>
+
         <button
           id="sidebar-settings-btn"
           onClick={onOpenSettings}
-          className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-200/80 transition-colors cursor-pointer shrink-0"
-          title="Settings & Model Config"
+          className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-900 transition-colors cursor-pointer shrink-0"
+          title="Settings & API Key"
         >
           <SettingsIcon className="w-4 h-4" />
         </button>
@@ -347,52 +429,46 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
     </div>
   );
 
-  // Desktop: Docked panel with smooth width & opacity slide-in transition
   if (isDesktop) {
     return (
       <motion.aside
         initial={false}
         animate={{
-          width: isOpen ? 320 : 0,
+          width: isOpen ? 288 : 0,
           opacity: isOpen ? 1 : 0
         }}
-        transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
-        className="h-full border-r border-slate-200 bg-white shrink-0 overflow-hidden flex flex-col z-20"
+        transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+        className="h-full border-r border-slate-800/80 bg-black shrink-0 overflow-hidden flex flex-col z-20"
       >
         {sidebarInnerContent}
       </motion.aside>
     );
   }
 
-  // Mobile: Floating drawer with backdrop and slide-in from left
   return (
     <AnimatePresence>
       {isOpen && (
-        <>
-          {/* Backdrop for mobile drawer */}
+        <div className="fixed inset-0 z-50 flex">
           <motion.div
-            key="mobile-sidebar-backdrop"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
             onClick={onClose}
-            className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-40 lg:hidden"
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm"
           />
-
-          {/* Sidebar container drawer on mobile */}
-          <motion.aside
-            key="mobile-sidebar-drawer"
-            initial={{ x: '-100%' }}
+          <motion.div
+            initial={{ x: -288 }}
             animate={{ x: 0 }}
-            exit={{ x: '-100%' }}
-            transition={{ type: 'spring', damping: 30, stiffness: 350 }}
-            className="fixed top-0 bottom-0 left-0 z-50 w-72 sm:w-80 max-w-[85vw] bg-white border-r border-slate-200 flex flex-col shadow-2xl h-full lg:hidden overflow-hidden"
+            exit={{ x: -288 }}
+            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+            className="relative w-72 h-full z-10"
           >
             {sidebarInnerContent}
-          </motion.aside>
-        </>
+          </motion.div>
+        </div>
       )}
     </AnimatePresence>
   );
 };
+
+export default ChatSidebar;
