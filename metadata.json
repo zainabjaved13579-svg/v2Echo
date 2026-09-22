@@ -1,6 +1,6 @@
 {
   "name": "Sapphire AI Assistant",
-  "description": "Sapphire AI assistant with 15MB file upload & multimodal understanding, AI code & folder zip/unzip generation, Android shortcut launcher, and responsive voice intelligence.",
+  "description": "Sapphire AI: Elite Multi-file AI Architecture, Codex App Builder & Global Intelligent Assistant.",
   "requestFramePermissions": [
     "microphone"
   ],

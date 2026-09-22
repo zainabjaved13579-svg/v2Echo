@@ -584,39 +584,64 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ language, meta, value, onPreview,
           )}
         </div>
 
-        {/* Action Controls: Copy and Preview ONLY */}
+        {/* Action Controls: Strictly 3 options: Copy, Download, and Preview */}
         <div className="flex items-center gap-1.5 flex-wrap">
-          {/* Live Preview Button */}
-          {isPreviewable && (
-            <button
-              type="button"
-              onClick={handlePreview}
-              className="flex items-center gap-1.5 px-3 py-1.5 sm:px-2.5 sm:py-1 rounded-lg text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 sm:text-emerald-300 sm:hover:text-white sm:bg-emerald-950/80 sm:hover:bg-emerald-900 border border-emerald-400/50 sm:border-emerald-500/40 transition-all shadow-xs active:scale-95 cursor-pointer"
-              title="Preview rendered code"
-            >
-              <Eye className="w-3.5 h-3.5 text-white sm:text-emerald-400" />
-              <span>Preview</span>
-            </button>
-          )}
-
-          {/* Copy Button */}
+          {/* 1. Copy Button */}
           <button
             type="button"
             onClick={handleCopy}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700/80 transition-all active:scale-95 cursor-pointer"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium text-slate-300 hover:text-white bg-[#222120] hover:bg-[#2e2c29] border border-[#383633] transition-all active:scale-95 cursor-pointer"
             title="Copy code to clipboard"
           >
             {copied ? (
               <>
                 <Check className="w-3.5 h-3.5 text-emerald-400" />
-                <span className="text-emerald-400 font-semibold">Copied!</span>
+                <span className="text-emerald-400 font-semibold">Copied</span>
               </>
             ) : (
               <>
-                <Copy className="w-3.5 h-3.5" />
+                <Copy className="w-3.5 h-3.5 text-slate-400" />
                 <span>Copy</span>
               </>
             )}
+          </button>
+
+          {/* 2. Download Button */}
+          <button
+            type="button"
+            onClick={() => {
+              downloadSingleFileDirectly({
+                id: cleanName,
+                name: cleanName,
+                path: `/${cleanName}`,
+                content: code,
+                language: language || 'text',
+                createdAt: Date.now(),
+                updatedAt: Date.now(),
+                autoSaved: true,
+                source: 'ai-generated'
+              });
+            }}
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium text-slate-300 hover:text-white bg-[#222120] hover:bg-[#2e2c29] border border-[#383633] transition-all active:scale-95 cursor-pointer"
+            title={`Download ${cleanName}`}
+          >
+            <Download className="w-3.5 h-3.5 text-slate-400" />
+            <span>Download</span>
+          </button>
+
+          {/* 3. Preview Button */}
+          <button
+            type="button"
+            onClick={handlePreview}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all active:scale-95 cursor-pointer shadow-xs ${
+              isPreviewable
+                ? 'text-white bg-[#d97757] hover:bg-[#c66b4d] border border-[#d97757]/80'
+                : 'text-slate-300 hover:text-white bg-[#222120] hover:bg-[#2e2c29] border border-[#383633]'
+            }`}
+            title="Live Preview"
+          >
+            <Eye className="w-3.5 h-3.5" />
+            <span>Preview</span>
           </button>
         </div>
       </div>

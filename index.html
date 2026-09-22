@@ -4,12 +4,13 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Sapphire AI Assistant</title>
-    <meta name="description" content="Sapphire AI assistant with 15MB file upload & multimodal understanding, AI code & folder zip/unzip generation, Android shortcut launcher, and responsive voice intelligence." />
+    <meta name="description" content="Sapphire AI: Elite Multi-file AI Architecture, Codex App Builder & Global Intelligent Assistant." />
     <meta property="og:title" content="Sapphire AI Assistant" />
-    <meta property="og:description" content="Sapphire AI assistant with 15MB file upload & multimodal understanding, AI code & folder zip/unzip generation, Android shortcut launcher, and responsive voice intelligence." />
+    <meta property="og:description" content="Sapphire AI: Elite Multi-file AI Architecture, Codex App Builder & Global Intelligent Assistant." />
+    <meta name="google-site-verification" content="google8d72cfb9e1595dd7" />
     <link rel="icon" type="image/png" href="https://i.ibb.co/q37Fs0hH/cropped-circle-image-1.png" />
     <link rel="manifest" href="/manifest.json" />
-    <meta name="theme-color" content="#020617" />
+    <meta name="theme-color" content="#191817" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta property="og:image" content="https://i.ibb.co/q37Fs0hH/cropped-circle-image-1.png" />
@@ -17,7 +18,7 @@
     <meta name="twitter:card" content="summary_large_image" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
     <script>
       (function() {
         try {
@@ -48,9 +49,16 @@
       })();
     </script>
   </head>
-  <body class="h-full bg-white text-slate-800 antialiased font-['Plus_Jakarta_Sans',sans-serif]">
+  <body class="h-full bg-[#191817] text-[#ece7e1] antialiased font-['Plus_Jakarta_Sans',sans-serif] selection:bg-[#d97757]/30 selection:text-white">
     <div id="root" class="h-full"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js').catch(() => {});
+        });
+      }
+    </script>
   </body>
 </html>
 

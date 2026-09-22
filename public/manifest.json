@@ -1,12 +1,15 @@
 {
+  "id": "/",
   "name": "Sapphire AI Assistant",
   "short_name": "Sapphire",
   "description": "Sapphire AI: Elite AI Coding, Multi-file Codex Architecture & Intelligent Assistant",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#020617",
-  "theme_color": "#020617",
+  "background_color": "#191817",
+  "theme_color": "#191817",
   "orientation": "any",
+  "categories": ["productivity", "developer", "utilities"],
   "icons": [
     {
       "src": "https://i.ibb.co/q37Fs0hH/cropped-circle-image-1.png",
@@ -18,7 +21,13 @@
       "src": "https://i.ibb.co/q37Fs0hH/cropped-circle-image-1.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "https://i.ibb.co/q37Fs0hH/cropped-circle-image-1.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }
