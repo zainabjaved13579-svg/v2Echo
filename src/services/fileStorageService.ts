@@ -750,7 +750,8 @@ export function downloadWorkspaceFile(file: WorkspaceFile): void {
 }
 
 // Export all files as ZIP package
-export async function exportAllFilesAsZip(files: WorkspaceFile[]): Promise<void> {
+export async function exportAllFilesAsZip(filesInput?: WorkspaceFile[]): Promise<void> {
+  const files = filesInput && filesInput.length > 0 ? filesInput : loadWorkspaceFiles();
   const zip = new JSZip();
 
   for (const file of files) {

@@ -207,7 +207,7 @@ Adhere strictly to:
         },
         onError: (err) => {
           console.error('Codex Engine Generation Error:', err);
-          setStatusMessage(`Error: ${err.message || 'Generation failed. Check Google AI Studio API key.'}`);
+          setStatusMessage(`Error: ${typeof err === 'string' ? err : (err as any)?.message || 'Generation failed. Check Google AI Studio API key.'}`);
           setIsGenerating(false);
         }
       });
@@ -334,7 +334,7 @@ Adhere strictly to:
 
           {/* Export Zip */}
           <button
-            onClick={() => exportAllFilesAsZip()}
+            onClick={() => exportAllFilesAsZip(files)}
             className="p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-white text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
             title="Download ZIP"
           >
