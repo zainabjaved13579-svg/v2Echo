@@ -584,39 +584,8 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ language, meta, value, onPreview,
           )}
         </div>
 
-        {/* Action Controls: Remake (Desktop only), Download, Preview, Workspace, Copy */}
+        {/* Action Controls: Copy and Preview ONLY */}
         <div className="flex items-center gap-1.5 flex-wrap">
-          {/* AI Remake Code Button - hidden on mobile as per user request: "jb mobile ke lye code dn to remake na ho bs preview ka and download ka option ho" */}
-          <button
-            type="button"
-            onClick={() => setShowRemakeDrawer((prev) => !prev)}
-            className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold text-purple-200 hover:text-white bg-purple-950/80 hover:bg-purple-900 border border-purple-500/40 transition-all shadow-xs active:scale-95 cursor-pointer"
-            title="Remake and refactor this code with AI"
-          >
-            <Wand2 className="w-3.5 h-3.5 text-purple-400" />
-            <span>Remake</span>
-          </button>
-
-          {/* Direct File Download with Extension */}
-          <button
-            type="button"
-            onClick={handleDownload}
-            className="flex items-center gap-1.5 px-3 py-1.5 sm:px-2.5 sm:py-1 rounded-lg text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 sm:text-indigo-200 sm:hover:text-white sm:bg-indigo-950/80 sm:hover:bg-indigo-900 border border-indigo-400/50 sm:border-indigo-500/40 transition-all shadow-xs active:scale-95 cursor-pointer"
-            title={`Download ${cleanName} with .${fileExtension} extension`}
-          >
-            {downloaded ? (
-              <>
-                <Check className="w-3.5 h-3.5 text-emerald-400" />
-                <span className="text-emerald-400 font-bold">Downloaded</span>
-              </>
-            ) : (
-              <>
-                <Download className="w-3.5 h-3.5 text-white sm:text-indigo-400" />
-                <span>Download<span className="hidden xs:inline"> .{fileExtension}</span></span>
-              </>
-            )}
-          </button>
-
           {/* Live Preview Button */}
           {isPreviewable && (
             <button
@@ -629,17 +598,6 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ language, meta, value, onPreview,
               <span>Preview</span>
             </button>
           )}
-
-          {/* Open in File & Workspace */}
-          <button
-            type="button"
-            onClick={handleOpenInWorkspace}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 border border-slate-700/80 transition-all active:scale-95 cursor-pointer"
-            title="Open in File & Workspace"
-          >
-            <Folder className="w-3.5 h-3.5 text-amber-400" />
-            <span className="hidden sm:inline">Workspace</span>
-          </button>
 
           {/* Copy Button */}
           <button
