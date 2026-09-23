@@ -36,32 +36,32 @@ export const PersonaModal: React.FC<PersonaModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 select-none sm:select-auto font-['Plus_Jakarta_Sans',sans-serif]">
-      <div className="w-full max-w-xl bg-[#201f1d] border border-[#33312e] rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] text-[#ede8e1]">
+    <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
+      <div className="w-full max-w-xl bg-white border border-slate-200 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] animate-fadeIn">
         {/* Header */}
-        <div className="px-6 py-4.5 border-b border-[#2a2926] bg-[#191817] flex items-center justify-between">
+        <div className="px-6 py-4.5 border-b border-slate-200 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-2xl bg-[#282724] border border-[#383633] text-[#d97757] flex items-center justify-center">
+            <div className="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center">
               <Sparkles className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="text-base font-semibold text-[#f5f2eb]">Sapphire Persona & Instructions</h2>
-              <p className="text-xs text-[#86837c]">Choose how Sapphire should respond, format, and reason</p>
+              <h2 className="text-base font-bold text-slate-900">Echo Persona & Instructions</h2>
+              <p className="text-xs text-slate-500">Choose how Echo should respond, think, and format answers</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 text-[#86837c] hover:text-[#ede8e1] rounded-xl hover:bg-[#282724] transition-colors cursor-pointer"
+            className="p-1.5 text-slate-400 hover:text-slate-600 rounded-xl hover:bg-slate-100 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Content */}
-        <div className="p-6 overflow-y-auto space-y-5 flex-1 text-xs sm:text-sm">
+        <div className="p-6 overflow-y-auto space-y-5 flex-1">
           {/* Preset list */}
           <div className="space-y-2">
-            <label className="text-[11px] font-semibold uppercase tracking-wider text-[#86837c]">
+            <label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
               Preset Modes
             </label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
@@ -71,17 +71,17 @@ export const PersonaModal: React.FC<PersonaModalProps> = ({
                   <button
                     key={p.id}
                     onClick={() => handleSelect(p)}
-                    className={`text-left p-3 rounded-2xl border transition-all cursor-pointer ${
+                    className={`text-left p-3 rounded-2xl border transition-all ${
                       isSelected
-                        ? 'bg-[#282724] border-[#d97757] ring-1 ring-[#d97757]/40 text-[#ede8e1]'
-                        : 'bg-[#191817] border-[#2a2926] hover:border-[#383633] hover:bg-[#201f1d] text-[#a19e97]'
+                        ? 'bg-indigo-50 border-indigo-200 ring-1 ring-indigo-300 text-indigo-900'
+                        : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-700'
                     }`}
                   >
                     <div className="flex items-center justify-between mb-1">
-                      <span className={`font-semibold text-xs ${isSelected ? 'text-[#f5f2eb]' : 'text-[#ede8e1]'}`}>{p.name}</span>
-                      {isSelected && <Check className="w-3.5 h-3.5 text-[#d97757]" />}
+                      <span className={`font-semibold text-xs ${isSelected ? 'text-indigo-700' : 'text-slate-800'}`}>{p.name}</span>
+                      {isSelected && <Check className="w-3.5 h-3.5 text-indigo-600" />}
                     </div>
-                    <p className="text-[11px] text-[#86837c] line-clamp-2 leading-relaxed">
+                    <p className="text-[11px] text-slate-500 line-clamp-2 leading-relaxed">
                       {p.description}
                     </p>
                   </button>
@@ -93,7 +93,7 @@ export const PersonaModal: React.FC<PersonaModalProps> = ({
           {/* Custom Instruction Box */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <label className="text-[11px] font-semibold uppercase tracking-wider text-[#86837c]">
+              <label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
                 System Instructions
               </label>
               <button
@@ -101,7 +101,7 @@ export const PersonaModal: React.FC<PersonaModalProps> = ({
                   const preset = PERSONAS.find(p => p.id === activeId);
                   if (preset) setCustomText(preset.systemInstruction);
                 }}
-                className="text-[11px] text-[#d97757] hover:underline font-medium cursor-pointer"
+                className="text-[11px] text-indigo-600 hover:text-indigo-700 underline font-medium"
               >
                 Reset to preset default
               </button>
@@ -110,27 +110,27 @@ export const PersonaModal: React.FC<PersonaModalProps> = ({
               rows={4}
               value={customText}
               onChange={(e) => setCustomText(e.target.value)}
-              placeholder="Enter custom instructions to guide Sapphire's tone, role, format or constraints..."
-              className="w-full bg-[#191817] border border-[#33312e] rounded-2xl p-3.5 text-xs text-[#ede8e1] placeholder-[#86837c] focus:outline-none focus:border-[#d97757] leading-relaxed resize-none"
+              placeholder="Enter custom instructions to guide Echo's tone, role, format or constraints..."
+              className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 leading-relaxed"
             />
-            <p className="text-[11px] text-[#86837c] flex items-center gap-1">
-              <Info className="w-3.5 h-3.5 text-[#86837c]" />
-              Directs Sapphire on every message in this conversation.
+            <p className="text-[11px] text-slate-400 flex items-center gap-1">
+              <Info className="w-3.5 h-3.5 text-slate-400" />
+              Directs Echo on every message in this conversation.
             </p>
           </div>
         </div>
 
         {/* Footer Actions */}
-        <div className="px-6 py-4 border-t border-[#2a2926] bg-[#191817] flex items-center justify-end gap-2.5">
+        <div className="px-6 py-4 border-t border-slate-200 bg-slate-50/80 flex items-center justify-end gap-2.5">
           <button
             onClick={onClose}
-            className="px-4 py-2 rounded-xl text-xs font-semibold text-[#86837c] hover:text-[#ede8e1] hover:bg-[#282724] transition-colors cursor-pointer"
+            className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:text-slate-800 hover:bg-slate-200/60 transition-colors"
           >
             Cancel
           </button>
           <button
             onClick={handleApply}
-            className="px-5 py-2 rounded-xl text-xs font-semibold bg-[#d97757] hover:bg-[#c86b4c] text-white shadow-md transition-all active:scale-95 cursor-pointer"
+            className="px-5 py-2 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs transition-all active:scale-95"
           >
             Apply Persona
           </button>
@@ -139,4 +139,3 @@ export const PersonaModal: React.FC<PersonaModalProps> = ({
     </div>
   );
 };
-export default PersonaModal;

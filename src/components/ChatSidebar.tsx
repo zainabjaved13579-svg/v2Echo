@@ -98,26 +98,26 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
   const initial = userName.charAt(0).toLowerCase();
 
   const sidebarContent = (
-    <div className="w-full lg:w-64 h-full flex flex-col shrink-0 min-w-0 bg-[#191817] text-[#ede8e1] border-r border-[#2a2926] select-none font-['Plus_Jakarta_Sans',sans-serif]">
+    <div className="w-full lg:w-64 h-full flex flex-col shrink-0 min-w-0 bg-[#0e0f12] text-[#edeef2] border-r border-[#1f222b] select-none font-['Plus_Jakarta_Sans',sans-serif]">
       {/* Brand Header */}
-      <div className="p-3 pb-2.5 flex items-center justify-between border-b border-[#2a2926]">
+      <div className="p-3 pb-2.5 flex items-center justify-between border-b border-[#1f222b]">
         <div className="flex items-center gap-2.5">
           <img
             src={SAPPHIRE_LOGO_URL}
             alt="Sapphire"
-            className="w-7 h-7 rounded-xl object-cover ring-1 ring-[#d97757]/40 shadow-xs bg-[#201f1d]"
+            className="w-7 h-7 rounded-xl object-cover ring-1 ring-blue-500/30 shadow-xs"
           />
           <div className="flex flex-col">
-            <span className="font-semibold text-xs text-[#f5f2eb] tracking-tight">Sapphire</span>
-            <span className="text-[10px] text-[#86837c] leading-none">Studio</span>
+            <span className="font-semibold text-xs text-[#f3f4f6] tracking-tight">Sapphire</span>
+            <span className="text-[10px] text-[#717684] leading-none">Studio</span>
           </div>
         </div>
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" title="System Online" />
         </div>
       </div>
 
-      {/* Top Navigation Action Section */}
+      {/* Top Header Section */}
       <div className="p-3 space-y-1.5">
         {/* + New Button */}
         <button
@@ -126,13 +126,13 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
             onNewChat();
             if (window.innerWidth < 1024) onClose();
           }}
-          className="w-full py-2 px-3 bg-[#201f1d] hover:bg-[#282724] text-[#ede8e1] rounded-xl text-xs font-medium flex items-center gap-2 transition-all border border-[#33312e] active:scale-[0.99] cursor-pointer shadow-xs"
+          className="w-full py-2 px-3 bg-[#18191e] hover:bg-[#22242c] text-[#edeef2] rounded-xl text-xs font-medium flex items-center gap-2 transition-all border border-[#272a33] active:scale-[0.99] cursor-pointer"
         >
-          <Plus className="w-3.5 h-3.5 text-[#d97757]" />
+          <Plus className="w-3.5 h-3.5 text-blue-400" />
           <span>New</span>
         </button>
 
-        {/* Workspace / Projects */}
+        {/* Workspace / Projects (normal Gemini will code & all files preview in one button like index.html style.css at same time) */}
         <button
           id="sidebar-workspace-btn"
           onClick={() => {
@@ -142,8 +142,8 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
           }}
           className={`w-full py-1.5 px-2.5 rounded-xl text-xs font-normal flex items-center justify-between transition-colors cursor-pointer ${
             activeNavTab === 'projects' || activeNavTab === 'workspace'
-              ? 'bg-[#282724] text-[#ede8e1] font-medium'
-              : 'text-[#a19e97] hover:bg-[#201f1d] hover:text-[#ede8e1]'
+              ? 'bg-[#242320] text-white font-medium'
+              : 'text-[#a19e97] hover:bg-[#242320]/70 hover:text-[#ede8e1]'
           }`}
           title="Workspace (normal coding & multi-file preview)"
         >
@@ -153,7 +153,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
           </div>
         </button>
 
-        {/* Codex (Google AI Studio app builder & live preview) */}
+        {/* Codex (Google AI Studio works and all files preview) */}
         <button
           id="sidebar-codex-btn"
           onClick={() => {
@@ -162,8 +162,8 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
           }}
           className={`w-full py-1.5 px-2.5 rounded-xl text-xs font-normal flex items-center justify-between transition-colors cursor-pointer ${
             activeNavTab === 'codex'
-              ? 'bg-[#282724] text-[#ede8e1] font-medium'
-              : 'text-[#a19e97] hover:bg-[#201f1d] hover:text-[#ede8e1]'
+              ? 'bg-[#242320] text-white font-medium'
+              : 'text-[#a19e97] hover:bg-[#242320]/70 hover:text-[#ede8e1]'
           }`}
           title="Codex (Google AI Studio app builder & all files preview)"
         >
@@ -183,40 +183,21 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
           }}
           className={`w-full py-1.5 px-2.5 rounded-xl text-xs font-normal flex items-center justify-between transition-colors cursor-pointer ${
             activeNavTab === 'customize'
-              ? 'bg-[#282724] text-[#ede8e1] font-medium'
-              : 'text-[#a19e97] hover:bg-[#201f1d] hover:text-[#ede8e1]'
+              ? 'bg-[#1e2027] text-white font-medium'
+              : 'text-[#9ca3af] hover:bg-[#18191e] hover:text-[#edeef2]'
           }`}
           title="Customize"
         >
           <div className="flex items-center gap-2.5">
-            <Sliders className="w-3.5 h-3.5 text-[#a19e97]" />
+            <Sliders className="w-3.5 h-3.5 text-[#9ca3af]" />
             <span>Customize</span>
           </div>
         </button>
-
-        {/* Install / Download PWA Button */}
-        {onOpenGetApp && (
-          <button
-            id="sidebar-download-pwa-btn"
-            onClick={() => {
-              onOpenGetApp();
-              if (window.innerWidth < 1024) onClose();
-            }}
-            className="w-full py-1.5 px-2.5 rounded-xl text-xs font-normal flex items-center justify-between text-[#a19e97] hover:bg-[#201f1d] hover:text-[#ede8e1] transition-colors cursor-pointer"
-            title="Download / Install PWA App"
-          >
-            <div className="flex items-center gap-2.5">
-              <Download className="w-3.5 h-3.5 text-[#d97757]" />
-              <span>Download PWA</span>
-            </div>
-            <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-[#282724] text-[#d97757] font-medium">App</span>
-          </button>
-        )}
       </div>
 
       {/* Chats Section Header with Search and Filter Icons matching screenshot */}
-      <div className="px-3 pt-3 pb-1.5 flex items-center justify-between text-xs text-[#a19e97]">
-        <span className="font-normal text-[11px] tracking-wide text-[#86837c]">Chats</span>
+      <div className="px-3 pt-4 pb-1.5 flex items-center justify-between text-xs text-[#a19e97]">
+        <span className="font-normal text-[11px] tracking-wide text-[#7d7a74]">Chats</span>
         <div className="flex items-center gap-1.5">
           <button
             type="button"
@@ -224,7 +205,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
             className="p-1 hover:text-[#ede8e1] rounded-lg transition-colors cursor-pointer"
             title="Search chats"
           >
-            <Search className="w-3 h-3 text-[#86837c]" />
+            <Search className="w-3 h-3 text-[#7d7a74]" />
           </button>
           <button
             type="button"
@@ -232,7 +213,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
             className="p-1 hover:text-[#ede8e1] rounded-lg transition-colors cursor-pointer"
             title="Filter & parameters"
           >
-            <SlidersHorizontal className="w-3 h-3 text-[#86837c]" />
+            <SlidersHorizontal className="w-3 h-3 text-[#7d7a74]" />
           </button>
         </div>
       </div>
@@ -245,7 +226,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
             placeholder="Search..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-[#201f1d] border border-[#33312e] rounded-xl px-2.5 py-1 text-xs text-[#ede8e1] placeholder-[#86837c] focus:outline-none"
+            className="w-full bg-[#201f1d] border border-[#33312e] rounded-xl px-2.5 py-1 text-xs text-[#ede8e1] placeholder-[#7d7a74] focus:outline-none"
           />
         </div>
       )}
@@ -253,7 +234,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
       {/* Chat Session List with clean circle bullets matching screenshot */}
       <div className="flex-1 overflow-y-auto px-2 space-y-0.5 no-scrollbar">
         {filteredSessions.length === 0 ? (
-          <div className="px-2 py-3 text-[11px] text-[#86837c]">No chats yet</div>
+          <div className="px-2 py-3 text-[11px] text-[#7d7a74]">No chats yet</div>
         ) : (
           filteredSessions.map((session) => {
             const isSelected = session.id === currentSessionId;
@@ -270,13 +251,13 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
                 }}
                 className={`group relative flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs transition-colors cursor-pointer ${
                   isSelected
-                    ? 'bg-[#282724] text-[#ede8e1] font-medium'
+                    ? 'bg-[#242320] text-white font-medium'
                     : 'text-[#a19e97] hover:bg-[#201f1d] hover:text-[#ede8e1]'
                 }`}
               >
                 <div className="flex items-center gap-2 min-w-0 flex-1">
-                  {/* Clean bullet circle */}
-                  <span className={`w-1.5 h-1.5 rounded-full border shrink-0 ${isSelected ? 'border-[#d97757] bg-[#d97757]' : 'border-[#86837c] group-hover:border-[#ede8e1]'}`} />
+                  {/* Clean bullet circle matching screenshot */}
+                  <span className="w-1.5 h-1.5 rounded-full border border-[#7d7a74] group-hover:border-[#ede8e1] shrink-0" />
 
                   {isEditing ? (
                     <input
@@ -339,7 +320,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
       </div>
 
       {/* User Profile Pill at Bottom */}
-      <div className="p-3 border-t border-[#2a2926] flex items-center justify-between gap-2 shrink-0">
+      <div className="p-3 border-t border-[#1f222b] flex items-center justify-between gap-2 shrink-0">
         <button
           type="button"
           onClick={() => {
@@ -349,12 +330,12 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
           className="flex items-center gap-2 min-w-0 text-left hover:opacity-85 transition-opacity cursor-pointer flex-1"
         >
           {/* Square avatar with soft rounded edges */}
-          <div className="w-6 h-6 rounded-lg bg-[#201f1d] border border-[#33312e] text-[#ede8e1] flex items-center justify-center text-[11px] font-semibold shrink-0">
+          <div className="w-6 h-6 rounded-lg bg-[#1e2027] border border-[#272a33] text-[#edeef2] flex items-center justify-center text-[11px] font-semibold shrink-0">
             {initial.toUpperCase()}
           </div>
-          <div className="min-w-0 flex items-center gap-1.5 text-xs text-[#ede8e1] truncate">
+          <div className="min-w-0 flex items-center gap-1.5 text-xs text-[#edeef2] truncate">
             <span className="truncate font-medium">{userName}</span>
-            <ChevronDown className="w-3 h-3 text-[#86837c] shrink-0" />
+            <ChevronDown className="w-3 h-3 text-[#717684] shrink-0" />
           </div>
         </button>
 
@@ -362,7 +343,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
         <button
           type="button"
           onClick={onOpenGetApp}
-          className="p-1.5 text-[#86837c] hover:text-[#ede8e1] rounded-lg transition-colors cursor-pointer shrink-0 hover:bg-[#201f1d]"
+          className="p-1.5 text-[#7d7a74] hover:text-[#ede8e1] rounded-lg transition-colors cursor-pointer shrink-0"
           title="Download App / PWA"
         >
           <Download className="w-3.5 h-3.5" />
