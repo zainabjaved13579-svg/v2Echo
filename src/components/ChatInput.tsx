@@ -269,25 +269,25 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         </div>
       )}
 
-      {/* Main Input Card - Sapphire Theme */}
+      {/* Main Input Card - Sapphire Brown W Theme */}
       <div
-        className={`relative w-full rounded-2xl sm:rounded-3xl bg-[#18191e] border transition-all shadow-xl ${
+        className={`relative w-full rounded-2xl sm:rounded-3xl bg-[#201f1d] border transition-all shadow-xl ${
           isDragging
-            ? 'border-blue-500 ring-2 ring-blue-500/30'
-            : 'border-[#272a33] focus-within:border-blue-500/50'
+            ? 'border-[#d97757] ring-2 ring-[#d97757]/30'
+            : 'border-[#33312e] focus-within:border-[#d97757]/60'
         }`}
       >
         {/* Attached File Preview */}
         {attachedFile && (
-          <div className="mx-3 mt-2.5 p-2 bg-[#22242c] border border-[#2e323d] rounded-xl flex items-center justify-between gap-3 text-xs text-[#edeef2]">
+          <div className="mx-3 mt-2.5 p-2 bg-[#282724] border border-[#383633] rounded-xl flex items-center justify-between gap-3 text-xs text-[#ede8e1]">
             <div className="flex items-center gap-2 min-w-0">
-              <FileCode className="w-4 h-4 text-blue-400 shrink-0" />
+              <FileCode className="w-4 h-4 text-[#d97757] shrink-0" />
               <span className="truncate max-w-[200px] sm:max-w-sm">{attachedFile.name}</span>
             </div>
             <button
               type="button"
               onClick={() => setAttachedFile(null)}
-              className="text-[#9ca3af] hover:text-white cursor-pointer p-1"
+              className="text-[#a19e97] hover:text-white cursor-pointer p-1"
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -296,19 +296,19 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
         {/* Attached Image Preview */}
         {attachedImage && (
-          <div className="mx-3 mt-2.5 p-2 bg-[#22242c] border border-[#2e323d] rounded-xl flex items-center justify-between gap-3 text-xs text-[#edeef2]">
+          <div className="mx-3 mt-2.5 p-2 bg-[#282724] border border-[#383633] rounded-xl flex items-center justify-between gap-3 text-xs text-[#ede8e1]">
             <div className="flex items-center gap-2 min-w-0">
               <img
                 src={attachedImage.dataUrl}
                 alt="Uploaded"
-                className="w-8 h-8 rounded-lg object-cover border border-[#2e323d]"
+                className="w-8 h-8 rounded-lg object-cover border border-[#383633]"
               />
               <span className="truncate max-w-[200px]">{attachedImage.name || 'Image'}</span>
             </div>
             <button
               type="button"
               onClick={() => setAttachedImage(null)}
-              className="text-[#9ca3af] hover:text-white cursor-pointer p-1"
+              className="text-[#a19e97] hover:text-white cursor-pointer p-1"
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -332,19 +332,19 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                 ? 'Ask about this image...'
                 : 'How can I help you today?'
             }
-            className="w-full bg-transparent text-[#edeef2] placeholder-[#717684] text-sm sm:text-base focus:outline-none resize-none max-h-40 leading-relaxed"
+            className="w-full bg-transparent text-[#ede8e1] placeholder-[#86837c] text-sm sm:text-base focus:outline-none resize-none max-h-40 leading-relaxed font-normal"
           />
         </div>
 
         {/* Bottom Bar: ONLY + on the left, Search 🌐 + Mic + Send on the right */}
-        <div className="px-3 pb-2.5 pt-1 flex items-center justify-between gap-2 border-t border-[#22242c]">
+        <div className="px-3 pb-2.5 pt-1 flex items-center justify-between gap-2 border-t border-[#2a2926]">
           {/* Left: ONLY + icon button (Square with soft rounded corners) */}
           <div className="relative">
             <button
               type="button"
               id="chat-plus-menu-btn"
               onClick={() => setIsPlusMenuOpen((prev) => !prev)}
-              className="w-7 h-7 rounded-xl bg-[#22242c] hover:bg-[#2c2f3a] text-[#edeef2] flex items-center justify-center transition-colors cursor-pointer border border-[#2e323d]"
+              className="w-7 h-7 rounded-xl bg-[#282724] hover:bg-[#32302c] text-[#ede8e1] flex items-center justify-center transition-colors cursor-pointer border border-[#383633]"
               title="Upload file or image"
             >
               <span className="text-lg leading-none font-light mb-0.5">+</span>
@@ -357,23 +357,23 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                   initial={{ opacity: 0, scale: 0.95, y: 10 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                  className="absolute left-0 bottom-9 z-50 w-44 bg-[#18191e] border border-[#272a33] rounded-2xl shadow-2xl p-1.5 space-y-1 text-xs text-[#edeef2]"
+                  className="absolute left-0 bottom-9 z-50 w-44 bg-[#201f1d] border border-[#33312e] rounded-2xl shadow-2xl p-1.5 space-y-1 text-xs text-[#ede8e1]"
                 >
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="w-full px-3 py-2 rounded-xl hover:bg-[#22242c] flex items-center gap-2.5 transition-colors cursor-pointer text-left"
+                    className="w-full px-3 py-2 rounded-xl hover:bg-[#282724] flex items-center gap-2.5 transition-colors cursor-pointer text-left"
                   >
-                    <Paperclip className="w-4 h-4 text-blue-400" />
+                    <Paperclip className="w-4 h-4 text-[#d97757]" />
                     <span>Upload file</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => imageInputRef.current?.click()}
-                    className="w-full px-3 py-2 rounded-xl hover:bg-[#22242c] flex items-center gap-2.5 transition-colors cursor-pointer text-left"
+                    className="w-full px-3 py-2 rounded-xl hover:bg-[#282724] flex items-center gap-2.5 transition-colors cursor-pointer text-left"
                   >
-                    <ImageIcon className="w-4 h-4 text-blue-400" />
+                    <ImageIcon className="w-4 h-4 text-[#d97757]" />
                     <span>Upload image</span>
                   </button>
                 </motion.div>
@@ -390,8 +390,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               onClick={() => setUseSearchGrounding((prev) => !prev)}
               className={`p-1.5 sm:px-2 sm:py-1 rounded-xl text-xs flex items-center gap-1 transition-all cursor-pointer border ${
                 useSearchGrounding
-                  ? 'bg-blue-600/20 text-blue-400 border-blue-500/50'
-                  : 'bg-[#22242c] hover:bg-[#2c2f3a] text-[#9ca3af] border-[#2e323d]'
+                  ? 'bg-[#d97757]/20 text-[#d97757] border-[#d97757]/50 font-medium'
+                  : 'bg-[#282724] hover:bg-[#32302c] text-[#a19e97] border-[#383633]'
               }`}
               title="Toggle Live Web Search"
             >
@@ -407,7 +407,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               className={`p-1.5 rounded-xl transition-all cursor-pointer border ${
                 isRecording
                   ? 'bg-rose-600 text-white animate-pulse border-rose-500'
-                  : 'bg-[#22242c] hover:bg-[#2c2f3a] text-[#9ca3af] hover:text-[#edeef2] border-[#2e323d]'
+                  : 'bg-[#282724] hover:bg-[#32302c] text-[#a19e97] hover:text-[#ede8e1] border-[#383633]'
               }`}
               title="Voice dictation"
             >
@@ -430,7 +430,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                 id="send-message-btn"
                 disabled={!input.trim() && !attachedImage && !attachedFile}
                 onClick={handleSend}
-                className="w-7 h-7 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:hover:bg-blue-600 text-white flex items-center justify-center transition-all cursor-pointer active:scale-95 shadow-md"
+                className="w-7 h-7 rounded-xl bg-[#d97757] hover:bg-[#c86b4c] disabled:opacity-40 disabled:hover:bg-[#d97757] text-white flex items-center justify-center transition-all cursor-pointer active:scale-95 shadow-md"
                 title="Send message"
               >
                 <ArrowUp className="w-3.5 h-3.5" />

@@ -145,7 +145,7 @@ export interface StreamChatParams {
 }
 
 // Convert model identifier to official Google Gemini model ID
-function resolveGeminiModelId(modelName: string = 'echo-3.7-flash'): string {
+function resolveGeminiModelId(modelName: string = 'sapphire-3.8-flash'): string {
   const lower = modelName.toLowerCase();
   if (lower.includes('3.1-pro') || lower.includes('pro')) {
     return 'gemini-3.1-pro-preview';
@@ -153,25 +153,21 @@ function resolveGeminiModelId(modelName: string = 'echo-3.7-flash'): string {
   if (lower.includes('flash-latest')) {
     return 'gemini-flash-latest';
   }
-  if (lower.includes('3.1-flash-lite') || lower.includes('lite') || lower.includes('3.7') || lower.includes('flash') || lower.includes('echo')) {
-    return 'gemini-3.1-flash-lite';
+  if (lower.includes('3.6')) {
+    return 'gemini-3.6-flash';
   }
-  if (lower.startsWith('gemini-')) {
-    return lower;
-  }
-  return 'gemini-3.1-flash-lite';
+  return 'gemini-3.8-flash';
 }
 
 /**
  * Direct client-side streaming call to Google Generative Language API.
- * Ensures Echo works flawlessly on static hosting, Netlify drag-and-drop, and client-only setups!
  */
 async function callDirectGoogleGemini({
   apiKey,
   contents,
   systemInstruction,
   temperature = 0.7,
-  model = 'gemini-3.7-flash',
+  model = 'gemini-3.8-flash',
   useSearchGrounding = false,
   onChunk,
   signal
@@ -188,9 +184,8 @@ async function callDirectGoogleGemini({
   const targetModel = resolveGeminiModelId(model);
   const candidateModels = [
     targetModel,
-    'gemini-3.1-flash-lite',
-    'gemini-3-flash-preview',
     'gemini-3.8-flash',
+    'gemini-3.6-flash',
     'gemini-flash-latest'
   ].filter((m, i, arr) => arr.indexOf(m) === i);
 
@@ -204,36 +199,9 @@ async function callDirectGoogleGemini({
         apiKey
       )}`;
 
-      const baseOwnerInstruction = `You are Echo AI, an ultra-smart, professional, elite AI assistant and principal software architect.
-The creator and developer of this AI is Shaheer Hassan. Do NOT advertise or state who created you unprompted or in routine greetings. ONLY when a user explicitly asks who created you, who made you, who is your developer, who is your owner, who built Echo, or who is Shaheer Hassan, clearly and politely state that Shaheer Hassan is your creator and developer.
-
-CODING & MULTI-FILE PROJECT STANDARDS (CRITICAL):
-1. PROJECT STRUCTURE FIRST:
-   Whenever asked to create a website, web app, script, or multiple-file project:
-   - ALWAYS start your answer with a clean ASCII directory/file structure diagram showing exactly where each file belongs (e.g., 📁 project-name/ ├── index.html ├── src/ ...).
-   - Show how the files interact.
-2. INDIVIDUAL FILE CODE BLOCKS:
-   - Provide each file in its own markdown code block with an explicit filename tag or comment on line 1, for example:
-     \`\`\`html filename="index.html"
-     <!-- index.html -->
-     \`\`\`
-     \`\`\`typescript filename="src/App.tsx"
-     // src/App.tsx
-     \`\`\`
-   - NEVER use lazy abbreviations, comments like "// TODO", "// implement rest here", or truncated placeholders. Always output 100% complete, fully implemented, working code for every single file.
-3. INSTRUCTIONS TO RUN:
-   - At the end, provide brief, crystal-clear setup/execution instructions.
-
-4. ACCURACY & INTELLECT:
-   - Think deeply, eliminate bugs, handle edge cases, and ensure clean modern architecture.
-
-5. LANGUAGE & NATURAL CONVERSATION EXCELLENCE:
-   - Match the user's language naturally and fluently:
-     • If the user writes in English, reply in polished, articulate, professional English.
-     • If the user writes in Urdu script (اردو), reply in fluent, grammatically accurate Urdu Nastaliq.
-     • If the user writes in Roman Urdu (e.g. "kese ho", "batao", "mujhe yeh chahiye"), reply in clean, natural Roman Urdu that is easy to read and understand.
-     • If the user writes in Hindi, reply in fluent, respectful Hindi.
-   - Speak with warmth, polite intelligence, clarity, and precision. Answers should sound melodious, natural, and clear when read aloud via voice speech synthesis. Avoid robotic phrases.`;
+      const baseOwnerInstruction = `You are Sapphire AI, an elite AI assistant and principal software architect.
+Answer with high intelligence, accuracy, and clear structured presentation.
+When writing code for websites or apps, provide complete runnable multi-file code with index.html, style.css, script.js with no placeholders.`;
       const finalInstruction = systemInstruction && systemInstruction.trim()
         ? `${baseOwnerInstruction}\n\n${systemInstruction.trim()}`
         : baseOwnerInstruction;
@@ -584,22 +552,6 @@ export async function streamEchoChat({
     if (!success) {
       if (signal?.aborted) return;
 
-      const lastUserMsg = contents[contents.length - 1]?.parts?.[0]?.text || '';
-      const isGreeting = /^(hi|hello|hey|salam|assalam|aoa|hola|sup|good morning|good evening|good afternoon)/i.test(lastUserMsg.trim());
-
-      if (!isGreeting) {
-        const traces = generateThinkingTrace(lastUserMsg);
-        let traceAccum = '';
-        for (const step of traces.slice(0, 2)) {
-          if (signal?.aborted) return;
-          traceAccum += (traceAccum ? '\n' : '') + step;
-          onThinking?.(traceAccum, true);
-          await new Promise((resolve) => setTimeout(resolve, 30));
-        }
-        thinkingDurationMs = Math.max(1, Math.round(performance.now() - thinkingStartTime));
-        onThinking?.(traceAccum, false);
-      }
-
       const fallbackText = generateEchoFallbackResponse(contents, systemInstruction, model);
       const words = fallbackText.split(/(\s+)/);
       let streamed = '';
@@ -608,9 +560,6 @@ export async function streamEchoChat({
         if (signal?.aborted) return;
         streamed += words[i];
         onChunk(streamed);
-        if (i % 2 === 0 && i < words.length - 1) {
-          await new Promise((resolve) => setTimeout(resolve, 6));
-        }
       }
 
       const durationMs = Math.max(1, Math.round(performance.now() - startTime));
@@ -618,7 +567,7 @@ export async function streamEchoChat({
         durationMs,
         charsCount: streamed.length,
         charsPerSec: Math.round(streamed.length / (durationMs / 1000 || 1)),
-        thinkingDurationMs
+        thinkingDurationMs: 0
       });
       success = true;
     }

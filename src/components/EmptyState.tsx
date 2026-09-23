@@ -141,7 +141,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   ];
 
   return (
-    <div className="relative min-h-full w-full flex flex-col justify-between overflow-x-hidden select-none bg-[#0e0f12] text-[#edeef2] font-['Plus_Jakarta_Sans',sans-serif]">
+    <div className="relative min-h-full w-full flex flex-col justify-between overflow-x-hidden select-none bg-[#191817] text-[#ede8e1] font-['Plus_Jakarta_Sans',sans-serif]">
       {/* Hidden file inputs for multiple uploads */}
       <input
         type="file"
@@ -170,32 +170,32 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
             <img
               src={SAPPHIRE_LOGO_URL}
               alt="Sapphire Logo"
-              className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl object-cover ring-1 ring-blue-500/30 shadow-lg shadow-blue-500/10 transition-transform duration-200 group-hover:scale-105 bg-[#18191e]"
+              className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl object-cover ring-1 ring-[#d97757]/40 shadow-lg shadow-black/40 transition-transform duration-200 group-hover:scale-105 bg-[#201f1d]"
             />
           </div>
-          <h1 className="text-3xl sm:text-4xl md:text-[40px] text-[#f3f4f6] tracking-tight font-medium">
+          <h1 className="text-3xl sm:text-4xl md:text-[40px] text-[#f5f2eb] tracking-tight font-medium">
             {greetingTime}, {firstName}
           </h1>
         </div>
 
         {/* Central Clean Prompt Card */}
-        <div className="w-full relative bg-[#18191e] rounded-2xl sm:rounded-3xl border border-[#272a33] shadow-xl hover:border-[#383c48] transition-all p-3.5 sm:p-5 text-left">
+        <div className="w-full relative bg-[#201f1d] rounded-2xl sm:rounded-3xl border border-[#33312e] shadow-xl hover:border-[#423f3b] transition-all p-3.5 sm:p-5 text-left">
           {/* Attached Files Pills if any */}
           {attachedFiles.length > 0 && (
             <div className="flex flex-wrap items-center gap-1.5 mb-2.5">
               {attachedFiles.map((file, idx) => (
                 <div
                   key={idx}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-[#22242c] border border-[#2e323d] text-xs text-[#edeef2]"
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-[#282724] border border-[#383633] text-xs text-[#ede8e1]"
                 >
-                  <FileCode className="w-3.5 h-3.5 text-blue-400" />
+                  <FileCode className="w-3.5 h-3.5 text-[#d97757]" />
                   <span className="truncate max-w-[150px]">{file.name}</span>
                   <button
                     type="button"
                     onClick={() =>
                       setAttachedFiles((prev) => prev.filter((_, i) => i !== idx))
                     }
-                    className="text-[#9ca3af] hover:text-white cursor-pointer ml-1"
+                    className="text-[#a19e97] hover:text-white cursor-pointer ml-1"
                   >
                     ×
                   </button>
@@ -211,18 +211,18 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
             onKeyDown={handleKeyDown}
             placeholder="How can I help you today?"
             rows={2}
-            className="w-full bg-transparent text-[#f3f4f6] placeholder-[#717684] text-sm sm:text-base focus:outline-none resize-none leading-relaxed"
+            className="w-full bg-transparent text-[#ede8e1] placeholder-[#86837c] text-sm sm:text-base focus:outline-none resize-none leading-relaxed font-normal"
           />
 
           {/* Controls Bottom Bar */}
-          <div className="pt-2 sm:pt-3 flex items-center justify-between gap-2">
+          <div className="pt-2 sm:pt-3 flex items-center justify-between gap-2 border-t border-[#2a2926]">
             {/* Left: ONLY + Button (Square with soft rounded corners, no sharp ends, no text inside) */}
             <div className="relative">
               <button
                 type="button"
                 id="empty-state-plus-btn"
                 onClick={() => setIsPlusMenuOpen((prev) => !prev)}
-                className="w-8 h-8 rounded-xl bg-[#22242c] hover:bg-[#2c2f3a] text-[#edeef2] flex items-center justify-center transition-colors cursor-pointer border border-[#2e323d]"
+                className="w-8 h-8 rounded-xl bg-[#282724] hover:bg-[#32302c] text-[#ede8e1] flex items-center justify-center transition-colors cursor-pointer border border-[#383633]"
                 title="Add files or images"
               >
                 <span className="text-lg leading-none font-light mb-0.5">+</span>
@@ -235,15 +235,15 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
                     initial={{ opacity: 0, scale: 0.95, y: 10 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                    className="absolute left-0 bottom-10 z-50 w-48 bg-[#18191e] border border-[#2e323d] rounded-xl shadow-2xl p-1.5 space-y-1 text-xs text-[#edeef2]"
+                    className="absolute left-0 bottom-10 z-50 w-48 bg-[#201f1d] border border-[#33312e] rounded-xl shadow-2xl p-1.5 space-y-1 text-xs text-[#ede8e1]"
                   >
                     {/* 1. Upload File */}
                     <button
                       type="button"
                       onClick={() => fileInputRef.current?.click()}
-                      className="w-full px-3 py-2 rounded-lg hover:bg-[#22242c] flex items-center gap-2.5 transition-colors cursor-pointer text-left"
+                      className="w-full px-3 py-2 rounded-lg hover:bg-[#282724] flex items-center gap-2.5 transition-colors cursor-pointer text-left"
                     >
-                      <Paperclip className="w-4 h-4 text-blue-400" />
+                      <Paperclip className="w-4 h-4 text-[#d97757]" />
                       <span>Upload file</span>
                     </button>
 
@@ -251,9 +251,9 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
                     <button
                       type="button"
                       onClick={() => imageInputRef.current?.click()}
-                      className="w-full px-3 py-2 rounded-lg hover:bg-[#22242c] flex items-center gap-2.5 transition-colors cursor-pointer text-left"
+                      className="w-full px-3 py-2 rounded-lg hover:bg-[#282724] flex items-center gap-2.5 transition-colors cursor-pointer text-left"
                     >
-                      <ImageIcon className="w-4 h-4 text-blue-400" />
+                      <ImageIcon className="w-4 h-4 text-[#d97757]" />
                       <span>Upload image</span>
                     </button>
                   </motion.div>
@@ -268,10 +268,10 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
                 <button
                   type="button"
                   onClick={() => setIsModelDropdownOpen((prev) => !prev)}
-                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-[#22242c] hover:bg-[#2c2f3a] text-xs text-[#edeef2] border border-[#2e323d] transition-colors cursor-pointer"
+                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-[#282724] hover:bg-[#32302c] text-xs text-[#ede8e1] border border-[#383633] transition-colors cursor-pointer"
                 >
-                  <span className="font-medium text-[#f3f4f6]">{selectedModel}</span>
-                  <ChevronDown className="w-3.5 h-3.5 text-[#9ca3af]" />
+                  <span className="font-medium text-[#ede8e1]">{selectedModel}</span>
+                  <ChevronDown className="w-3.5 h-3.5 text-[#a19e97]" />
                 </button>
 
                 <AnimatePresence>
@@ -280,7 +280,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
                       initial={{ opacity: 0, y: 5 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: 5 }}
-                      className="absolute right-0 bottom-10 z-50 w-52 bg-[#18191e] border border-[#2e323d] rounded-xl shadow-2xl p-1.5 space-y-1 text-xs text-[#edeef2]"
+                      className="absolute right-0 bottom-10 z-50 w-52 bg-[#201f1d] border border-[#33312e] rounded-xl shadow-2xl p-1.5 space-y-1 text-xs text-[#ede8e1]"
                     >
                       {[
                         { name: 'Sapphire Studio', sub: 'Interactive live app builder' },
@@ -296,12 +296,12 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
                           }}
                           className={`w-full px-3 py-2 rounded-lg flex flex-col text-left transition-colors cursor-pointer ${
                             selectedModel === item.name
-                              ? 'bg-[#22242c] text-[#f3f4f6]'
-                              : 'hover:bg-[#1f2128] text-[#9ca3af]'
+                              ? 'bg-[#282724] text-[#f5f2eb] font-semibold'
+                              : 'hover:bg-[#252422] text-[#a19e97]'
                           }`}
                         >
-                          <span className="font-semibold text-white">{item.name}</span>
-                          <span className="text-[10px] text-[#717684]">{item.sub}</span>
+                          <span className="font-semibold text-[#ede8e1]">{item.name}</span>
+                          <span className="text-[10px] text-[#86837c]">{item.sub}</span>
                         </button>
                       ))}
                     </motion.div>
@@ -315,8 +315,8 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
                 onClick={() => setUseSearchGrounding((prev) => !prev)}
                 className={`p-1.5 sm:px-2 sm:py-1.5 rounded-xl text-xs flex items-center gap-1 transition-all cursor-pointer border ${
                   useSearchGrounding
-                    ? 'bg-blue-600/20 text-blue-400 border-blue-500/50'
-                    : 'bg-[#22242c] hover:bg-[#2c2f3a] text-[#9ca3af] border-[#2e323d]'
+                    ? 'bg-[#d97757]/20 text-[#d97757] border-[#d97757]/50 font-medium'
+                    : 'bg-[#282724] hover:bg-[#32302c] text-[#a19e97] border-[#383633]'
                 }`}
                 title="Toggle Live Web Search"
               >
@@ -331,7 +331,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
                 className={`p-2 rounded-xl transition-all cursor-pointer border ${
                   isRecording
                     ? 'bg-rose-600 text-white animate-pulse border-rose-500'
-                    : 'bg-[#22242c] hover:bg-[#2c2f3a] text-[#9ca3af] hover:text-[#edeef2] border-[#2e323d]'
+                    : 'bg-[#282724] hover:bg-[#32302c] text-[#a19e97] hover:text-[#ede8e1] border-[#383633]'
                 }`}
                 title="Voice dictation"
               >
@@ -342,7 +342,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
               <button
                 type="button"
                 onClick={onStartChat}
-                className="p-2 rounded-xl bg-[#22242c] hover:bg-[#2c2f3a] text-[#9ca3af] hover:text-[#edeef2] border border-[#2e323d] transition-colors cursor-pointer"
+                className="p-2 rounded-xl bg-[#282724] hover:bg-[#32302c] text-[#a19e97] hover:text-[#ede8e1] border border-[#383633] transition-colors cursor-pointer"
                 title="Voice mode"
               >
                 <AudioWaveform className="w-3.5 h-3.5" />
@@ -353,7 +353,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
                 <button
                   type="button"
                   onClick={handleSubmit}
-                  className="w-8 h-8 rounded-xl bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center transition-all cursor-pointer active:scale-95 shadow-md"
+                  className="w-8 h-8 rounded-xl bg-[#d97757] hover:bg-[#c86b4c] text-white flex items-center justify-center transition-all cursor-pointer active:scale-95 shadow-md"
                   title="Send message"
                 >
                   <ArrowUp className="w-4 h-4" />
@@ -372,9 +372,9 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
                 key={idx}
                 type="button"
                 onClick={() => onSendMessage(chip.prompt)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#18191e] hover:bg-[#22242c] text-[#9ca3af] hover:text-[#edeef2] text-xs font-medium border border-[#272a33] transition-all cursor-pointer active:scale-95 shadow-2xs"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#201f1d] hover:bg-[#282724] text-[#a19e97] hover:text-[#ede8e1] text-xs font-medium border border-[#33312e] transition-all cursor-pointer active:scale-95 shadow-2xs"
               >
-                <IconComp className="w-3.5 h-3.5 text-[#9ca3af]" />
+                <IconComp className="w-3.5 h-3.5 text-[#a19e97]" />
                 <span>{chip.label}</span>
               </button>
             );

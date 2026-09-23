@@ -630,9 +630,6 @@ app.post('/api/chat/stream', async (req, res) => {
   res.setHeader('Connection', 'keep-alive');
   res.flushHeaders?.();
 
-  // Immediately send initial thinking signal so UI shows fast feedback with 0ms delay
-  res.write(`data: ${JSON.stringify({ thinking: 'Analyzing query intent and synthesizing fast response...', isThinking: true })}\n\n`);
-
   // Sanitize and strictly enforce alternating contents for GoogleGenAI SDK
   const sanitizedContents = sanitizeAndAlternateContents(contents);
 
@@ -642,6 +639,9 @@ app.post('/api/chat/stream', async (req, res) => {
     .join(' ')
     .trim()
     .toLowerCase();
+
+  // Auto-switch engine: detect if user wants an app/code or conversational chat
+  const isCodingRequest = /\b(code|app|website|html|css|javascript|typescript|react|python|script|build|create an app|game|component|function|api|debug|program)\b/i.test(lastUserText);
 
   // Logical vs Physical Diagram Intent Detection
   const isConceptualDiagram = /\b(venn|ven diagram|comparison matrix|er diagram|architecture diagram|flowchart)\b/i.test(lastUserText) || /\btable ke sath\b/i.test(lastUserText);
@@ -657,7 +657,6 @@ app.post('/api/chat/stream', async (req, res) => {
     diagramPromise = fetchWorkingDiagram(lastUserText);
   }
 
-  // If logical conceptual diagram was requested, inject logical instruction
   let effectiveSystemInstruction = systemInstruction || '';
   if (isConceptualDiagram) {
     effectiveSystemInstruction += '\n[LOGICAL THINKING DIRECTIVE]: The user specifically requested a logical conceptual diagram (e.g., Venn diagram or comparison table). Explain the logic in clear text and present a structured Markdown comparison table detailing all sets and the intersection. Do NOT draw text-based ASCII art diagrams.';
@@ -666,22 +665,18 @@ app.post('/api/chat/stream', async (req, res) => {
   const isBasicGreeting = /^(hi|hello|hey|salam|assalam|aoa|hola|sup|good morning|good evening|good afternoon)[\s!.]*$/i.test(lastUserText);
   if (isBasicGreeting) {
     const greetingReplies = [
-      "Hello! I'm Echo AI, your principal AI software architect and coding assistant. What can I build, code, or solve for you today?",
-      "Hi there! Echo AI is ready. Whether you need full-stack web code, bug fixes, or rapid answers, let's get started!",
-      "Hey! Echo AI here, running fast and ready. What project or question are we working on?"
+      "Hello! I'm Sapphire AI, your principal AI software architect and coding assistant. What can I build, code, or solve for you today?",
+      "Hi there! Sapphire AI is ready. Whether you need full-stack web code, bug fixes, or rapid answers, let's get started!",
+      "Hey! Sapphire AI here, running fast and ready. What project or question are we working on?"
     ];
     const reply = greetingReplies[Math.floor(Math.random() * greetingReplies.length)];
     const words = reply.split(' ');
     for (let i = 0; i < words.length; i += 3) {
       const chunk = words.slice(i, i + 3).join(' ');
-      res.write(`data: ${JSON.stringify({ text: (i === 0 ? '' : ' ') + chunk })}
-
-`);
+      res.write(`data: ${JSON.stringify({ text: (i === 0 ? '' : ' ') + chunk })}\n\n`);
       await new Promise((r) => setTimeout(r, 6));
     }
-    res.write(`data: [DONE]
-
-`);
+    res.write(`data: [DONE]\n\n`);
     res.end();
     return;
   }
@@ -698,52 +693,32 @@ app.post('/api/chat/stream', async (req, res) => {
         }
       });
 
-      // Map echo model names to official Gemini model IDs
-      let targetModel = 'gemini-3.8-flash';
-      if (model.includes('3.1-pro') || model.includes('pro')) targetModel = 'gemini-3.1-pro-preview';
-      else if (model.includes('lite')) targetModel = 'gemini-3.1-flash-lite';
-      else if (model.includes('preview')) targetModel = 'gemini-3-flash-preview';
-      else if (model.includes('flash-latest')) targetModel = 'gemini-flash-latest';
-      else if (model.includes('3.8') || model.includes('flash') || model.includes('echo')) targetModel = 'gemini-3.8-flash';
-      else if (model.startsWith('gemini-')) targetModel = model;
-
-      const baseOwnerInstruction = `You are Echo AI, an ultra-smart, professional, elite AI assistant and principal software architect.
-The creator and developer of this AI is Shaheer Hassan. Do NOT advertise or state who created you unprompted or in routine greetings. ONLY when a user explicitly asks who created you, who made you, who is your developer, who is your owner, who built Echo, or who is Shaheer Hassan, clearly and politely state that Shaheer Hassan is your creator and developer.
-
-STRICT PROHIBITION OF TEXT ASCII ART DIAGRAMS:
-- NEVER draw ASCII art diagrams, text schematics, or character drawings made of slashes, pipes, dashes, and boxes (such as '\\ | /', '+---+', or simulated physical drawings). The user strictly forbids text ASCII diagrams.
-- When asked for a diagram or explanation of any topic (scientific, educational, biological, mechanical, physical, etc.), provide a rich, clear explanation with bullet points and a clean Markdown table. Real, authentic photographic and vector visual diagrams are automatically fetched from Google / Wikimedia and embedded by the application.
-
+      const baseInstruction = isCodingRequest
+        ? `You are Sapphire AI, an elite autonomous software architect and app builder (Google AI Studio Codex Engine).
 CODING & MULTI-FILE PROJECT STANDARDS (CRITICAL):
 1. PROJECT STRUCTURE FIRST:
    Whenever asked to create a website, web app, script, or multiple-file project:
-   - ALWAYS start your answer with a clean ASCII directory/file structure diagram showing exactly where each file belongs (e.g., 📁 project-name/ ├── index.html ├── src/ ...).
-   - Show how the files interact.
+   - ALWAYS start your answer with a clean ASCII directory/file structure diagram showing exactly where each file belongs (e.g., 📁 project-name/ ├── index.html ├── style.css ├── script.js).
 2. INDIVIDUAL FILE CODE BLOCKS:
-   - Provide each file in its own markdown code block with an explicit filename tag or comment on line 1, for example:
+   - Provide each file in its own markdown code block with an explicit filename tag or comment on line 1:
      \`\`\`html filename="index.html"
      <!-- index.html -->
      \`\`\`
-     \`\`\`typescript filename="src/App.tsx"
-     // src/App.tsx
+     \`\`\`css filename="style.css"
+     /* style.css */
      \`\`\`
-   - NEVER use lazy abbreviations, comments like "// TODO", "// implement rest here", or truncated placeholders. Always output 100% complete, fully implemented, working code for every single file.
-3. INSTRUCTIONS TO RUN:
-   - At the end, provide brief, crystal-clear setup/execution instructions.
+     \`\`\`javascript filename="script.js"
+     // script.js
+     \`\`\`
+   - NEVER use lazy abbreviations, comments like "// TODO", or truncated placeholders. Always output 100% complete, fully implemented, working code for every single file.
+3. Keep explanation concise and let the code shine.`
+        : `You are Sapphire AI, an ultra-smart, professional, elite AI assistant.
+Answer questions directly, accurately, and with high intellectual clarity.
+Be fast, clear, and articulate. Do NOT include unnecessary internal monologue or meta-thinking tokens.`;
 
-4. ACCURACY & INTELLECT:
-   - Think deeply, eliminate bugs, handle edge cases, and ensure clean modern architecture.
-
-5. LANGUAGE & NATURAL CONVERSATION EXCELLENCE:
-   - Match the user's language naturally and fluently:
-     • If the user writes in English, reply in polished, articulate, professional English.
-     • If the user writes in Urdu script (اردو), reply in fluent, grammatically accurate Urdu Nastaliq.
-     • If the user writes in Roman Urdu (e.g. "kese ho", "batao", "mujhe yeh chahiye"), reply in clean, natural Roman Urdu that is easy to read and understand.
-     • If the user writes in Hindi, reply in fluent, respectful Hindi.
-   - Speak with warmth, polite intelligence, clarity, and precision. Answers should sound melodious, natural, and clear when read aloud via voice speech synthesis. Avoid robotic phrases.`;
       const combinedInstruction = effectiveSystemInstruction && typeof effectiveSystemInstruction === 'string' && effectiveSystemInstruction.trim()
-        ? `${baseOwnerInstruction}\n\n${effectiveSystemInstruction.trim()}`
-        : baseOwnerInstruction;
+        ? `${baseInstruction}\n\n${effectiveSystemInstruction.trim()}`
+        : baseInstruction;
 
       const config: Record<string, any> = {
         temperature: Number(temperature) || 0.7,
@@ -754,30 +729,21 @@ CODING & MULTI-FILE PROJECT STANDARDS (CRITICAL):
         config.tools = [{ googleSearch: {} }];
       }
 
-      // Candidate model list with fast fallback:
-      // Prioritize low-latency gemini-3.1-flash-lite and gemini-flash-latest for instant sub-second streaming
-      const isProRequested = typeof model === 'string' && (model.includes('3.1-pro') || model.includes('pro'));
-      const candidateModels = isProRequested
-        ? ['gemini-3.1-pro-preview', 'gemini-3.1-flash-lite', 'gemini-flash-latest']
-        : ['gemini-3.1-flash-lite', 'gemini-flash-latest', 'gemini-3.5-flash-lite'];
+      // Fast, verified models: gemini-3.8-flash and gemini-3.6-flash provide sub-second latency
+      const candidateModels = isCodingRequest
+        ? ['gemini-3.8-flash', 'gemini-3.6-flash', 'gemini-3.1-pro-preview']
+        : ['gemini-3.8-flash', 'gemini-3.6-flash', 'gemini-flash-latest'];
 
       let streamedAny = false;
 
       for (const currModel of candidateModels) {
         if (streamedAny) break;
         try {
-          // Race stream generation with a 3500ms first-chunk timeout to avoid long spikes
-          const streamPromise = ai.models.generateContentStream({
+          const responseStream = await ai.models.generateContentStream({
             model: currModel,
             contents: sanitizedContents,
             config
           });
-
-          const timeoutPromise = new Promise<never>((_, reject) =>
-            setTimeout(() => reject(new Error(`First token timeout on ${currModel}`)), 3500)
-          );
-
-          const responseStream: any = await Promise.race([streamPromise, timeoutPromise]);
 
           for await (const chunk of responseStream) {
             const text = chunk.text || '';
@@ -807,7 +773,6 @@ CODING & MULTI-FILE PROJECT STANDARDS (CRITICAL):
           }
         } catch (streamErr: any) {
           console.warn(`Gemini stream attempt notice (${currModel}):`, streamErr?.message?.slice(0, 100));
-          // If we already started streaming tokens, don't corrupt stream with another model
           if (streamedAny) break;
         }
       }

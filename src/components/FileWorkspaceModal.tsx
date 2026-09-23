@@ -1213,20 +1213,20 @@ export const FileWorkspaceModal: React.FC<FileWorkspaceModalProps> = ({
       onDrop={handleDrop}
     >
       <div
-        className="w-full max-w-7xl h-full sm:h-[92vh] bg-[#111622] border-0 sm:border border-slate-700/80 rounded-none sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden text-slate-100"
+        className="w-full max-w-7xl h-full sm:h-[92vh] bg-[#201f1d] border-0 sm:border border-[#33312e] rounded-none sm:rounded-2xl shadow-2xl flex flex-col overflow-hidden text-[#ede8e1]"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Top Header - Clean, Easy, and Clear */}
-        <div className="px-4 py-3 bg-[#151b2a] border-b border-slate-800 flex items-center justify-between gap-3 shrink-0">
+        <div className="px-4 py-3 bg-[#191817] border-b border-[#2a2926] flex items-center justify-between gap-3 shrink-0">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-8 h-8 rounded-xl bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 flex items-center justify-center font-bold shrink-0">
+            <div className="w-8 h-8 rounded-xl bg-[#282724] text-[#d97757] border border-[#383633] flex items-center justify-center font-bold shrink-0">
               <FolderTree className="w-4 h-4" />
             </div>
             <div className="min-w-0 flex items-center gap-2">
-              <h2 className="text-sm sm:text-base font-bold text-white tracking-tight truncate">
+              <h2 className="text-sm sm:text-base font-semibold text-[#f5f2eb] tracking-tight truncate">
                 File Manager & Workspace
               </h2>
-              <span className="text-xs px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 font-medium border border-slate-700">
+              <span className="text-xs px-2 py-0.5 rounded-full bg-[#282724] text-[#86837c] font-medium border border-[#383633]">
                 {files.length} {files.length === 1 ? 'file' : 'files'}
               </span>
               <span className="hidden sm:inline-flex items-center gap-1 text-[11px] text-emerald-400 font-medium">
@@ -1242,7 +1242,7 @@ export const FileWorkspaceModal: React.FC<FileWorkspaceModalProps> = ({
               <button
                 type="button"
                 onClick={() => exportAllFilesAsZip(files)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#d97757] hover:bg-[#c86b4c] text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer"
                 title="Download all files as a ZIP archive"
               >
                 <Download className="w-3.5 h-3.5" />
@@ -1257,14 +1257,14 @@ export const FileWorkspaceModal: React.FC<FileWorkspaceModalProps> = ({
                 onClick={() => setIsHistoryOpen(!isHistoryOpen)}
                 className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-medium border transition-all cursor-pointer ${
                   isHistoryOpen
-                    ? 'bg-indigo-600 text-white border-indigo-500'
-                    : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'
+                    ? 'bg-[#d97757] text-white border-[#d97757]'
+                    : 'bg-[#282724] hover:bg-[#32302c] text-[#ede8e1] border-[#383633]'
                 }`}
                 title="AI Edit History"
               >
-                <History className="w-3.5 h-3.5 text-indigo-400" />
+                <History className="w-3.5 h-3.5 text-[#d97757]" />
                 <span className="hidden sm:inline">History</span>
-                <span className="text-[10px] bg-slate-900 px-1.5 py-0.2 rounded-full border border-slate-700">
+                <span className="text-[10px] bg-[#191817] px-1.5 py-0.2 rounded-full border border-[#383633]">
                   {aiHistory.length}
                 </span>
               </button>
@@ -1275,11 +1275,11 @@ export const FileWorkspaceModal: React.FC<FileWorkspaceModalProps> = ({
               id="close-file-workspace-btn"
               type="button"
               onClick={onClose}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-rose-600 active:bg-rose-700 text-slate-200 hover:text-white border border-slate-700 hover:border-rose-500 text-xs font-bold transition-all shadow-xs cursor-pointer active:scale-95"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#282724] hover:bg-[#32302c] active:bg-[#383633] text-[#ede8e1] border border-[#383633] text-xs font-semibold transition-all shadow-xs cursor-pointer active:scale-95"
               title="Cancel & Close File Manager (Esc)"
             >
               <X className="w-4 h-4" />
-              <span>Cancel / Close</span>
+              <span>Close</span>
             </button>
           </div>
         </div>

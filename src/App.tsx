@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { Menu } from 'lucide-react';
 import {
   ChatSession,
   ChatMessage,
@@ -12,7 +13,6 @@ import { streamGeminiChat, getStoredApiKey } from './services/geminiService';
 import { autoSaveAiCodeBlocks, fileStorageService } from './services/fileStorageService';
 import { ChatHeader } from './components/ChatHeader';
 import { ChatSidebar } from './components/ChatSidebar';
-import { TopTabBar } from './components/TopTabBar';
 import { ChatMessageItem } from './components/ChatMessageItem';
 import { ChatInput } from './components/ChatInput';
 import { EmptyState } from './components/EmptyState';
@@ -885,43 +885,20 @@ Please carefully examine, understand, and analyze this uploaded document/file an
       </AnimatePresence>
 
       {/* Main Content View */}
-      <main className="flex-1 flex flex-col h-full min-w-0 relative bg-[#0e0f12] overflow-hidden">
-        {/* Top Tab Bar: Navigation, Mode Switcher (Chat vs Codex Studio), and Profile */}
-        <TopTabBar
-          isStartingScreen={isStartingScreen}
-          onSelectStartingScreen={() => {
-            setIsStartingScreen(true);
-            setActiveNavTab('chat');
-          }}
-          sessions={sessions}
-          currentSessionId={currentSession.id}
-          onSelectSession={(id) => {
-            handleSelectSession(id);
-            setIsStartingScreen(false);
-            setActiveNavTab('chat');
-          }}
-          onCloseSession={handleCloseSessionTab}
-          onNewChat={() => {
-            handleNewChat();
-            setIsStartingScreen(false);
-            setActiveNavTab('chat');
-          }}
-          onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
-          isSidebarOpen={isSidebarOpen}
-          userProfile={currentUserProfile}
-          onOpenProfile={() => setIsUserProfileModalOpen(true)}
-          onOpenAndroidShortcut={() => setIsAndroidShortcutModalOpen(true)}
-          onSignOut={handleSignOut}
-          onOpenGetApp={() => setIsDownloadModalOpen(true)}
-          onOpenCodex={() => {
-            setActiveNavTab('codex');
-          }}
-          onOpenWorkspace={() => {
-            setActiveNavTab('workspace');
-            setIsWorkspaceOpen(true);
-          }}
-          activeNavTab={activeNavTab}
-        />
+      <main className="flex-1 flex flex-col h-full min-w-0 relative bg-[#191817] overflow-hidden">
+        {/* Sleek Floating Menu Button when sidebar is collapsed */}
+        {!isSidebarOpen && (
+          <button
+            type="button"
+            id="floating-sidebar-toggle-btn"
+            onClick={() => setIsSidebarOpen(true)}
+            className="absolute top-3.5 left-3.5 z-30 p-2.5 rounded-xl bg-[#201f1d] hover:bg-[#282724] border border-[#33312e] text-[#a19e97] hover:text-[#ede8e1] shadow-lg transition-all active:scale-95 cursor-pointer"
+            title="Open Sidebar"
+            aria-label="Open Sidebar"
+          >
+            <Menu className="w-4 h-4" />
+          </button>
+        )}
 
         <AnimatePresence mode="wait" initial={false}>
           {activeNavTab === 'codex' ? (
