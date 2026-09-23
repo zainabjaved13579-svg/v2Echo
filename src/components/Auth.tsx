@@ -5,8 +5,9 @@ import {
   User
 } from 'firebase/auth';
 import { auth, googleProvider } from '../services/firebase';
-import { SAPPHIRE_APP_NAME } from '../data/constants';
-import { ShieldCheck, UserCheck, AlertCircle } from 'lucide-react';
+import { SAPPHIRE_APP_NAME, SAPPHIRE_LOGO_URL } from '../data/constants';
+import { ShieldCheck, UserCheck, AlertCircle, Sparkles, Code2, Cpu, Zap } from 'lucide-react';
+import { motion } from 'motion/react';
 
 interface AuthProps {
   onLoginSuccess?: (user: User) => void;
@@ -44,46 +45,121 @@ export const Auth: React.FC<AuthProps> = ({ onLoginSuccess, onContinueAsGuest })
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-[#191817] text-[#ede8e1] p-4 sm:p-6 relative overflow-hidden select-none font-['Plus_Jakarta_Sans',sans-serif]">
-      {/* Subtle Warm Ambient Glow */}
-      <div className="absolute top-1/4 -left-20 w-80 h-80 bg-[#d97757]/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-1/4 -right-20 w-80 h-80 bg-amber-700/10 rounded-full blur-3xl pointer-events-none" />
+      {/* Animated Floating Gradient Orbs in Background */}
+      <motion.div
+        animate={{
+          scale: [1, 1.15, 1],
+          opacity: [0.12, 0.22, 0.12],
+          x: [0, 20, 0],
+          y: [0, -20, 0]
+        }}
+        transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
+        className="absolute top-1/4 -left-20 w-96 h-96 bg-[#d97757]/20 rounded-full blur-3xl pointer-events-none"
+      />
+      <motion.div
+        animate={{
+          scale: [1, 1.2, 1],
+          opacity: [0.08, 0.16, 0.08],
+          x: [0, -30, 0],
+          y: [0, 25, 0]
+        }}
+        transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
+        className="absolute bottom-1/4 -right-20 w-96 h-96 bg-[#c86b4c]/20 rounded-full blur-3xl pointer-events-none"
+      />
 
-      {/* Main Login Card - Claude Aesthetic */}
-      <div className="w-full max-w-md bg-[#201f1d] border border-[#33312e] rounded-3xl p-6 sm:p-8 shadow-2xl relative z-10 flex flex-col items-center text-center space-y-6">
-        {/* Warm Terracotta Sunburst Icon */}
-        <div className="relative group">
-          <div className="w-16 h-16 rounded-2xl bg-[#282724] p-3 border border-[#383633] shadow-lg flex items-center justify-center">
-            <svg
-              className="w-10 h-10 text-[#d97757]"
-              viewBox="0 0 24 24"
-              fill="currentColor"
-            >
-              {/* Elegant 10-point asterisk matching Claude icon in screenshot */}
-              <path d="M12 2a1 1 0 0 1 1 1v5.07l3.58-3.58a1 1 0 1 1 1.42 1.42L14.42 9.5H19.5a1 1 0 0 1 0 2h-5.08l3.58 3.58a1 1 0 1 1-1.42 1.42L13 12.92V18a1 1 0 0 1-2 0v-5.08l-3.58 3.58a1 1 0 0 1-1.42-1.42L9.58 11.5H4.5a1 1 0 0 1 0-2h5.08L6 5.92a1 1 0 1 1 1.42-1.42L11 8.07V3a1 1 0 0 1 1-1z" />
-            </svg>
+      {/* Main Animated Login Card */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.93, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+        className="w-full max-w-md bg-[#201f1d] border border-[#33312e] rounded-3xl p-6 sm:p-8 shadow-2xl relative z-10 flex flex-col items-center text-center space-y-6"
+      >
+        {/* Sapphire Brand Logo with breathing animated glow ring */}
+        <motion.div
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ delay: 0.1, duration: 0.4 }}
+          className="relative group cursor-pointer"
+        >
+          <motion.div
+            animate={{
+              boxShadow: [
+                '0 0 0 0 rgba(217, 119, 87, 0.2)',
+                '0 0 0 14px rgba(217, 119, 87, 0)',
+                '0 0 0 0 rgba(217, 119, 87, 0.2)'
+              ]
+            }}
+            transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+            className="w-20 h-20 rounded-2xl bg-[#282724] p-1.5 border border-[#383633] shadow-xl flex items-center justify-center"
+          >
+            <img
+              src={SAPPHIRE_LOGO_URL}
+              alt="Sapphire Logo"
+              className="w-full h-full rounded-xl object-cover ring-1 ring-[#d97757]/40 shadow-md group-hover:scale-105 transition-transform"
+            />
+          </motion.div>
+        </motion.div>
+
+        {/* Title & Tagline with subtle badge */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2, duration: 0.4 }}
+          className="space-y-2"
+        >
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#282724] border border-[#383633] text-[11px] text-[#a19e97]">
+            <Sparkles className="w-3 h-3 text-[#d97757] animate-pulse" />
+            <span>Next-Gen Intelligent Studio</span>
           </div>
-        </div>
 
-        {/* Title & Tagline */}
-        <div className="space-y-1.5">
-          <h1 className="text-2xl font-claude-serif text-[#ede8e1] tracking-tight">
+          <h1 className="text-2xl sm:text-[26px] font-semibold text-[#f5f2eb] tracking-tight">
             Welcome to {SAPPHIRE_APP_NAME}
           </h1>
           <p className="text-xs text-[#a19e97] max-w-xs mx-auto leading-relaxed">
-            Autonomous multi-file architecture, Codex app builder, and global intelligent assistant.
+            Multi-file application architecture, live interactive Codex engine, and ultra-fast reasoning.
           </p>
-        </div>
+        </motion.div>
+
+        {/* Feature Pills */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.3 }}
+          className="grid grid-cols-3 gap-2 w-full pt-1 text-[10px] text-[#86837c]"
+        >
+          <div className="flex flex-col items-center gap-1 p-2 rounded-xl bg-[#191817] border border-[#2a2926]">
+            <Code2 className="w-3.5 h-3.5 text-[#d97757]" />
+            <span className="font-medium text-[#ede8e1]">Codex Apps</span>
+          </div>
+          <div className="flex flex-col items-center gap-1 p-2 rounded-xl bg-[#191817] border border-[#2a2926]">
+            <Zap className="w-3.5 h-3.5 text-[#d97757]" />
+            <span className="font-medium text-[#ede8e1]">Fast Engine</span>
+          </div>
+          <div className="flex flex-col items-center gap-1 p-2 rounded-xl bg-[#191817] border border-[#2a2926]">
+            <Cpu className="w-3.5 h-3.5 text-[#d97757]" />
+            <span className="font-medium text-[#ede8e1]">Multi-File</span>
+          </div>
+        </motion.div>
 
         {/* Error notification */}
         {error && (
-          <div className="w-full p-3 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex items-center gap-2 text-left">
+          <motion.div
+            initial={{ opacity: 0, y: -5 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="w-full p-3 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex items-center gap-2 text-left"
+          >
             <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
             <span className="flex-1">{error}</span>
-          </div>
+          </motion.div>
         )}
 
         {/* Action Buttons */}
-        <div className="w-full space-y-3 pt-1">
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.35, duration: 0.4 }}
+          className="w-full space-y-3 pt-1"
+        >
           {/* Google Sign-In Button */}
           <button
             id="google-signin-btn"
@@ -125,15 +201,16 @@ export const Auth: React.FC<AuthProps> = ({ onLoginSuccess, onContinueAsGuest })
             className="w-full py-3 px-4 bg-[#282724] hover:bg-[#32302c] active:scale-[0.98] text-[#ede8e1] border border-[#383633] rounded-2xl font-semibold text-xs transition-all flex items-center justify-center gap-2 cursor-pointer"
           >
             <UserCheck className="w-4 h-4 text-[#d97757]" />
-            <span>Continue as Guest (No Sign-in)</span>
+            <span>Continue as Guest (Instant Access)</span>
           </button>
 
           <p className="text-[11px] text-[#86837c] flex items-center justify-center gap-1.5 pt-2">
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Guest mode stores data locally without saving to cloud</span>
+            <span>Guest mode saves data locally in your browser</span>
           </p>
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
     </div>
   );
 };
+export default Auth;

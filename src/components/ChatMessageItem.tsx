@@ -24,7 +24,9 @@ import {
   ChevronDown,
   ChevronRight,
   Languages,
-  Eye
+  Eye,
+  ThumbsUp,
+  ThumbsDown
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { ChatMessage, SupportedLanguage, UserProfile } from '../types';
@@ -238,6 +240,7 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
   const [showTranslation, setShowTranslation] = useState(false);
   const [isZipping, setIsZipping] = useState(false);
   const [zipDone, setZipDone] = useState(false);
+  const [feedback, setFeedback] = useState<'up' | 'down' | null>(null);
   const [isThinkingExpanded, setIsThinkingExpanded] = useState(false);
   const [thinkingElapsed, setThinkingElapsed] = useState(1);
 
@@ -433,66 +436,51 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
-        className={`group w-full py-3.5 sm:py-5 transition-colors ${
+        className={`group w-full py-4 sm:py-5 transition-colors ${
           isUser ? 'bg-transparent text-[#ede8e1]' : 'bg-[#191817] text-[#ede8e1]'
         }`}
       >
-        <div className="w-full max-w-3xl mx-auto px-3 sm:px-4 flex gap-2.5 sm:gap-4 items-start">
-          {/* Avatar */}
+        <div className="w-full max-w-3xl mx-auto px-3 sm:px-4 flex gap-3 sm:gap-4 items-start">
+          {/* Avatar - Square with rounded edges (not sharp, not circle) */}
           <div className="shrink-0 mt-0.5">
             {isUser ? (
               userAvatar ? (
                 <img
                   src={userAvatar}
                   alt={userName}
-                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-full object-cover bg-[#242320] border border-[#383633]"
+                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl object-cover bg-[#201f1d] border border-[#33312e]"
                 />
               ) : (
-                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-[#242320] border border-[#383633] flex items-center justify-center text-xs font-bold text-[#ede8e1]">
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-[#201f1d] border border-[#33312e] flex items-center justify-center text-xs font-semibold text-[#ede8e1]">
                   {userName.charAt(0).toUpperCase()}
                 </div>
               )
             ) : (
-              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-[#242320] border border-[#383633] flex items-center justify-center text-[#d97757]">
-                <svg className="w-4 h-4 text-[#d97757]" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 2a1 1 0 0 1 1 1v5.07l3.58-3.58a1 1 0 1 1 1.42 1.42L14.42 9.5H19.5a1 1 0 0 1 0 2h-5.08l3.58 3.58a1 1 0 1 1-1.42 1.42L13 12.92V18a1 1 0 0 1-2 0v-5.08l-3.58 3.58a1 1 0 0 1-1.42-1.42L9.58 11.5H4.5a1 1 0 0 1 0-2h5.08L6 5.92a1 1 0 1 1 1.42-1.42L11 8.07V3a1 1 0 0 1 1-1z" />
-                </svg>
+              <div className="relative shrink-0">
+                <img
+                  src={SAPPHIRE_LOGO_URL}
+                  alt="Sapphire AI"
+                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl object-cover ring-1 ring-[#d97757]/40 shadow-xs bg-[#201f1d]"
+                />
+                {message.isStreaming && (
+                  <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-[#d97757] rounded-full animate-ping" />
+                )}
               </div>
             )}
           </div>
 
           {/* Message Content Body */}
-          <div className={`flex-1 min-w-0 ${isUser ? 'space-y-2 pt-0.5' : 'space-y-3 bg-[#201f1d] p-3.5 sm:p-5 md:p-6 rounded-2xl sm:rounded-3xl border border-[#302e2b] text-[#ede8e1]'}`}>
-            {/* Header row: Author, model badge & timestamp */}
-            <div className="flex items-center justify-between gap-2">
+          <div className={`flex-1 min-w-0 ${isUser ? 'bg-[#201f1d] text-[#ede8e1] px-4 py-3 rounded-2xl border border-[#33312e] max-w-2xl' : 'space-y-3 py-0.5 text-[#ede8e1]'}`}>
+            {/* Header row: Author & timestamp without model badges */}
+            <div className="flex items-center justify-between gap-2 mb-1">
               <div className="flex items-center gap-2">
-                <span className="font-semibold text-xs sm:text-sm text-[#ede8e1]">
+                <span className="font-medium text-xs sm:text-sm text-[#f5f2eb]">
                   {isUser ? userName : 'Sapphire'}
                 </span>
-                {!isUser && message.modelUsed && (
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100 font-medium">
-                    {message.modelUsed}
-                  </span>
-                )}
-                <span className="text-[11px] text-slate-400">
+                <span className="text-[11px] text-[#86837c]">
                   {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </span>
               </div>
-
-              {/* Performance Stats badge if available */}
-              {!isUser && message.stats && !message.isStreaming && (
-                <div className="hidden sm:flex items-center gap-2 text-[11px] text-slate-500 font-mono bg-white px-2 py-0.5 rounded-md border border-slate-200/80 shadow-2xs">
-                  <span className="flex items-center gap-1 text-amber-600 font-medium">
-                    <Zap className="w-3 h-3" />
-                    {message.stats.charsPerSec} ch/s
-                  </span>
-                  <span className="text-slate-300">•</span>
-                  <span className="flex items-center gap-1 text-slate-500">
-                    <Clock className="w-3 h-3" />
-                    {(message.stats.durationMs / 1000).toFixed(1)}s
-                  </span>
-                </div>
-              )}
             </div>
 
             {/* User Attached Code or Document File */}
@@ -711,79 +699,23 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
 
             {/* Quoted Reply Preview */}
             {message.replyTo && (
-              <div className="mb-2.5 p-2 rounded-xl bg-slate-100/95 border-l-3 border-indigo-500 text-xs text-slate-700 flex items-start gap-2 shadow-2xs">
-                <Reply className="w-3.5 h-3.5 text-indigo-600 shrink-0 mt-0.5" />
+              <div className="mb-2.5 p-2 rounded-xl bg-[#201f1d] border-l-3 border-[#d97757] text-xs text-[#a19e97] flex items-start gap-2 shadow-2xs">
+                <Reply className="w-3.5 h-3.5 text-[#d97757] shrink-0 mt-0.5" />
                 <div className="min-w-0 flex-1">
-                  <span className="font-bold text-indigo-900 block text-[11px]">
-                    {message.replyTo.role === 'model' ? 'Echo AI' : 'You'}
+                  <span className="font-bold text-[#ede8e1] block text-[11px]">
+                    {message.replyTo.role === 'model' ? 'Sapphire AI' : 'You'}
                   </span>
-                  <p className="truncate text-slate-600 text-[11px] italic">
+                  <p className="truncate text-[#86837c] text-[11px] italic">
                     "{message.replyTo.text}"
                   </p>
                 </div>
               </div>
             )}
 
-            {/* Live AI Thinking & Reasoning Process - 1:1 with Image 2 */}
-            {!isUser && (message.isThinking || message.thinkingText) && (
-              <div className="relative overflow-hidden mb-3 rounded-2xl border border-indigo-100/90 bg-[#f8faff] hover:bg-white transition-all px-3.5 py-2.5 sm:px-4 sm:py-3 shadow-2xs">
-                <button
-                  type="button"
-                  onClick={() => setIsThinkingExpanded(!isThinkingExpanded)}
-                  className="w-full flex items-center justify-between text-left select-none cursor-pointer group"
-                >
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-indigo-50/90 text-indigo-600 flex items-center justify-center border border-indigo-100/90 shrink-0 shadow-2xs">
-                      <Brain className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${message.isThinking ? 'animate-pulse text-indigo-600' : 'text-indigo-600'}`} />
-                    </div>
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span className="font-semibold text-slate-800 text-xs sm:text-sm">Thinking Process</span>
-                      <span className="font-mono text-xs text-indigo-500 font-normal">
-                        ({message.isThinking ? `${thinkingElapsed}s` : message.thinkingDurationMs ? `${(message.thinkingDurationMs / 1000).toFixed(0)}s` : `${thinkingElapsed}s`})
-                      </span>
-                      <span className={`w-2 h-2 rounded-full ${message.isThinking ? 'bg-indigo-400 animate-ping' : 'bg-indigo-200'} ml-1 shrink-0`} />
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1 text-xs text-indigo-600 group-hover:text-indigo-800 font-medium">
-                    <span>{isThinkingExpanded ? 'Hide' : 'View thoughts'}</span>
-                    {isThinkingExpanded ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
-                  </div>
-                </button>
-
-                {/* Loading animation bar while thinking or searching */}
-                {message.isThinking && (
-                  <div className="absolute bottom-0 left-0 right-0 h-[2.5px] overflow-hidden rounded-b-2xl bg-indigo-100/50">
-                    <motion.div
-                      animate={{ x: ['-100%', '100%'] }}
-                      transition={{ repeat: Infinity, duration: 1.5, ease: 'easeInOut' }}
-                      className="h-full w-1/2 bg-gradient-to-r from-transparent via-indigo-500 to-transparent"
-                    />
-                  </div>
-                )}
-
-                {/* Expanded Thinking Thoughts */}
-                {isThinkingExpanded && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    transition={{ duration: 0.25 }}
-                    className="mt-2.5 pt-2.5 border-t border-indigo-100/80 text-xs text-slate-600 font-mono leading-relaxed whitespace-pre-wrap max-h-56 overflow-y-auto pr-1"
-                  >
-                    {message.thinkingText || (
-                      <div className="flex items-center gap-2 text-indigo-600 italic py-1">
-                        <Sparkles className="w-3.5 h-3.5 animate-spin" />
-                        <span>Formulating architectural logic, validating requirements, and constructing solution...</span>
-                      </div>
-                    )}
-                  </motion.div>
-                )}
-              </div>
-            )}
-
-            {/* Text Content */}
-            <div className="text-slate-700 break-words">
+            {/* Text Content - Clear high-contrast text */}
+            <div className="text-[#ede8e1] break-words">
               {isUser ? (
-                <div className="whitespace-pre-wrap text-sm leading-relaxed text-slate-800 font-medium">
+                <div className="whitespace-pre-wrap text-sm leading-relaxed text-[#ede8e1] font-normal">
                   {message.text}
                 </div>
               ) : (
@@ -794,17 +726,17 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
                       onPreviewCode={onPreviewCode}
                       onOpenFileWorkspace={openWorkspaceHandler}
                     />
-                  ) : message.isStreaming && !message.isThinking ? (
-                    <div className="flex items-center gap-1.5 py-2 text-slate-400">
-                      <motion.span animate={{ y: [0, -4, 0] }} transition={{ repeat: Infinity, duration: 0.6, delay: 0 }} className="w-2 h-2 rounded-full bg-indigo-500" />
-                      <motion.span animate={{ y: [0, -4, 0] }} transition={{ repeat: Infinity, duration: 0.6, delay: 0.2 }} className="w-2 h-2 rounded-full bg-indigo-500" />
-                      <motion.span animate={{ y: [0, -4, 0] }} transition={{ repeat: Infinity, duration: 0.6, delay: 0.4 }} className="w-2 h-2 rounded-full bg-indigo-500" />
+                  ) : message.isStreaming ? (
+                    <div className="flex items-center gap-1.5 py-2 text-[#a19e97]">
+                      <motion.span animate={{ y: [0, -4, 0] }} transition={{ repeat: Infinity, duration: 0.6, delay: 0 }} className="w-2 h-2 rounded-full bg-[#d97757]" />
+                      <motion.span animate={{ y: [0, -4, 0] }} transition={{ repeat: Infinity, duration: 0.6, delay: 0.2 }} className="w-2 h-2 rounded-full bg-[#d97757]" />
+                      <motion.span animate={{ y: [0, -4, 0] }} transition={{ repeat: Infinity, duration: 0.6, delay: 0.4 }} className="w-2 h-2 rounded-full bg-[#d97757]" />
                     </div>
                   ) : null}
 
                   {/* Blinking streaming cursor when text is actively arriving */}
                   {message.isStreaming && message.text && (
-                    <span className="inline-block w-2 h-4 ml-1 bg-indigo-600 animate-pulse rounded-xs align-middle" />
+                    <span className="inline-block w-2 h-4 ml-1 bg-[#d97757] animate-pulse rounded-xs align-middle" />
                   )}
                 </div>
               )}
@@ -812,16 +744,16 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
 
             {/* Error Banner */}
             {message.error && (
-              <div className="mt-3 p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-sm flex items-start gap-3">
-                <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+              <div className="mt-3 p-3.5 rounded-xl bg-rose-950/40 border border-rose-800/40 text-rose-200 text-sm flex items-start gap-3">
+                <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
                 <div className="flex-1">
-                  <p className="font-medium text-rose-900">Sapphire Notice</p>
-                  <p className="text-xs text-rose-700 mt-0.5">{message.error}</p>
+                  <p className="font-medium text-rose-100">Sapphire Notice</p>
+                  <p className="text-xs text-rose-300 mt-0.5">{message.error}</p>
                   {onRegenerate && (
                     <button
                       id={`retry-btn-${message.id}`}
                       onClick={onRegenerate}
-                      className="mt-2 text-xs flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-medium transition-colors shadow-xs"
+                      className="mt-2 text-xs flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#d97757] hover:bg-[#c86b4c] text-white font-medium transition-colors shadow-xs cursor-pointer"
                     >
                       <RotateCcw className="w-3 h-3" />
                       Retry with Sapphire
@@ -831,96 +763,84 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
               </div>
             )}
 
-            {/* Action Toolbar (Professional Claude Warm Dark Theme) */}
-            {!message.isStreaming && !message.error && message.text && (
-              <div className="flex items-center gap-1.5 pt-2 opacity-90 group-hover:opacity-100 transition-opacity border-t border-[#302e2b] flex-wrap">
-                {/* 1. Copy Text Button */}
+            {/* Minimalist 5-Icon Action Bar */}
+            {!message.isStreaming && !message.error && message.text && !isUser && (
+              <div className="flex items-center gap-1.5 pt-2 text-[#86837c] select-none">
+                {/* 1. Copy icon */}
                 <button
+                  type="button"
                   id={`copy-msg-${message.id}`}
                   onClick={handleCopy}
-                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs text-[#a19e97] hover:text-[#ede8e1] bg-[#242320] hover:bg-[#2e2c29] border border-[#383633] transition-all active:scale-95 cursor-pointer touch-manipulation shadow-2xs"
-                  title={copied ? 'Copied to clipboard' : 'Copy response'}
-                  aria-label={copied ? 'Copied' : 'Copy'}
+                  className="p-1 text-[#86837c] hover:text-[#ede8e1] transition-colors cursor-pointer rounded-lg hover:bg-[#282724]"
+                  title={copied ? 'Copied' : 'Copy'}
+                  aria-label="Copy"
                 >
-                  {copied ? (
-                    <>
-                      <Check className="w-3.5 h-3.5 text-emerald-400" />
-                      <span className="hidden sm:inline font-medium text-emerald-400">Copied</span>
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="w-3.5 h-3.5 text-[#a19e97]" />
-                      <span className="hidden sm:inline font-medium">Copy</span>
-                    </>
-                  )}
+                  {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
                 </button>
 
-                {/* 2. Regenerate Response Button (for AI messages) */}
-                {!isUser && onRegenerate && (
+                {/* 2. Speaker icon */}
+                <button
+                  type="button"
+                  id={`speak-msg-${message.id}`}
+                  onClick={handleToggleSpeech}
+                  className={`p-1 transition-colors cursor-pointer rounded-lg hover:bg-[#282724] ${
+                    isSpeakingThis ? 'text-[#d97757]' : 'text-[#86837c] hover:text-[#ede8e1]'
+                  }`}
+                  title={isSpeakingThis ? 'Stop voice' : 'Listen with voice'}
+                  aria-label="Listen"
+                >
+                  {isSpeakingThis ? <VolumeX className="w-4 h-4 text-[#d97757] animate-pulse" /> : <Volume2 className="w-4 h-4" />}
+                </button>
+
+                {/* 3. Thumbs up icon */}
+                <button
+                  type="button"
+                  onClick={() => setFeedback(feedback === 'up' ? null : 'up')}
+                  className={`p-1 transition-colors cursor-pointer rounded-lg hover:bg-[#282724] ${
+                    feedback === 'up' ? 'text-[#d97757]' : 'text-[#86837c] hover:text-[#ede8e1]'
+                  }`}
+                  title="Good response"
+                  aria-label="Thumbs up"
+                >
+                  <ThumbsUp className={`w-4 h-4 ${feedback === 'up' ? 'fill-[#d97757]/30' : ''}`} />
+                </button>
+
+                {/* 4. Thumbs down icon */}
+                <button
+                  type="button"
+                  onClick={() => setFeedback(feedback === 'down' ? null : 'down')}
+                  className={`p-1 transition-colors cursor-pointer rounded-lg hover:bg-[#282724] ${
+                    feedback === 'down' ? 'text-rose-400' : 'text-[#86837c] hover:text-[#ede8e1]'
+                  }`}
+                  title="Bad response"
+                  aria-label="Thumbs down"
+                >
+                  <ThumbsDown className={`w-4 h-4 ${feedback === 'down' ? 'fill-rose-400/30' : ''}`} />
+                </button>
+
+                {/* 5. Regenerate icon */}
+                {onRegenerate && (
                   <button
+                    type="button"
                     id={`regenerate-msg-${message.id}`}
                     onClick={onRegenerate}
-                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs text-[#a19e97] hover:text-[#ede8e1] bg-[#242320] hover:bg-[#2e2c29] border border-[#383633] transition-all active:scale-95 cursor-pointer touch-manipulation shadow-2xs"
-                    title="Regenerate this response"
+                    className="p-1 text-[#86837c] hover:text-[#ede8e1] transition-colors cursor-pointer rounded-lg hover:bg-[#282724]"
+                    title="Regenerate response"
                     aria-label="Regenerate"
                   >
-                    <RotateCcw className="w-3.5 h-3.5 text-[#a19e97]" />
-                    <span className="hidden sm:inline font-medium">Regenerate</span>
-                  </button>
-                )}
-
-                {/* 3. Reply to this Message */}
-                {onReply && (
-                  <button
-                    id={`reply-msg-${message.id}`}
-                    onClick={() => onReply(message)}
-                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs text-[#a19e97] hover:text-[#ede8e1] bg-[#242320] hover:bg-[#2e2c29] border border-[#383633] transition-all active:scale-95 cursor-pointer touch-manipulation shadow-2xs"
-                    title="Reply to this message"
-                    aria-label="Reply"
-                  >
-                    <Reply className="w-3.5 h-3.5 text-[#a19e97]" />
-                    <span className="hidden sm:inline font-medium">Reply</span>
-                  </button>
-                )}
-
-                {/* 4. Speaker Button */}
-                {!isUser && (
-                  <button
-                    id={`speak-msg-${message.id}`}
-                    onClick={handleToggleSpeech}
-                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs transition-all active:scale-95 cursor-pointer touch-manipulation shadow-2xs ${
-                      isSpeakingThis
-                        ? 'bg-[#d97757] text-white font-semibold shadow-xs ring-2 ring-[#d97757]/40 animate-pulse'
-                        : 'text-[#a19e97] hover:text-[#ede8e1] bg-[#242320] hover:bg-[#2e2c29] border border-[#383633]'
-                    }`}
-                    title={isSpeakingThis ? 'Stop speaking' : 'Read aloud with voice'}
-                    aria-label={isSpeakingThis ? 'Stop voice' : 'Listen with voice'}
-                  >
-                    {isSpeakingThis ? (
-                      <>
-                        <VolumeX className="w-3.5 h-3.5 text-white" />
-                        <span className="font-semibold text-white">Stop Voice</span>
-                      </>
-                    ) : (
-                      <>
-                        <Volume2 className="w-3.5 h-3.5 text-[#d97757]" />
-                        <span className="hidden sm:inline font-medium">Listen Voice</span>
-                      </>
-                    )}
+                    <RotateCcw className="w-4 h-4" />
                   </button>
                 )}
 
                 {/* Active Speaking Indicator */}
                 {isSpeakingThis && (
-                  <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[#242320] border border-[#383633] text-[#ede8e1] text-[11px] font-medium animate-fadeIn ml-auto">
+                  <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[#201f1d] border border-[#33312e] text-[#ede8e1] text-[11px] font-medium animate-fadeIn ml-2">
                     <span className="flex items-center gap-0.5">
                       <span className="w-1 h-2 bg-[#d97757] rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
                       <span className="w-1 h-3.5 bg-[#d97757] rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
                       <span className="w-1 h-1.5 bg-[#d97757] rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                     </span>
-                    <span className="font-medium">
-                      Voice Playing
-                    </span>
+                    <span className="text-[10px] text-[#d97757]">Playing voice</span>
                   </div>
                 )}
               </div>

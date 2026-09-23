@@ -567,13 +567,13 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ language, meta, value, onPreview,
   return (
     <div className="my-4 rounded-xl overflow-hidden border border-slate-800 bg-slate-950 shadow-md font-mono text-[13.5px]">
       {/* File Header Bar with Name, Extension, and Individual Download Option */}
-      <div className="flex flex-wrap items-center justify-between gap-2 px-3.5 py-2.5 bg-slate-900/95 border-b border-slate-800 text-xs">
+      <div className="flex flex-wrap items-center justify-between gap-2 px-3.5 py-2.5 bg-[#18191e] border-b border-[#272a33] text-xs">
         <div className="flex items-center gap-2 min-w-0">
-          <FileCode className="w-4 h-4 text-indigo-400 shrink-0" />
-          <span className="font-semibold text-slate-100 truncate max-w-[180px] sm:max-w-[240px]">
+          <FileCode className="w-4 h-4 text-blue-400 shrink-0" />
+          <span className="font-semibold text-[#f3f4f6] truncate max-w-[180px] sm:max-w-[240px]">
             {cleanName}
           </span>
-          <span className="px-1.5 py-0.5 rounded bg-indigo-500/20 text-indigo-300 text-[10px] font-mono uppercase font-bold border border-indigo-500/30">
+          <span className="px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 text-[10px] font-mono uppercase font-bold border border-blue-500/30">
             .{fileExtension}
           </span>
           {wasRemade && (
@@ -590,7 +590,7 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ language, meta, value, onPreview,
           <button
             type="button"
             onClick={handleCopy}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium text-slate-300 hover:text-white bg-[#222120] hover:bg-[#2e2c29] border border-[#383633] transition-all active:scale-95 cursor-pointer"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium text-slate-300 hover:text-white bg-[#22242c] hover:bg-[#2c2f3a] border border-[#2e323d] transition-all active:scale-95 cursor-pointer"
             title="Copy code to clipboard"
           >
             {copied ? (
@@ -612,7 +612,7 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ language, meta, value, onPreview,
             onClick={() => {
               downloadSingleFileDirectly(cleanName, currentCode);
             }}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium text-slate-300 hover:text-white bg-[#222120] hover:bg-[#2e2c29] border border-[#383633] transition-all active:scale-95 cursor-pointer"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium text-slate-300 hover:text-white bg-[#22242c] hover:bg-[#2c2f3a] border border-[#2e323d] transition-all active:scale-95 cursor-pointer"
             title={`Download ${cleanName}`}
           >
             <Download className="w-3.5 h-3.5 text-slate-400" />
@@ -625,8 +625,8 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ language, meta, value, onPreview,
             onClick={handlePreview}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all active:scale-95 cursor-pointer shadow-xs ${
               isPreviewable
-                ? 'text-white bg-[#d97757] hover:bg-[#c66b4d] border border-[#d97757]/80'
-                : 'text-slate-300 hover:text-white bg-[#222120] hover:bg-[#2e2c29] border border-[#383633]'
+                ? 'text-white bg-blue-600 hover:bg-blue-500 border border-blue-500'
+                : 'text-slate-300 hover:text-white bg-[#22242c] hover:bg-[#2c2f3a] border border-[#2e323d]'
             }`}
             title="Live Preview"
           >

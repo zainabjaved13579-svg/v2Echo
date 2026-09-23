@@ -1,13 +1,13 @@
 {
   "id": "/",
-  "name": "Sapphire AI Assistant",
+  "name": "Sapphire AI Studio",
   "short_name": "Sapphire",
-  "description": "Sapphire AI: Elite AI Coding, Multi-file Codex Architecture & Intelligent Assistant",
+  "description": "Sapphire AI: Elite Multi-file AI Architecture, Codex App Builder & Live Preview Engine",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#191817",
-  "theme_color": "#191817",
+  "background_color": "#0e0f12",
+  "theme_color": "#0e0f12",
   "orientation": "any",
   "categories": ["productivity", "developer", "utilities"],
   "icons": [
@@ -28,6 +28,29 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "New Chat",
+      "short_name": "Chat",
+      "description": "Start a new conversation with Sapphire AI",
+      "url": "/?mode=chat",
+      "icons": [{ "src": "https://i.ibb.co/q37Fs0hH/cropped-circle-image-1.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Codex App Builder",
+      "short_name": "Codex",
+      "description": "Build full-stack applications with Live Preview",
+      "url": "/?mode=codex",
+      "icons": [{ "src": "https://i.ibb.co/q37Fs0hH/cropped-circle-image-1.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Workspace",
+      "short_name": "Workspace",
+      "description": "Access multi-file coding workspace",
+      "url": "/?mode=workspace",
+      "icons": [{ "src": "https://i.ibb.co/q37Fs0hH/cropped-circle-image-1.png", "sizes": "192x192" }]
     }
   ]
 }

@@ -11,6 +11,7 @@ import {
   X
 } from 'lucide-react';
 import { ChatSession, UserProfile } from '../types';
+import { SAPPHIRE_LOGO_URL } from '../data/constants';
 
 interface TopTabBarProps {
   isStartingScreen: boolean;
@@ -63,8 +64,8 @@ export const TopTabBar: React.FC<TopTabBarProps> = ({
   };
 
   return (
-    <header className="h-10 bg-[#191817] border-b border-[#262422] px-2 sm:px-3 flex items-center justify-between gap-2 shrink-0 z-30 select-none text-[#a19e97] font-['Plus_Jakarta_Sans',sans-serif]">
-      {/* Left controls: ☰, ◫, ←, →, and Mode Toggle Pill (💬 / </>) */}
+    <header className="h-10 bg-[#0e0f12] border-b border-[#1f222b] px-2 sm:px-3 flex items-center justify-between gap-2 shrink-0 z-30 select-none text-[#9ca3af] font-['Plus_Jakarta_Sans',sans-serif]">
+      {/* Left controls: ☰, Sapphire Logo, ←, →, and Mode Toggle Pill */}
       <div className="flex items-center gap-1.5 sm:gap-2">
         {/* Sidebar Toggle / Hamburger */}
         {onToggleSidebar && (
@@ -72,19 +73,36 @@ export const TopTabBar: React.FC<TopTabBarProps> = ({
             type="button"
             onClick={onToggleSidebar}
             id="tab-toggle-sidebar-btn"
-            className="p-1 hover:text-[#ede8e1] rounded-lg transition-colors cursor-pointer"
+            className="p-1 hover:text-[#edeef2] rounded-lg transition-colors cursor-pointer"
             title="Toggle Sidebar"
           >
             <Menu className="w-4 h-4" />
           </button>
         )}
 
+        {/* Sapphire Brand Logo (Square with soft rounded corners, not sharp) */}
+        <button
+          type="button"
+          onClick={onSelectStartingScreen}
+          className="flex items-center gap-1.5 hover:opacity-85 transition-opacity cursor-pointer group"
+          title="Sapphire Home"
+        >
+          <img
+            src={SAPPHIRE_LOGO_URL}
+            alt="Sapphire"
+            className="w-5 h-5 rounded-lg object-cover ring-1 ring-blue-500/30 shadow-xs group-hover:scale-105 transition-transform"
+          />
+          <span className="font-semibold text-xs text-[#f3f4f6] tracking-tight hidden sm:inline">
+            Sapphire
+          </span>
+        </button>
+
         {/* Back and Forward navigation arrows */}
         <div className="flex items-center">
           <button
             type="button"
             onClick={handlePrevSession}
-            className="p-1 hover:text-[#ede8e1] rounded-lg transition-colors cursor-pointer"
+            className="p-1 hover:text-[#edeef2] rounded-lg transition-colors cursor-pointer"
             title="Back"
           >
             <ChevronLeft className="w-4 h-4" />
@@ -92,15 +110,15 @@ export const TopTabBar: React.FC<TopTabBarProps> = ({
           <button
             type="button"
             onClick={handleNextSession}
-            className="p-1 hover:text-[#ede8e1] rounded-lg transition-colors cursor-pointer"
+            className="p-1 hover:text-[#edeef2] rounded-lg transition-colors cursor-pointer"
             title="Forward"
           >
             <ChevronRight className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Mode Toggle Pill: Chat 💬 / Codex </> */}
-        <div className="flex items-center bg-[#201f1d] border border-[#33312e] rounded-xl p-0.5 ml-1">
+        {/* Mode Toggle Pill: Chat 💬 / Codex </> / Workspace */}
+        <div className="flex items-center bg-[#18191e] border border-[#272a33] rounded-xl p-0.5 ml-1">
           {/* Chat Mode */}
           <button
             type="button"
@@ -111,8 +129,8 @@ export const TopTabBar: React.FC<TopTabBarProps> = ({
             }}
             className={`p-1 sm:px-2 rounded-lg text-xs flex items-center gap-1 transition-all cursor-pointer ${
               activeNavTab === 'chat'
-                ? 'bg-[#282724] text-[#ede8e1] shadow-2xs font-medium'
-                : 'text-[#a19e97] hover:text-[#ede8e1]'
+                ? 'bg-[#22242c] text-white shadow-2xs font-medium'
+                : 'text-[#9ca3af] hover:text-[#edeef2]'
             }`}
             title="Chat Mode"
           >
@@ -128,46 +146,31 @@ export const TopTabBar: React.FC<TopTabBarProps> = ({
             }}
             className={`p-1 sm:px-2 rounded-lg text-xs flex items-center gap-1 transition-all cursor-pointer ${
               activeNavTab === 'codex'
-                ? 'bg-[#282724] text-[#ede8e1] shadow-2xs font-medium'
-                : 'text-[#a19e97] hover:text-[#ede8e1]'
+                ? 'bg-[#22242c] text-white shadow-2xs font-medium'
+                : 'text-[#9ca3af] hover:text-[#edeef2]'
             }`}
-            title="Codex (AI Studio App Builder)"
+            title="Codex (Google AI Studio Live Workbench)"
           >
-            <Code2 className="w-3.5 h-3.5" />
-            <span className="hidden md:inline">Codex</span>
+            <Code2 className="w-3.5 h-3.5 text-blue-400" />
+            <span className="hidden md:inline">Codex Studio</span>
           </button>
         </div>
       </div>
 
-      {/* Center: Free plan · Upgrade pill */}
-      <div className="hidden sm:flex items-center">
-        <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#201f1d] border border-[#33312e] text-[11px] text-[#a19e97]">
-          <span>Free plan</span>
-          <span>·</span>
-          <button
-            type="button"
-            onClick={onOpenGetApp}
-            className="text-[#d97757] hover:text-[#e88869] font-medium transition-colors cursor-pointer"
-          >
-            Upgrade
-          </button>
-        </div>
-      </div>
-
-      {/* Right controls: Ghost icon 👻, Window controls (—, □, ✕) */}
+      {/* Right controls: Profile icon, Window controls */}
       <div className="flex items-center gap-2">
-        {/* Ghost / Profile icon matching screenshot */}
+        {/* Profile icon */}
         <button
           type="button"
           onClick={onOpenProfile}
-          className="p-1 text-[#a19e97] hover:text-[#ede8e1] rounded-lg transition-colors cursor-pointer"
+          className="p-1 text-[#9ca3af] hover:text-[#edeef2] rounded-lg transition-colors cursor-pointer"
           title="Profile & Settings"
         >
           <Ghost className="w-4 h-4" />
         </button>
 
-        {/* Desktop window controls styling matching reference */}
-        <div className="hidden md:flex items-center gap-2 text-[#7d7a74] pl-2 border-l border-[#262422]">
+        {/* Desktop window controls */}
+        <div className="hidden md:flex items-center gap-2 text-[#717684] pl-2 border-l border-[#1f222b]">
           <button
             type="button"
             className="p-1 hover:text-white transition-colors cursor-pointer"
