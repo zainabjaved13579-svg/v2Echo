@@ -23,7 +23,8 @@ import {
   Brain,
   ChevronDown,
   ChevronRight,
-  Languages
+  Languages,
+  Eye
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { ChatMessage, SupportedLanguage, UserProfile } from '../types';
@@ -433,7 +434,7 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
         className={`group w-full py-3.5 sm:py-5 transition-colors ${
-          isUser ? 'bg-transparent' : 'bg-white'
+          isUser ? 'bg-transparent text-[#ede8e1]' : 'bg-[#191817] text-[#ede8e1]'
         }`}
       >
         <div className="w-full max-w-3xl mx-auto px-3 sm:px-4 flex gap-2.5 sm:gap-4 items-start">
@@ -444,34 +445,29 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
                 <img
                   src={userAvatar}
                   alt={userName}
-                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg object-cover bg-white border border-slate-200 shadow-2xs"
+                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-full object-cover bg-[#242320] border border-[#383633]"
                 />
               ) : (
-                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-gradient-to-tr from-indigo-500 to-purple-600 flex items-center justify-center text-xs font-bold text-white shadow-2xs">
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-[#242320] border border-[#383633] flex items-center justify-center text-xs font-bold text-[#ede8e1]">
                   {userName.charAt(0).toUpperCase()}
                 </div>
               )
             ) : (
-              <div className="relative">
-                <img
-                  src={SAPPHIRE_LOGO_URL}
-                  alt="Sapphire AI"
-                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg object-contain bg-white border border-slate-200 shadow-2xs"
-                />
-                {message.isStreaming && (
-                  <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-500 rounded-full animate-ping" />
-                )}
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-[#242320] border border-[#383633] flex items-center justify-center text-[#d97757]">
+                <svg className="w-4 h-4 text-[#d97757]" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 2a1 1 0 0 1 1 1v5.07l3.58-3.58a1 1 0 1 1 1.42 1.42L14.42 9.5H19.5a1 1 0 0 1 0 2h-5.08l3.58 3.58a1 1 0 1 1-1.42 1.42L13 12.92V18a1 1 0 0 1-2 0v-5.08l-3.58 3.58a1 1 0 0 1-1.42-1.42L9.58 11.5H4.5a1 1 0 0 1 0-2h5.08L6 5.92a1 1 0 1 1 1.42-1.42L11 8.07V3a1 1 0 0 1 1-1z" />
+                </svg>
               </div>
             )}
           </div>
 
           {/* Message Content Body */}
-          <div className={`flex-1 min-w-0 ${isUser ? 'space-y-2 pt-0.5' : 'space-y-3 bg-slate-50/90 p-3.5 sm:p-5 md:p-6 rounded-2xl border border-slate-100 shadow-2xs'}`}>
+          <div className={`flex-1 min-w-0 ${isUser ? 'space-y-2 pt-0.5' : 'space-y-3 bg-[#201f1d] p-3.5 sm:p-5 md:p-6 rounded-2xl sm:rounded-3xl border border-[#302e2b] text-[#ede8e1]'}`}>
             {/* Header row: Author, model badge & timestamp */}
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
-                <span className="font-semibold text-xs sm:text-sm text-slate-800">
-                  {isUser ? userName : 'Sapphire AI'}
+                <span className="font-semibold text-xs sm:text-sm text-[#ede8e1]">
+                  {isUser ? userName : 'Sapphire'}
                 </span>
                 {!isUser && message.modelUsed && (
                   <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100 font-medium">
@@ -646,11 +642,36 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
                   </div>
 
                   <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap shrink-0">
+                    {/* Preview All Files (Live App Sandbox) Button */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const htmlFile = extractedFiles.find((f) => f.name.endsWith('.html')) || extractedFiles[0];
+                        if (htmlFile && onPreviewCode) {
+                          extractedFiles.forEach((f) => {
+                            autoSaveFile({
+                              name: f.name,
+                              path: `/${f.name}`,
+                              content: f.content,
+                              language: f.language,
+                              source: 'ai-generated'
+                            });
+                          });
+                          onPreviewCode(htmlFile.content, htmlFile.language, htmlFile.name);
+                        }
+                      }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#d97757] hover:bg-[#c66b4d] text-white text-xs font-semibold shadow-xs active:scale-95 transition-all cursor-pointer whitespace-nowrap"
+                      title="Preview all generated files together in live app sandbox"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      <span>Preview All Files</span>
+                    </button>
+
                     {/* Full Folder ZIP Download Button */}
                     <button
                       type="button"
                       onClick={handleDownloadFullFolderZip}
-                      className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md active:scale-95 transition-all cursor-pointer whitespace-nowrap"
+                      className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#242320] hover:bg-[#2e2c29] border border-[#383633] text-white text-xs font-semibold shadow-xs active:scale-95 transition-all cursor-pointer whitespace-nowrap"
                       title="Download all files in this project as a full ZIP folder"
                     >
                       {isZipping ? (
@@ -666,7 +687,7 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
                       ) : (
                         <>
                           <Download className="w-3.5 h-3.5 text-white" />
-                          <span>Download Full Folder (ZIP)</span>
+                          <span>Download ZIP</span>
                         </>
                       )}
                     </button>
@@ -676,10 +697,10 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
                       <button
                         type="button"
                         onClick={handleSaveAllToWorkspace}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-medium transition-all active:scale-95 cursor-pointer whitespace-nowrap"
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#242320] hover:bg-[#2e2c29] border border-[#383633] text-slate-200 text-xs font-medium transition-all active:scale-95 cursor-pointer whitespace-nowrap"
                         title="Open all generated files in File & Workspace"
                       >
-                        <Folder className="w-3.5 h-3.5 text-amber-400" />
+                        <Folder className="w-3.5 h-3.5 text-[#d97757]" />
                         <span>Open in Workspace</span>
                       </button>
                     )}
@@ -810,25 +831,25 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
               </div>
             )}
 
-            {/* Action Toolbar (Professional Monochrome Icons: Icon on mobile, Icon + Name on PC) */}
+            {/* Action Toolbar (Professional Claude Warm Dark Theme) */}
             {!message.isStreaming && !message.error && message.text && (
-              <div className="flex items-center gap-1.5 pt-2 opacity-90 group-hover:opacity-100 transition-opacity border-t border-slate-100/80 flex-wrap">
+              <div className="flex items-center gap-1.5 pt-2 opacity-90 group-hover:opacity-100 transition-opacity border-t border-[#302e2b] flex-wrap">
                 {/* 1. Copy Text Button */}
                 <button
                   id={`copy-msg-${message.id}`}
                   onClick={handleCopy}
-                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200/80 transition-all active:scale-95 cursor-pointer touch-manipulation shadow-2xs"
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs text-[#a19e97] hover:text-[#ede8e1] bg-[#242320] hover:bg-[#2e2c29] border border-[#383633] transition-all active:scale-95 cursor-pointer touch-manipulation shadow-2xs"
                   title={copied ? 'Copied to clipboard' : 'Copy response'}
                   aria-label={copied ? 'Copied' : 'Copy'}
                 >
                   {copied ? (
                     <>
-                      <Check className="w-3.5 h-3.5 text-emerald-600" />
-                      <span className="hidden sm:inline font-medium text-emerald-600">Copied</span>
+                      <Check className="w-3.5 h-3.5 text-emerald-400" />
+                      <span className="hidden sm:inline font-medium text-emerald-400">Copied</span>
                     </>
                   ) : (
                     <>
-                      <Copy className="w-3.5 h-3.5 text-slate-500" />
+                      <Copy className="w-3.5 h-3.5 text-[#a19e97]" />
                       <span className="hidden sm:inline font-medium">Copy</span>
                     </>
                   )}
@@ -839,11 +860,11 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
                   <button
                     id={`regenerate-msg-${message.id}`}
                     onClick={onRegenerate}
-                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200/80 transition-all active:scale-95 cursor-pointer touch-manipulation shadow-2xs"
+                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs text-[#a19e97] hover:text-[#ede8e1] bg-[#242320] hover:bg-[#2e2c29] border border-[#383633] transition-all active:scale-95 cursor-pointer touch-manipulation shadow-2xs"
                     title="Regenerate this response"
                     aria-label="Regenerate"
                   >
-                    <RotateCcw className="w-3.5 h-3.5 text-slate-500" />
+                    <RotateCcw className="w-3.5 h-3.5 text-[#a19e97]" />
                     <span className="hidden sm:inline font-medium">Regenerate</span>
                   </button>
                 )}
@@ -853,27 +874,27 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
                   <button
                     id={`reply-msg-${message.id}`}
                     onClick={() => onReply(message)}
-                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200/80 transition-all active:scale-95 cursor-pointer touch-manipulation shadow-2xs"
+                    className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs text-[#a19e97] hover:text-[#ede8e1] bg-[#242320] hover:bg-[#2e2c29] border border-[#383633] transition-all active:scale-95 cursor-pointer touch-manipulation shadow-2xs"
                     title="Reply to this message"
                     aria-label="Reply"
                   >
-                    <Reply className="w-3.5 h-3.5 text-slate-500" />
+                    <Reply className="w-3.5 h-3.5 text-[#a19e97]" />
                     <span className="hidden sm:inline font-medium">Reply</span>
                   </button>
                 )}
 
-                {/* 4. Speaker Button: Read aloud with human Gemini voice */}
+                {/* 4. Speaker Button */}
                 {!isUser && (
                   <button
                     id={`speak-msg-${message.id}`}
                     onClick={handleToggleSpeech}
-                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs transition-all active:scale-95 cursor-pointer touch-manipulation shadow-2xs ${
+                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs transition-all active:scale-95 cursor-pointer touch-manipulation shadow-2xs ${
                       isSpeakingThis
-                        ? 'bg-indigo-600 text-white font-semibold shadow-xs ring-2 ring-indigo-300 animate-pulse'
-                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200/80'
+                        ? 'bg-[#d97757] text-white font-semibold shadow-xs ring-2 ring-[#d97757]/40 animate-pulse'
+                        : 'text-[#a19e97] hover:text-[#ede8e1] bg-[#242320] hover:bg-[#2e2c29] border border-[#383633]'
                     }`}
-                    title={isSpeakingThis ? 'Stop speaking' : 'Read aloud with human Gemini voice'}
-                    aria-label={isSpeakingThis ? 'Stop voice' : 'Listen with Gemini voice'}
+                    title={isSpeakingThis ? 'Stop speaking' : 'Read aloud with voice'}
+                    aria-label={isSpeakingThis ? 'Stop voice' : 'Listen with voice'}
                   >
                     {isSpeakingThis ? (
                       <>
@@ -882,7 +903,7 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
                       </>
                     ) : (
                       <>
-                        <Volume2 className="w-3.5 h-3.5 text-indigo-600" />
+                        <Volume2 className="w-3.5 h-3.5 text-[#d97757]" />
                         <span className="hidden sm:inline font-medium">Listen Voice</span>
                       </>
                     )}
@@ -891,14 +912,14 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
 
                 {/* Active Speaking Indicator */}
                 {isSpeakingThis && (
-                  <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-700 text-[11px] font-medium animate-fadeIn ml-auto">
+                  <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[#242320] border border-[#383633] text-[#ede8e1] text-[11px] font-medium animate-fadeIn ml-auto">
                     <span className="flex items-center gap-0.5">
-                      <span className="w-1 h-2 bg-indigo-600 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                      <span className="w-1 h-3.5 bg-indigo-600 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                      <span className="w-1 h-1.5 bg-indigo-600 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                      <span className="w-1 h-2 bg-[#d97757] rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                      <span className="w-1 h-3.5 bg-[#d97757] rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                      <span className="w-1 h-1.5 bg-[#d97757] rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                     </span>
                     <span className="font-medium">
-                      Sapphire Voice
+                      Voice Playing
                     </span>
                   </div>
                 )}

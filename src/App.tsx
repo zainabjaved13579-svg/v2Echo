@@ -128,6 +128,14 @@ export default function App() {
   const [authUser, setAuthUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
 
+  // Guest Mode State (no cloud save, instant access)
+  const [isGuestMode, setIsGuestMode] = useState<boolean>(() => {
+    return localStorage.getItem('sapphire_guest_mode') === 'true';
+  });
+
+  // Active navigation tab ('chat' | 'workspace' | 'codex' | 'projects' | 'artifacts' | 'customize')
+  const [activeNavTab, setActiveNavTab] = useState<string>('chat');
+
   // Monitor Firebase Auth State
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -815,19 +823,29 @@ Please carefully examine, understand, and analyze this uploaded document/file an
     );
   }
 
-  // Route protection: If user is not authenticated, render Login Screen
-  if (!authUser) {
+  // Route protection: If user is not authenticated and not in guest mode, render Login Screen
+  if (!authUser && !isGuestMode) {
     return (
       <Auth
         onLoginSuccess={(user) => {
           setAuthUser(user);
         }}
+        onContinueAsGuest={() => {
+          setIsGuestMode(true);
+          localStorage.setItem('sapphire_guest_mode', 'true');
+        }}
       />
     );
   }
 
+  const handleSignOut = () => {
+    setIsGuestMode(false);
+    localStorage.removeItem('sapphire_guest_mode');
+    signOut(auth);
+  };
+
   return (
-    <div className="flex h-full w-full bg-white text-slate-800 overflow-hidden select-none sm:select-auto font-['Plus_Jakarta_Sans',sans-serif]">
+    <div className="flex h-full w-full bg-[#191817] text-[#ede8e1] overflow-hidden select-none sm:select-auto font-['Plus_Jakarta_Sans',sans-serif]">
       {/* Sidebar: Shown in chat view or toggled open */}
       <AnimatePresence>
         {(!isStartingScreen || isSidebarOpen) && (
@@ -851,18 +869,30 @@ Please carefully examine, understand, and analyze this uploaded document/file an
             onClearAllSessions={handleClearAllSessions}
             onOpenSettings={() => setIsSettingsModalOpen(true)}
             onOpenFileManager={() => handleOpenFileManager()}
-            onOpenFileWorkspace={() => setIsWorkspaceOpen(true)}
+            onOpenFileWorkspace={() => {
+              setActiveNavTab('workspace');
+              setIsWorkspaceOpen(true);
+            }}
             onOpenGetApp={() => setIsDownloadModalOpen(true)}
+            onOpenCodex={() => {
+              setActiveNavTab('codex');
+              setIsStartingScreen(false);
+              handleNewChat();
+            }}
+            activeNavTab={activeNavTab}
           />
         )}
       </AnimatePresence>
 
       {/* Main Chat View */}
-      <main className="flex-1 flex flex-col h-full min-w-0 relative bg-white overflow-hidden">
+      <main className="flex-1 flex flex-col h-full min-w-0 relative bg-[#191817] overflow-hidden">
         {/* Top Tab Bar: Navigation, Home Pill, Dynamic Session Tabs, Android Shortcut, and Profile */}
         <TopTabBar
           isStartingScreen={isStartingScreen}
-          onSelectStartingScreen={() => setIsStartingScreen(true)}
+          onSelectStartingScreen={() => {
+            setIsStartingScreen(true);
+            setActiveNavTab('chat');
+          }}
           sessions={sessions}
           currentSessionId={currentSession.id}
           onSelectSession={(id) => {
@@ -870,25 +900,39 @@ Please carefully examine, understand, and analyze this uploaded document/file an
             setIsStartingScreen(false);
           }}
           onCloseSession={handleCloseSessionTab}
-          onNewChat={handleNewChat}
+          onNewChat={() => {
+            handleNewChat();
+            setIsStartingScreen(false);
+          }}
           onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
           isSidebarOpen={isSidebarOpen}
           userProfile={currentUserProfile}
           onOpenProfile={() => setIsUserProfileModalOpen(true)}
           onOpenAndroidShortcut={() => setIsAndroidShortcutModalOpen(true)}
-          onSignOut={() => signOut(auth)}
+          onSignOut={handleSignOut}
+          onOpenGetApp={() => setIsDownloadModalOpen(true)}
+          onOpenCodex={() => {
+            setActiveNavTab('codex');
+            setIsStartingScreen(false);
+            handleNewChat();
+          }}
+          onOpenWorkspace={() => {
+            setActiveNavTab('workspace');
+            setIsWorkspaceOpen(true);
+          }}
+          activeNavTab={activeNavTab}
         />
 
         <AnimatePresence mode="wait" initial={false}>
           {isStartingScreen ? (
-            /* Starting Screen: DeepSeek Style "Into the Unknown" with Get App (APK/EXE), Search Box, and NO API Option */
+            /* Starting Screen: Claude Aesthetic matching Reference Image */
             <motion.div
               key="starting-screen"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.28, ease: 'easeInOut' }}
-              className="flex-1 h-full w-full overflow-y-auto"
+              transition={{ duration: 0.25, ease: 'easeInOut' }}
+              className="flex-1 h-full w-full overflow-y-auto bg-[#191817]"
             >
               <EmptyState
                 onSendMessage={(text) => handleSendMessage(text)}
@@ -908,79 +952,47 @@ Please carefully examine, understand, and analyze this uploaded document/file an
                       typeof val === 'function' ? val(s.useSearchGrounding) : val
                   }));
                 }}
-                onOpenFileWorkspace={() => setIsWorkspaceOpen(true)}
+                onOpenFileWorkspace={() => {
+                  setActiveNavTab('workspace');
+                  setIsWorkspaceOpen(true);
+                }}
+                userName={currentUserProfile?.name || 'Shaheer'}
               />
             </motion.div>
           ) : (
-            /* Active Chat Stream View */
+            /* Active Chat Stream View - Sleek No-Bar Design matching Codex */
             <motion.div
               key="chat-view"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.28, ease: 'easeInOut' }}
-              className="flex-1 flex flex-col h-full min-w-0 relative bg-white overflow-hidden"
+              transition={{ duration: 0.25, ease: 'easeInOut' }}
+              className="flex-1 flex flex-col h-full min-w-0 relative bg-[#191817] overflow-hidden"
             >
-              {/* Header */}
-              <ChatHeader
-                currentSession={currentSession}
-                userProfile={currentUserProfile}
-                onOpenProfile={() => setIsUserProfileModalOpen(true)}
-                onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
-                onNewChat={handleNewChat}
-                onClearMessages={handleClearMessages}
-                onRenameSession={(title) => handleRenameSession(currentSession.id, title)}
-                onOpenSettings={() => setIsSettingsModalOpen(true)}
-                onOpenFileManager={() => handleOpenFileManager()}
-                onOpenFileWorkspace={() => setIsWorkspaceOpen(true)}
-                onOpenGetApp={() => setIsDownloadModalOpen(true)}
-                onExportChat={handleExportChat}
-                onGoHome={() => setIsStartingScreen(true)}
-              />
-
               {/* Scrollable Conversation Stream */}
               <div
                 ref={chatContainerRef}
                 onScroll={handleScroll}
-                className="flex-1 overflow-y-auto overflow-x-hidden scroll-smooth flex flex-col"
+                className="flex-1 overflow-y-auto overflow-x-hidden scroll-smooth flex flex-col bg-[#191817]"
               >
                 {currentSession.messages.length === 0 ? (
                   <div className="flex-1 flex flex-col items-center justify-center p-6 text-center max-w-xl mx-auto my-auto animate-fadeIn">
-                    <div className="w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center mb-3 shadow-2xs">
-                      <img
-                        src={SAPPHIRE_LOGO_URL}
-                        alt="Sapphire AI"
-                        className="w-7 h-7 rounded-xl object-contain"
-                      />
+                    <div className="w-12 h-12 rounded-2xl bg-[#242320] border border-[#383633] flex items-center justify-center mb-3 shadow-2xs">
+                      <svg className="w-6 h-6 text-[#d97757]" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 2a1 1 0 0 1 1 1v5.07l3.58-3.58a1 1 0 1 1 1.42 1.42L14.42 9.5H19.5a1 1 0 0 1 0 2h-5.08l3.58 3.58a1 1 0 1 1-1.42 1.42L13 12.92V18a1 1 0 0 1-2 0v-5.08l-3.58 3.58a1 1 0 0 1-1.42-1.42L9.58 11.5H4.5a1 1 0 0 1 0-2h5.08L6 5.92a1 1 0 1 1 1.42-1.42L11 8.07V3a1 1 0 0 1 1-1z" />
+                      </svg>
                     </div>
-                    <h2 className="text-xl font-bold text-slate-800 tracking-tight">
-                      What can Sapphire help you with?
-                    </h2>
-                    <p className="text-xs text-slate-500 mt-1 max-w-sm">
-                      Ask questions, solve problems, generate code, or upload files and images.
+                    <h3 className="font-claude-serif text-xl text-[#ede8e1] mb-1">
+                      {activeNavTab === 'codex' ? 'Codex App Studio' : 'Sapphire Chat'}
+                    </h3>
+                    <p className="text-xs text-[#a19e97] max-w-md">
+                      {activeNavTab === 'codex'
+                        ? 'Google AI Studio architect: generating full-stack applications with instant multi-file preview.'
+                        : 'Ask questions, engineer code, or upload files and images.'}
                     </p>
-
-                    {/* Quick prompt suggestions */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-5 w-full text-left">
-                      {[
-                        'Explain quantum computing simply',
-                        'Help me write a professional email',
-                        'Create a Python script to parse JSON',
-                        'Translate English to Urdu voice'
-                      ].map((suggestion) => (
-                        <button
-                          key={suggestion}
-                          type="button"
-                          onClick={() => handleSendMessage(suggestion)}
-                          className="p-3 rounded-xl bg-slate-50 hover:bg-indigo-50/70 border border-slate-200/70 hover:border-indigo-200 text-xs text-slate-700 transition-all cursor-pointer shadow-2xs hover:shadow-xs active:scale-[0.99]"
-                        >
-                          {suggestion}
-                        </button>
-                      ))}
-                    </div>
                   </div>
                 ) : (
-                  <div className="divide-y divide-slate-100/80">
+                  <div className="divide-y divide-[#262422]">
                     {currentSession.messages.map((msg) => (
                       <ChatMessageItem
                         key={msg.id}

@@ -1,16 +1,16 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import {
-  MessageSquare,
-  Plus,
   Menu,
-  Download,
-  X,
-  LogOut,
+  ChevronLeft,
+  ChevronRight,
+  MessageSquare,
   Code2,
-  Folder
+  Ghost,
+  Minus,
+  Square,
+  X
 } from 'lucide-react';
 import { ChatSession, UserProfile } from '../types';
-import { SAPPHIRE_APP_NAME } from '../data/constants';
 
 interface TopTabBarProps {
   isStartingScreen: boolean;
@@ -38,139 +38,158 @@ export const TopTabBar: React.FC<TopTabBarProps> = ({
   sessions,
   currentSessionId,
   onSelectSession,
-  onCloseSession,
-  onNewChat,
   onToggleSidebar,
   userProfile,
   onOpenProfile,
-  onSignOut,
   onOpenGetApp,
   onOpenCodex,
   onOpenWorkspace,
   activeNavTab = 'chat'
 }) => {
-  const currentSession = sessions.find((s) => s.id === currentSessionId);
-  const displayName = userProfile?.name || 'Guest User';
-  const avatarUrl = userProfile?.avatar;
-  const isGuest = !userProfile?.email || userProfile?.name === 'Guest User';
+  const currentSessionIndex = sessions.findIndex((s) => s.id === currentSessionId);
+
+  const handlePrevSession = () => {
+    if (currentSessionIndex > 0) {
+      onSelectSession(sessions[currentSessionIndex - 1].id);
+    } else if (sessions.length > 0) {
+      onSelectStartingScreen();
+    }
+  };
+
+  const handleNextSession = () => {
+    if (currentSessionIndex >= 0 && currentSessionIndex < sessions.length - 1) {
+      onSelectSession(sessions[currentSessionIndex + 1].id);
+    }
+  };
 
   return (
-    <header className="h-12 bg-black border-b border-slate-800/80 px-3 sm:px-4 flex items-center justify-between gap-2 shrink-0 z-30 select-none backdrop-blur-md text-slate-200">
-      {/* Left side: Sidebar Toggle & Chat Name / Breadcrumb */}
-      <div className="flex items-center gap-2 min-w-0 flex-1 overflow-x-auto no-scrollbar">
+    <header className="h-10 bg-[#191817] border-b border-[#262422] px-2 sm:px-3 flex items-center justify-between gap-2 shrink-0 z-30 select-none text-[#a19e97] font-['Plus_Jakarta_Sans',sans-serif]">
+      {/* Left controls: ☰, ◫, ←, →, and Mode Toggle Pill (💬 / </>) */}
+      <div className="flex items-center gap-1.5 sm:gap-2">
+        {/* Sidebar Toggle / Hamburger */}
         {onToggleSidebar && (
           <button
             type="button"
             onClick={onToggleSidebar}
             id="tab-toggle-sidebar-btn"
-            className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-900 rounded-lg transition-colors shrink-0 cursor-pointer"
+            className="p-1 hover:text-[#ede8e1] rounded-lg transition-colors cursor-pointer"
             title="Toggle Sidebar"
           >
             <Menu className="w-4 h-4" />
           </button>
         )}
 
-        {/* Sapphire Brand / Home */}
-        <button
-          type="button"
-          onClick={onSelectStartingScreen}
-          className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-semibold transition-all shrink-0 cursor-pointer ${
-            isStartingScreen && activeNavTab === 'chat'
-              ? 'bg-slate-900 text-white border border-slate-700'
-              : 'text-slate-400 hover:text-white hover:bg-slate-900/60'
-          }`}
-          title="Home"
-        >
-          <span className="font-bold tracking-tight text-white">{SAPPHIRE_APP_NAME}</span>
-        </button>
+        {/* Back and Forward navigation arrows */}
+        <div className="flex items-center">
+          <button
+            type="button"
+            onClick={handlePrevSession}
+            className="p-1 hover:text-[#ede8e1] rounded-lg transition-colors cursor-pointer"
+            title="Back"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <button
+            type="button"
+            onClick={handleNextSession}
+            className="p-1 hover:text-[#ede8e1] rounded-lg transition-colors cursor-pointer"
+            title="Forward"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
 
-        {/* Divider */}
-        <span className="text-slate-700 hidden xs:inline">/</span>
+        {/* Mode Toggle Pill: Chat 💬 / Codex </> */}
+        <div className="flex items-center bg-[#201f1d] border border-[#33312e] rounded-xl p-0.5 ml-1">
+          {/* Chat Mode */}
+          <button
+            type="button"
+            onClick={() => {
+              if (activeNavTab !== 'chat') {
+                if (onSelectStartingScreen) onSelectStartingScreen();
+              }
+            }}
+            className={`p-1 sm:px-2 rounded-lg text-xs flex items-center gap-1 transition-all cursor-pointer ${
+              activeNavTab === 'chat'
+                ? 'bg-[#282724] text-[#ede8e1] shadow-2xs font-medium'
+                : 'text-[#a19e97] hover:text-[#ede8e1]'
+            }`}
+            title="Chat Mode"
+          >
+            <MessageSquare className="w-3.5 h-3.5" />
+            <span className="hidden md:inline">Chat</span>
+          </button>
 
-        {/* Current Active Mode / Chat Name */}
-        {activeNavTab === 'codex' ? (
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-blue-600/20 text-blue-300 border border-blue-500/40 text-xs font-semibold shrink-0">
-            <Code2 className="w-3.5 h-3.5 text-blue-400" />
-            <span>Codex (AI Studio App Builder)</span>
-          </div>
-        ) : activeNavTab === 'projects' ? (
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-purple-600/20 text-purple-300 border border-purple-500/40 text-xs font-semibold shrink-0">
-            <Folder className="w-3.5 h-3.5 text-purple-400" />
-            <span>Workspace Projects</span>
-          </div>
-        ) : (
-          <div className="flex items-center gap-1.5 min-w-0 max-w-[180px] sm:max-w-xs truncate text-xs font-medium text-slate-300">
-            <MessageSquare className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-            <span className="truncate">{currentSession?.title || 'New Session'}</span>
-          </div>
-        )}
-
-        {/* Plus / New Chat */}
-        <button
-          type="button"
-          id="topbar-new-chat-btn"
-          onClick={onNewChat}
-          className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-900 rounded-lg transition-colors shrink-0 cursor-pointer"
-          title="New Chat"
-        >
-          <Plus className="w-3.5 h-3.5" />
-        </button>
+          {/* Codex Mode (Google AI Studio) */}
+          <button
+            type="button"
+            onClick={() => {
+              if (onOpenCodex) onOpenCodex();
+            }}
+            className={`p-1 sm:px-2 rounded-lg text-xs flex items-center gap-1 transition-all cursor-pointer ${
+              activeNavTab === 'codex'
+                ? 'bg-[#282724] text-[#ede8e1] shadow-2xs font-medium'
+                : 'text-[#a19e97] hover:text-[#ede8e1]'
+            }`}
+            title="Codex (AI Studio App Builder)"
+          >
+            <Code2 className="w-3.5 h-3.5" />
+            <span className="hidden md:inline">Codex</span>
+          </button>
+        </div>
       </div>
 
-      {/* Right side: 'Get App', Profile Name, and Logout */}
-      <div className="flex items-center gap-2 shrink-0">
-        {/* 'Get App' */}
-        {onOpenGetApp && (
+      {/* Center: Free plan · Upgrade pill */}
+      <div className="hidden sm:flex items-center">
+        <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-[#201f1d] border border-[#33312e] text-[11px] text-[#a19e97]">
+          <span>Free plan</span>
+          <span>·</span>
           <button
             type="button"
             onClick={onOpenGetApp}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 text-xs font-medium transition-all cursor-pointer shadow-xs active:scale-95"
-            title="Download Sapphire App (APK & EXE)"
+            className="text-[#d97757] hover:text-[#e88869] font-medium transition-colors cursor-pointer"
           >
-            <Download className="w-3.5 h-3.5 text-blue-400" />
-            <span className="hidden sm:inline">Get App</span>
+            Upgrade
           </button>
-        )}
+        </div>
+      </div>
 
-        {/* Profile Name & Avatar */}
-        {onOpenProfile && (
+      {/* Right controls: Ghost icon 👻, Window controls (—, □, ✕) */}
+      <div className="flex items-center gap-2">
+        {/* Ghost / Profile icon matching screenshot */}
+        <button
+          type="button"
+          onClick={onOpenProfile}
+          className="p-1 text-[#a19e97] hover:text-[#ede8e1] rounded-lg transition-colors cursor-pointer"
+          title="Profile & Settings"
+        >
+          <Ghost className="w-4 h-4" />
+        </button>
+
+        {/* Desktop window controls styling matching reference */}
+        <div className="hidden md:flex items-center gap-2 text-[#7d7a74] pl-2 border-l border-[#262422]">
           <button
             type="button"
-            onClick={onOpenProfile}
-            id="tab-user-profile-btn"
-            className="flex items-center gap-2 pl-1.5 pr-2.5 py-1 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-800 transition-all cursor-pointer shadow-xs active:scale-97 group shrink-0"
-            title="Profile & Settings"
+            className="p-1 hover:text-white transition-colors cursor-pointer"
+            title="Minimize"
           >
-            <div className="w-6 h-6 rounded-lg overflow-hidden bg-slate-800 border border-slate-700 shrink-0 flex items-center justify-center text-xs font-bold text-slate-200">
-              {avatarUrl ? (
-                <img
-                  src={avatarUrl}
-                  alt={displayName}
-                  className="w-full h-full object-cover"
-                />
-              ) : isGuest ? (
-                'G'
-              ) : (
-                displayName[0]?.toUpperCase() || 'U'
-              )}
-            </div>
-            <span className="text-xs font-medium text-slate-200 group-hover:text-white truncate max-w-[100px] hidden sm:inline">
-              {displayName}
-            </span>
+            <Minus className="w-3.5 h-3.5" />
           </button>
-        )}
-
-        {/* Logout */}
-        {onSignOut && (
           <button
             type="button"
-            onClick={onSignOut}
-            className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-slate-900 rounded-lg transition-colors cursor-pointer"
-            title={isGuest ? 'Exit Guest Mode' : 'Logout'}
+            className="p-1 hover:text-white transition-colors cursor-pointer"
+            title="Toggle Window"
           >
-            <LogOut className="w-4 h-4" />
+            <Square className="w-3 h-3" />
           </button>
-        )}
+          <button
+            type="button"
+            className="p-1 hover:text-rose-400 transition-colors cursor-pointer"
+            title="Close"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
       </div>
     </header>
   );

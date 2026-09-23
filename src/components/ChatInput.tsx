@@ -1,27 +1,20 @@
 import React, { useRef, useEffect, useState, KeyboardEvent, ClipboardEvent, DragEvent } from 'react';
 import {
-  Send,
   Square,
   Globe,
-  PlusCircle,
-  Camera,
   ImageIcon,
   Paperclip,
   X,
   Mic,
   MicOff,
   FileCode,
-  FileText,
-  AlertCircle,
-  FolderCode,
-  Languages,
-  Reply
+  ArrowUp
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import { ImageAttachment, UploadedFileAttachment, SupportedLanguage } from '../types';
-import { getLanguageConfig } from '../data/languages';
 import { createSpeechRecognition, speechService } from '../services/speechService';
 
-const MAX_FILE_SIZE_BYTES = 15 * 1024 * 1024; // 15MB limit
+const MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024; // 25MB
 
 interface ChatInputProps {
   input: string;
@@ -32,7 +25,7 @@ interface ChatInputProps {
   useSearchGrounding: boolean;
   setUseSearchGrounding: (val: boolean | ((prev: boolean) => boolean)) => void;
   selectedLanguage: SupportedLanguage;
-  onOpenLanguageModal: () => void;
+  onOpenLanguageModal?: () => void;
   onOpenImageGen?: () => void;
   onOpenFileWorkspace?: () => void;
   onChangeLanguage?: (lang: SupportedLanguage) => void;
@@ -53,11 +46,6 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   isLoading,
   useSearchGrounding,
   setUseSearchGrounding,
-  selectedLanguage,
-  onOpenLanguageModal,
-  onOpenImageGen,
-  onOpenFileWorkspace,
-  onChangeLanguage,
   replyTo,
   onCancelReply
 }) => {
@@ -66,14 +54,13 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   const [fileErrorMessage, setFileErrorMessage] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
+  const [isPlusMenuOpen, setIsPlusMenuOpen] = useState(false);
+
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
-  const cameraInputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<any>(null);
   const baseInputRef = useRef<string>('');
-
-  const langConfig = getLanguageConfig(selectedLanguage);
 
   // Auto-resize textarea
   useEffect(() => {
@@ -83,430 +70,247 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     }
   }, [input]);
 
-  // Voice speech-to-text recording toggle (Supports English & Urdu accents without text duplication)
+  // Voice speech-to-text recording toggle
   const toggleRecording = () => {
     if (isRecording) {
       if (recognitionRef.current) {
         try {
           recognitionRef.current.stop();
-        } catch (e) {}
+        } catch {}
       }
       setIsRecording(false);
       baseInputRef.current = input.trim();
       return;
     }
 
-    // Stop any ongoing AI speech playback so mic doesn't pick up speaker sound
     speechService.stop();
-
-    // Snapshot existing text before voice dictation
     baseInputRef.current = input.trim();
 
-    // Determine speech recognition language (English or Urdu)
-    const recLang = selectedLanguage === 'ur' ? 'ur' : selectedLanguage === 'hi' ? 'hi' : 'en';
-
     const recognition = createSpeechRecognition(
-      recLang,
+      'en',
       (transcript) => {
         const base = baseInputRef.current;
         const full = base ? `${base} ${transcript}` : transcript;
         setInput(full);
       },
-      () => {
-        setIsRecording(false);
-      },
-      (err) => {
-        console.warn('Speech recognition ended/error:', err);
-        setIsRecording(false);
-      }
+      () => setIsRecording(false),
+      () => setIsRecording(false)
     );
 
-    if (!recognition) {
-      alert('Voice microphone input is not supported in this browser environment. You can type directly.');
-      return;
-    }
+    if (!recognition) return;
 
     recognitionRef.current = recognition;
     try {
       recognition.start();
       setIsRecording(true);
-    } catch (err) {
-      console.error('Failed to start speech recognition:', err);
+    } catch {
       setIsRecording(false);
     }
   };
 
-  // Quick toggle between English and Urdu voice/accent
-  const toggleEnglishUrduAccent = () => {
-    if (!onChangeLanguage) return;
-    if (selectedLanguage === 'ur') {
-      onChangeLanguage('en');
-    } else {
-      onChangeLanguage('ur');
-    }
-  };
-
-  // Process any uploaded file (< 15MB: Code, Text, PDF, Image, Document)
-  const processGeneralFile = async (file: File, fileHandle?: any) => {
+  const processGeneralFile = async (file: File) => {
     setFileErrorMessage(null);
-
-    // Strict 15MB check
     if (file.size > MAX_FILE_SIZE_BYTES) {
-      const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
-      setFileErrorMessage(`File "${file.name}" is ${sizeMB} MB. Maximum allowed size is 15 MB.`);
+      setFileErrorMessage(`File "${file.name}" exceeds maximum allowed size.`);
       return;
     }
 
-    // 1. Image Files
     if (file.type.startsWith('image/')) {
       const reader = new FileReader();
-      reader.onload = () => {
-        const result = reader.result as string;
-        const commaIdx = result.indexOf(',');
-        const base64 = commaIdx !== -1 ? result.slice(commaIdx + 1) : result;
+      reader.onload = (e) => {
+        const result = e.target?.result as string;
+        const base64 = result.includes(',') ? result.split(',')[1] : result;
         setAttachedImage({
-          mimeType: file.type || 'image/png',
-          base64,
           dataUrl: result,
-          name: file.name || `image_${Date.now()}.png`
+          base64: base64,
+          name: file.name,
+          mimeType: file.type || 'image/png'
         });
       };
       reader.readAsDataURL(file);
       return;
     }
 
-    // 2. Code or Plain Text files
-    const isCodeOrTextExt =
-      /\.(txt|md|html|htm|css|scss|sass|less|js|jsx|ts|tsx|mjs|cjs|json|jsonc|mcmeta|properties|yml|yaml|xml|svg|py|java|c|cpp|h|hpp|cs|go|rs|php|rb|sql|sh|bash|zsh|bat|cmd|env|dockerfile|gitignore)$/i.test(
-        file.name
-      ) ||
-      file.type.startsWith('text/') ||
-      file.type === 'application/json' ||
-      file.type === 'application/xml' ||
-      file.type === 'application/javascript';
-
-    if (isCodeOrTextExt) {
-      try {
-        const textContent = await file.text();
-        setAttachedFile({
-          name: file.name,
-          type: file.type || 'text/plain',
-          size: file.size,
-          content: textContent,
-          isCodeOrText: true,
-          fileHandle
-        });
-        return;
-      } catch (err) {
-        console.warn('Could not read file as text, trying binary/multimodal reader:', err);
-      }
-    }
-
-    // 3. PDF Document or other multimodal files (up to 15MB)
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result as string;
-      const commaIdx = result.indexOf(',');
-      const base64 = commaIdx !== -1 ? result.slice(commaIdx + 1) : result;
+    try {
+      const text = await file.text();
       setAttachedFile({
         name: file.name,
-        type: file.type || (file.name.toLowerCase().endsWith('.pdf') ? 'application/pdf' : 'application/octet-stream'),
+        type: file.type || 'text/plain',
         size: file.size,
-        content: `[Uploaded Document: ${file.name}]`,
-        isCodeOrText: false,
-        base64,
-        dataUrl: result,
-        fileHandle
+        content: text,
+        isCodeOrText: true
       });
-    };
-    reader.readAsDataURL(file);
-  };
-
-  // Open file picker with File System Access API support for direct disk auto-save!
-  const handleTriggerFileUpload = async () => {
-    if (typeof window !== 'undefined' && 'showOpenFilePicker' in window) {
-      try {
-        const [handle] = await (window as any).showOpenFilePicker();
-        if (handle) {
-          const file = await handle.getFile();
-          await processGeneralFile(file, handle);
-          return;
-        }
-      } catch (err: any) {
-        if (err.name === 'AbortError') return; // User cancelled
-      }
-    }
-    // Standard fallback
-    fileInputRef.current?.click();
-  };
-
-  // Handle Clipboard Paste (CTRL+V for screenshots or code files)
-  const handlePaste = (e: ClipboardEvent<HTMLTextAreaElement | HTMLDivElement>) => {
-    const items = e.clipboardData?.items;
-    if (!items) return;
-
-    for (let i = 0; i < items.length; i++) {
-      const item = items[i];
-      if (item.type.indexOf('image') !== -1) {
-        e.preventDefault();
-        const file = item.getAsFile();
-        if (file) {
-          processGeneralFile(file);
-        }
-        break;
-      }
+    } catch {
+      setFileErrorMessage(`Could not read text from "${file.name}".`);
     }
   };
 
-  // Drag and Drop
-  const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setIsDragging(true);
-  };
-
-  const handleDragLeave = (e: DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setIsDragging(false);
-  };
-
-  const handleDrop = async (e: DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setIsDragging(false);
-    const files = e.dataTransfer.files;
-    if (files && files.length > 0) {
-      const file = files[0];
-      await processGeneralFile(file);
+  const handleMultipleFilesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    for (let i = 0; i < files.length; i++) {
+      processGeneralFile(files[i]);
     }
+    setIsPlusMenuOpen(false);
+    e.target.value = '';
   };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      handleSubmit();
+      handleSend();
     }
   };
 
-  const handleSubmit = () => {
-    if (isLoading) return;
-    const trimmed = input.trim();
-    if (!trimmed && !attachedImage && !attachedFile) return;
+  const handleSend = () => {
+    if ((!input.trim() && !attachedImage && !attachedFile) || isLoading) return;
 
-    const messageText = trimmed || (attachedFile ? `Please analyze and rewrite this file: ${attachedFile.name}` : 'Please analyze this screenshot.');
-
-    onSend(messageText, attachedImage || undefined, attachedFile || undefined);
+    onSend(input.trim(), attachedImage || undefined, attachedFile || undefined);
     setInput('');
     setAttachedImage(null);
     setAttachedFile(null);
+    setFileErrorMessage(null);
+    setIsPlusMenuOpen(false);
+    if (onCancelReply) onCancelReply();
 
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
     }
   };
 
+  const handlePaste = (e: ClipboardEvent<HTMLTextAreaElement>) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.indexOf('image') !== -1) {
+        const file = items[i].getAsFile();
+        if (file) {
+          e.preventDefault();
+          processGeneralFile(file);
+          return;
+        }
+      }
+    }
+  };
+
+  const handleDragOver = (e: DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      for (let i = 0; i < files.length; i++) {
+        processGeneralFile(files[i]);
+      }
+    }
+  };
+
   return (
-    <div className="w-full max-w-3xl mx-auto px-3 sm:px-4 pb-3 sm:pb-5">
-      {/* Universal File Upload Input (Any file type) */}
+    <div
+      className="relative w-full max-w-3xl mx-auto px-3 sm:px-4 pb-3 select-none sm:select-auto font-['Plus_Jakarta_Sans',sans-serif]"
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      {/* Hidden file input elements supporting multiple items */}
       <input
-        type="file"
         ref={fileInputRef}
-        accept="*/*"
-        className="hidden"
-        onChange={async (e) => {
-          const file = e.target.files?.[0];
-          if (file) {
-            await processGeneralFile(file);
-          }
-          if (fileInputRef.current) fileInputRef.current.value = '';
-        }}
-      />
-
-      {/* Image Upload Input */}
-      <input
         type="file"
+        multiple
+        className="hidden"
+        onChange={handleMultipleFilesChange}
+      />
+      <input
         ref={imageInputRef}
-        accept="image/*"
-        className="hidden"
-        onChange={async (e) => {
-          const file = e.target.files?.[0];
-          if (file) {
-            await processGeneralFile(file);
-          }
-          if (imageInputRef.current) imageInputRef.current.value = '';
-        }}
-      />
-
-      {/* Direct Mobile Camera Input */}
-      <input
         type="file"
-        ref={cameraInputRef}
         accept="image/*"
-        capture="environment"
+        multiple
         className="hidden"
-        onChange={async (e) => {
-          const file = e.target.files?.[0];
-          if (file) {
-            await processGeneralFile(file);
-          }
-          if (cameraInputRef.current) cameraInputRef.current.value = '';
-        }}
+        onChange={handleMultipleFilesChange}
       />
 
+      {/* Reply Quote Banner */}
+      {replyTo && (
+        <div className="mx-2 sm:mx-3 mb-2 p-2 rounded-2xl bg-[#282724] border border-[#383633] text-xs flex items-center justify-between text-[#ede8e1]">
+          <span className="truncate max-w-[85%] text-[#a19e97]">
+            Replying to: &quot;{replyTo.text.slice(0, 70)}...&quot;
+          </span>
+          <button
+            type="button"
+            onClick={onCancelReply}
+            className="text-[#a19e97] hover:text-white p-1 cursor-pointer"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
+      {/* Error message */}
+      {fileErrorMessage && (
+        <div className="mx-2 sm:mx-3 mb-2 p-2 rounded-2xl bg-rose-950/40 border border-rose-500/30 text-rose-300 text-xs flex items-center justify-between">
+          <span>{fileErrorMessage}</span>
+          <button
+            type="button"
+            onClick={() => setFileErrorMessage(null)}
+            className="text-rose-400 hover:text-white cursor-pointer ml-2"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
+      {/* Main Input Card - Warm Dark Obsidian Claude Theme */}
       <div
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-        onPaste={handlePaste}
-        className={`relative rounded-2xl bg-white border transition-all shadow-xs ${
+        className={`relative w-full rounded-2xl sm:rounded-3xl bg-[#201f1d] border transition-all shadow-xl ${
           isDragging
-            ? 'border-indigo-500 ring-2 ring-indigo-500/30 bg-indigo-50/20'
-            : 'border-slate-200 focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-500/20'
+            ? 'border-[#d97757] ring-2 ring-[#d97757]/30'
+            : 'border-[#33312e] focus-within:border-[#44413c]'
         }`}
       >
-        {/* File Size Error Alert Banner */}
-        {fileErrorMessage && (
-          <div className="mx-3 mt-2.5 p-2.5 bg-rose-50 border border-rose-200 rounded-xl flex items-center justify-between gap-3 text-rose-800 text-xs animate-fadeIn shadow-2xs">
+        {/* Attached File Preview */}
+        {attachedFile && (
+          <div className="mx-3 mt-2.5 p-2 bg-[#282724] border border-[#383633] rounded-xl flex items-center justify-between gap-3 text-xs text-[#ede8e1]">
             <div className="flex items-center gap-2 min-w-0">
-              <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
-              <span className="truncate">{fileErrorMessage}</span>
+              <FileCode className="w-4 h-4 text-[#d97757] shrink-0" />
+              <span className="truncate max-w-[200px] sm:max-w-sm">{attachedFile.name}</span>
             </div>
             <button
               type="button"
-              onClick={() => setFileErrorMessage(null)}
-              className="p-1 rounded-lg text-rose-500 hover:text-rose-800 hover:bg-rose-100 transition-colors cursor-pointer shrink-0"
-              title="Dismiss error"
+              onClick={() => setAttachedFile(null)}
+              className="text-[#a19e97] hover:text-white cursor-pointer p-1"
             >
               <X className="w-3.5 h-3.5" />
             </button>
           </div>
         )}
 
-        {/* Active Reply Banner */}
-        {replyTo && (
-          <div className="mx-3 mt-2.5 p-2 bg-indigo-50/90 border border-indigo-200/80 rounded-xl flex items-center justify-between gap-3 animate-fadeIn">
-            <div className="flex items-center gap-2 min-w-0">
-              <div className="w-6 h-6 rounded-lg bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
-                <Reply className="w-3.5 h-3.5" />
-              </div>
-              <div className="min-w-0">
-                <span className="text-[11px] font-bold text-indigo-900 block">
-                  Replying to {replyTo.role === 'model' ? 'Sapphire AI' : 'You'}
-                </span>
-                <p className="text-[11px] text-slate-600 truncate max-w-[220px] sm:max-w-lg italic">
-                  "{replyTo.text.slice(0, 120)}"
-                </p>
-              </div>
-            </div>
-            {onCancelReply && (
-              <button
-                type="button"
-                onClick={onCancelReply}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-indigo-100 transition-colors cursor-pointer shrink-0"
-                title="Cancel reply"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            )}
-          </div>
-        )}
-
-        {/* Uploaded File Preview Badge (<15MB support) */}
-        {attachedFile && (
-          <div className="mx-3 mt-2.5 p-2 bg-indigo-50/70 border border-indigo-200/80 rounded-xl flex items-center justify-between gap-3 animate-fadeIn shadow-2xs">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-8 h-8 rounded-lg bg-white border border-indigo-200 flex items-center justify-center shrink-0 shadow-2xs">
-                {attachedFile.type.includes('pdf') || attachedFile.name.toLowerCase().endsWith('.pdf') ? (
-                  <FileText className="w-4 h-4 text-rose-600" />
-                ) : attachedFile.isCodeOrText ? (
-                  <FileCode className="w-4 h-4 text-indigo-600" />
-                ) : (
-                  <Paperclip className="w-4 h-4 text-purple-600" />
-                )}
-              </div>
-              <div className="min-w-0">
-                <p className="text-xs font-semibold text-slate-900 truncate max-w-[190px] sm:max-w-md">
-                  {attachedFile.name}
-                </p>
-                <p className="text-[10px] text-indigo-700 font-medium flex items-center gap-1.5 flex-wrap">
-                  <span className="font-mono font-semibold">
-                    {attachedFile.size < 1024 * 1024
-                      ? `${(attachedFile.size / 1024).toFixed(1)} KB`
-                      : `${(attachedFile.size / (1024 * 1024)).toFixed(2)} MB`}
-                  </span>
-                  <span>•</span>
-                  <span className="text-emerald-700 font-semibold">
-                    {attachedFile.isCodeOrText
-                      ? 'Code/Text Ready for Remake'
-                      : 'Multimodal <15MB Document Ready'}
-                  </span>
-                </p>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={() => setAttachedFile(null)}
-              className="p-1 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer shrink-0"
-              title="Remove file"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        )}
-
-        {/* Screenshot / Image Attachment Preview */}
+        {/* Attached Image Preview */}
         {attachedImage && (
-          <div className="mx-3 mt-2.5 p-2 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between gap-3 animate-fadeIn">
-            <div className="flex items-center gap-2.5 min-w-0">
+          <div className="mx-3 mt-2.5 p-2 bg-[#282724] border border-[#383633] rounded-xl flex items-center justify-between gap-3 text-xs text-[#ede8e1]">
+            <div className="flex items-center gap-2 min-w-0">
               <img
                 src={attachedImage.dataUrl}
-                alt={attachedImage.name || 'Screenshot'}
-                className="w-10 h-10 object-cover rounded-lg border border-slate-300 shrink-0 bg-white"
+                alt="Uploaded"
+                className="w-8 h-8 rounded-lg object-cover border border-[#383633]"
               />
-              <div className="min-w-0">
-                <p className="text-xs font-semibold text-slate-800 truncate max-w-[180px] sm:max-w-sm">
-                  {attachedImage.name || 'Screenshot'}
-                </p>
-                <p className="text-[10px] text-emerald-600 font-medium">Vision Ready</p>
-              </div>
+              <span className="truncate max-w-[200px]">{attachedImage.name || 'Image'}</span>
             </div>
             <button
               type="button"
               onClick={() => setAttachedImage(null)}
-              className="p-1 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
-              title="Remove screenshot"
+              className="text-[#a19e97] hover:text-white cursor-pointer p-1"
             >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        )}
-
-        {/* Active Voice Listening Banner with Animated Soundwave */}
-        {isRecording && (
-          <div className="mx-3 mt-2.5 p-2.5 bg-rose-50 border border-rose-200 rounded-xl flex items-center justify-between gap-3 animate-fadeIn shadow-2xs">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-7 h-7 rounded-lg bg-rose-600 text-white flex items-center justify-center shrink-0 animate-pulse">
-                <Mic className="w-4 h-4" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-xs font-bold text-rose-900 flex items-center gap-1.5">
-                  <span>Listening ({selectedLanguage === 'ur' ? 'اردو / Urdu' : 'English'})...</span>
-                  <span className="flex items-center gap-0.5">
-                    <span className="w-1 h-3 bg-rose-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                    <span className="w-1 h-4 bg-rose-600 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                    <span className="w-1 h-2 bg-rose-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                  </span>
-                </p>
-                <p className="text-[11px] text-rose-700 truncate">
-                  Speak now — words are recorded clearly without repetition.
-                </p>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={toggleRecording}
-              className="px-2.5 py-1 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold cursor-pointer shrink-0 active:scale-95 transition-all shadow-2xs"
-              title="Finish listening"
-            >
-              Done
+              <X className="w-3.5 h-3.5" />
             </button>
           </div>
         )}
@@ -523,167 +327,117 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             onPaste={handlePaste}
             placeholder={
               attachedFile
-                ? `Tell Echo what to rewrite in ${attachedFile.name}...`
+                ? `Ask about ${attachedFile.name}...`
                 : attachedImage
-                ? "Ask Echo about this image..."
-                : "Ask Echo..."
+                ? 'Ask about this image...'
+                : 'How can I help you today?'
             }
-            className="w-full bg-transparent text-slate-800 placeholder-slate-400 text-base sm:text-sm focus:outline-none resize-none max-h-40 leading-relaxed"
+            className="w-full bg-transparent text-[#ede8e1] placeholder-[#a19e97]/70 text-sm sm:text-base focus:outline-none resize-none max-h-40 leading-relaxed"
           />
         </div>
 
-        {/* Bottom Action Bar */}
-        <div className="px-2.5 sm:px-3 pb-2.5 pt-1.5 flex items-center justify-between gap-1.5 border-t border-slate-100">
-          {/* Left tools: Upload File, File Manager, Language Accent, Search */}
-          <div className="flex items-center gap-1 sm:gap-1.5 overflow-x-auto no-scrollbar py-0.5 max-w-[calc(100%-85px)] sm:max-w-none">
-            {/* Upload File Button (<15MB support) with Plus-Circle */}
+        {/* Bottom Bar: ONLY + on the left, Search 🌐 + Mic + Send on the right */}
+        <div className="px-3 pb-2.5 pt-1 flex items-center justify-between gap-2 border-t border-[#2a2825]">
+          {/* Left: ONLY + icon button */}
+          <div className="relative">
             <button
-              id="upload-file-btn"
               type="button"
-              onClick={handleTriggerFileUpload}
-              className="p-1.5 sm:px-2.5 sm:py-1 rounded-xl bg-slate-100 hover:bg-indigo-50 text-slate-700 hover:text-indigo-600 border border-slate-200 text-xs font-semibold transition-all flex items-center gap-1.5 active:scale-95 cursor-pointer shadow-2xs shrink-0"
-              title="Upload file under 15MB (Code, HTML, JS, Python, Text, PDF) for AI analysis & remake"
+              id="chat-plus-menu-btn"
+              onClick={() => setIsPlusMenuOpen((prev) => !prev)}
+              className="w-7 h-7 rounded-full bg-[#282724] hover:bg-[#32302c] text-[#ede8e1] flex items-center justify-center transition-colors cursor-pointer border border-[#383633]"
+              title="Add files or images"
             >
-              <PlusCircle className="w-3.5 h-3.5 text-indigo-600" />
-              <span className="hidden xs:inline">Upload File</span>
-              <span className="text-[10px] px-1 py-0.2 rounded bg-indigo-100 text-indigo-700 font-mono font-bold">
-                &lt;15MB
-              </span>
+              <span className="text-lg leading-none font-light mb-0.5">+</span>
             </button>
 
-            {/* Upload Image Button */}
+            {/* Popover Menu with strictly Upload File & Upload Image */}
+            <AnimatePresence>
+              {isPlusMenuOpen && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                  className="absolute left-0 bottom-9 z-50 w-44 bg-[#201f1d] border border-[#383633] rounded-2xl shadow-2xl p-1.5 space-y-1 text-xs text-[#ede8e1]"
+                >
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full px-3 py-2 rounded-xl hover:bg-[#2c2a27] flex items-center gap-2.5 transition-colors cursor-pointer text-left"
+                  >
+                    <Paperclip className="w-4 h-4 text-[#d97757]" />
+                    <span>Upload file</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => imageInputRef.current?.click()}
+                    className="w-full px-3 py-2 rounded-xl hover:bg-[#2c2a27] flex items-center gap-2.5 transition-colors cursor-pointer text-left"
+                  >
+                    <ImageIcon className="w-4 h-4 text-[#d97757]" />
+                    <span>Upload image</span>
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* Right Tools: Web Search 🌐, Mic, and Send / Stop */}
+          <div className="flex items-center gap-1.5">
+            {/* Live Web Search toggle */}
             <button
-              id="upload-image-btn"
               type="button"
-              onClick={() => imageInputRef.current?.click()}
-              className="p-1.5 sm:px-2.5 sm:py-1 rounded-xl bg-slate-100 hover:bg-indigo-50 text-slate-700 hover:text-indigo-600 border border-slate-200 text-xs font-semibold transition-all flex items-center gap-1.5 active:scale-95 cursor-pointer shadow-2xs shrink-0"
-              title="Upload image / photo"
-            >
-              <ImageIcon className="w-3.5 h-3.5 text-indigo-600" />
-              <span className="hidden sm:inline">Upload Image</span>
-            </button>
-
-            {/* Mobile / Device Camera Button */}
-            <button
-              id="camera-capture-btn"
-              type="button"
-              onClick={() => cameraInputRef.current?.click()}
-              className="p-1.5 sm:px-2 sm:py-1 rounded-xl bg-slate-100 hover:bg-indigo-50 text-slate-700 hover:text-indigo-600 border border-slate-200 text-xs font-semibold transition-all flex items-center gap-1.5 active:scale-95 cursor-pointer shadow-2xs shrink-0"
-              title="Open camera to take photo directly"
-            >
-              <Camera className="w-3.5 h-3.5 text-indigo-600" />
-              <span className="hidden md:inline">Camera</span>
-            </button>
-
-            {/* Quick File Manager button */}
-            {onOpenFileWorkspace && (
-              <button
-                id="input-file-workspace-btn"
-                type="button"
-                onClick={onOpenFileWorkspace}
-                className="flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-semibold transition-all active:scale-95 cursor-pointer shadow-2xs shrink-0"
-                title="Open File Manager & Code Workspace"
-              >
-                <FolderCode className="w-3.5 h-3.5 text-indigo-600" />
-                <span className="hidden sm:inline">File Manager</span>
-              </button>
-            )}
-
-            {/* Quick Language Accent Selector (English / Urdu Toggle) */}
-            <button
-              id="language-accent-toggle-btn"
-              type="button"
-              onClick={toggleEnglishUrduAccent}
-              className={`flex items-center gap-1 px-2 py-1 rounded-xl text-xs font-semibold transition-all active:scale-95 cursor-pointer border shrink-0 ${
-                selectedLanguage === 'ur'
-                  ? 'bg-emerald-50 text-emerald-800 border-emerald-300 shadow-2xs'
-                  : 'bg-slate-100 text-slate-700 hover:bg-slate-200/80 border-slate-200'
-              }`}
-              title="Toggle between English accent and Urdu accent"
-            >
-              <Languages className="w-3.5 h-3.5 text-emerald-600" />
-              <span>{selectedLanguage === 'ur' ? 'اردو' : 'EN'}</span>
-            </button>
-
-            {/* Web Search toggle */}
-            <button
               id="search-grounding-btn"
-              type="button"
               onClick={() => setUseSearchGrounding((prev) => !prev)}
-              className={`p-1.5 sm:px-2 sm:py-1 rounded-xl transition-all text-xs font-medium border flex items-center gap-1 shrink-0 ${
+              className={`p-1.5 sm:px-2 sm:py-1 rounded-xl text-xs flex items-center gap-1 transition-all cursor-pointer border ${
                 useSearchGrounding
-                  ? 'bg-indigo-50 text-indigo-700 border-indigo-200 font-bold'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200/80 border-slate-200'
+                  ? 'bg-[#d97757]/20 text-[#d97757] border-[#d97757]/50'
+                  : 'bg-[#282724] hover:bg-[#32302c] text-[#a19e97] border-[#383633]'
               }`}
               title="Toggle Live Web Search"
             >
-              <Globe className={`w-3.5 h-3.5 ${useSearchGrounding ? 'text-indigo-600' : 'text-slate-500'}`} />
-              <span className="hidden md:inline">Search</span>
-              {useSearchGrounding && <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />}
+              <Globe className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Search</span>
             </button>
-          </div>
 
-          {/* Right tools: Voice Microphone + Send / Stop */}
-          <div className="flex items-center gap-1.5 shrink-0">
-            {/* Voice Dictation (Microphone) with Accent Indicator */}
+            {/* Voice Dictation Microphone */}
             <button
-              id="voice-mic-btn"
               type="button"
+              id="voice-mic-btn"
               onClick={toggleRecording}
-              className={`flex items-center justify-center gap-1 px-2 h-8 rounded-xl transition-all cursor-pointer ${
+              className={`p-1.5 rounded-xl transition-all cursor-pointer border ${
                 isRecording
-                  ? 'bg-rose-600 text-white animate-pulse shadow-md shadow-rose-600/30 ring-2 ring-rose-300'
-                  : 'bg-slate-100 hover:bg-slate-200/80 text-slate-700 border border-slate-200'
+                  ? 'bg-rose-600 text-white animate-pulse border-rose-500'
+                  : 'bg-[#282724] hover:bg-[#32302c] text-[#a19e97] hover:text-[#ede8e1] border-[#383633]'
               }`}
-              title={
-                isRecording
-                  ? 'Recording voice... Click to finish'
-                  : `Speak in ${selectedLanguage === 'ur' ? 'Urdu' : 'English'} (Voice to Text)`
-              }
+              title="Voice dictation"
             >
-              {isRecording ? (
-                <MicOff className="w-4 h-4 text-white animate-bounce" />
-              ) : (
-                <Mic className="w-4 h-4 text-slate-600" />
-              )}
-              <span className="text-[10px] font-bold text-slate-500">
-                {selectedLanguage === 'ur' ? 'UR' : 'EN'}
-              </span>
+              {isRecording ? <MicOff className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
             </button>
 
+            {/* Send or Stop Button */}
             {isLoading ? (
               <button
-                id="stop-generation-btn"
                 type="button"
                 onClick={onStop}
-                className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-medium text-xs transition-all shadow-xs active:scale-95 cursor-pointer"
+                className="w-7 h-7 rounded-xl bg-rose-600 hover:bg-rose-700 text-white flex items-center justify-center transition-all cursor-pointer shadow-md"
                 title="Stop generation"
               >
-                <Square className="w-3.5 h-3.5 fill-current" />
-                <span className="hidden sm:inline">Stop</span>
+                <Square className="w-3 h-3 fill-current" />
               </button>
             ) : (
               <button
-                id="send-message-btn"
                 type="button"
-                onClick={handleSubmit}
+                id="send-message-btn"
                 disabled={!input.trim() && !attachedImage && !attachedFile}
-                className={`flex items-center justify-center w-8 h-8 rounded-xl transition-all shadow-2xs active:scale-95 cursor-pointer ${
-                  input.trim() || attachedImage || attachedFile
-                    ? 'bg-indigo-600 hover:bg-indigo-700 text-white'
-                    : 'bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200'
-                }`}
-                title="Send (Enter)"
+                onClick={handleSend}
+                className="w-7 h-7 rounded-xl bg-[#d97757] hover:bg-[#e88869] disabled:opacity-40 disabled:hover:bg-[#d97757] text-white flex items-center justify-center transition-all cursor-pointer active:scale-95 shadow-md"
+                title="Send message"
               >
-                <Send className="w-4 h-4" />
+                <ArrowUp className="w-3.5 h-3.5" />
               </button>
             )}
           </div>
         </div>
-      </div>
-
-      <div className="mt-1.5 text-center text-[10px] text-slate-400 font-medium">
-        Sapphire AI • Multimodal & Intelligent Assistant
       </div>
     </div>
   );

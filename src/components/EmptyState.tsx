@@ -1,24 +1,28 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
-  Sparkles,
-  ArrowUp,
   Globe,
-  MessageSquare,
-  Atom,
-  Download,
-  Languages,
+  Mic,
+  MicOff,
+  ArrowUp,
+  Paperclip,
   FileCode,
-  Terminal,
-  Palette,
-  Menu
+  Image as ImageIcon,
+  ChevronDown,
+  Edit3,
+  GraduationCap,
+  Code,
+  Coffee,
+  Lightbulb,
+  AudioWaveform
 } from 'lucide-react';
-import { motion } from 'motion/react';
-import { SAPPHIRE_LOGO_URL, SAPPHIRE_APP_NAME } from '../data/constants';
+import { motion, AnimatePresence } from 'motion/react';
+import { loadUserProfile } from '../services/userService';
+import { createSpeechRecognition } from '../services/speechService';
 
 interface EmptyStateProps {
   onSendMessage: (text: string) => void;
   onStartChat?: () => void;
-  onOpenGetApp: () => void;
+  onOpenGetApp?: () => void;
   onOpenLanguageModal?: () => void;
   onToggleSidebar?: () => void;
   selectedLanguage?: string;
@@ -26,33 +30,60 @@ interface EmptyStateProps {
   setUseSearchGrounding: (val: boolean | ((prev: boolean) => boolean)) => void;
   onOpenFileWorkspace?: () => void;
   onOpenImageGen?: () => void;
+  userName?: string;
 }
 
 export const EmptyState: React.FC<EmptyStateProps> = ({
   onSendMessage,
   onStartChat,
   onOpenGetApp,
-  onOpenLanguageModal,
-  onToggleSidebar,
-  selectedLanguage = 'auto',
   useSearchGrounding,
   setUseSearchGrounding,
-  onOpenFileWorkspace
+  userName: propUserName
 }) => {
   const [promptText, setPromptText] = useState('');
-  const [isDeepThinkActive, setIsDeepThinkActive] = useState(true);
+  const [isPlusMenuOpen, setIsPlusMenuOpen] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [selectedModel, setSelectedModel] = useState('Sonnet 5 Medium');
+  const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
+  const [attachedFiles, setAttachedFiles] = useState<{ name: string; size: number }[]>([]);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const recognitionRef = useRef<any>(null);
+
+  // Dynamic greeting based on time of day matching screenshot
+  const [greetingTime, setGreetingTime] = useState('Up late');
+  const userDisplayName = propUserName || loadUserProfile().name || 'Shaheer';
+  const firstName = userDisplayName.split(' ')[0] || 'Shaheer';
+
+  useEffect(() => {
+    const hour = new Date().getHours();
+    if (hour >= 23 || hour < 5) {
+      setGreetingTime('Up late');
+    } else if (hour >= 5 && hour < 12) {
+      setGreetingTime('Good morning');
+    } else if (hour >= 12 && hour < 17) {
+      setGreetingTime('Good afternoon');
+    } else {
+      setGreetingTime('Good evening');
+    }
+  }, []);
 
   const handleSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!promptText.trim()) {
-      if (onStartChat) {
-        onStartChat();
-      } else {
-        onSendMessage('Hello! How can you assist me today?');
-      }
+    if (!promptText.trim() && attachedFiles.length === 0) {
+      if (onStartChat) onStartChat();
       return;
     }
-    onSendMessage(promptText.trim());
+
+    let finalPrompt = promptText.trim();
+    if (attachedFiles.length > 0) {
+      const fileNames = attachedFiles.map((f) => f.name).join(', ');
+      finalPrompt = `${finalPrompt}\n\n[Attached: ${fileNames}]`.trim();
+    }
+
+    onSendMessage(finalPrompt);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -62,252 +93,309 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
     }
   };
 
+  // Toggle voice dictation
+  const toggleRecording = () => {
+    if (isRecording) {
+      if (recognitionRef.current) recognitionRef.current.stop();
+      setIsRecording(false);
+      return;
+    }
+
+    const recognition = createSpeechRecognition(
+      'en',
+      (transcript) => {
+        setPromptText((prev) => (prev ? `${prev} ${transcript}` : transcript));
+      },
+      () => setIsRecording(false),
+      () => setIsRecording(false)
+    );
+
+    if (!recognition) return;
+    recognitionRef.current = recognition;
+    try {
+      recognition.start();
+      setIsRecording(true);
+    } catch {
+      setIsRecording(false);
+    }
+  };
+
+  const handleMultipleFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+    const list: { name: string; size: number }[] = [];
+    for (let i = 0; i < files.length; i++) {
+      list.push({ name: files[i].name, size: files[i].size });
+    }
+    setAttachedFiles((prev) => [...prev, ...list]);
+    setIsPlusMenuOpen(false);
+  };
+
+  const suggestionChips = [
+    { label: 'Write', icon: Edit3, prompt: 'Help me draft a clear, persuasive document or article' },
+    { label: 'Learn', icon: GraduationCap, prompt: 'Explain the core principles of modern distributed systems' },
+    { label: 'Code', icon: Code, prompt: 'Build a full responsive web application with index.html and style.css' },
+    { label: 'Life stuff', icon: Coffee, prompt: 'Give me a structured weekly productivity and wellness schedule' },
+    { label: "Claude's choice", icon: Lightbulb, prompt: 'What are the most innovative AI developments right now and why do they matter?' }
+  ];
+
   return (
-    <div className="relative min-h-full flex flex-col justify-between overflow-x-hidden select-none sm:select-auto bg-[#f8fafc]">
-      {/* Background Subtle Radial Glow & Grid - 1:1 with Image 2 */}
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          backgroundImage: `
-            radial-gradient(circle at 18% 22%, rgba(205, 230, 255, 0.55) 0%, transparent 45%),
-            radial-gradient(circle at 50% 12%, rgba(215, 238, 255, 0.65) 0%, transparent 60%),
-            linear-gradient(to right, rgba(147, 197, 253, 0.15) 1px, transparent 1px),
-            linear-gradient(to bottom, rgba(147, 197, 253, 0.15) 1px, transparent 1px)
-          `,
-          backgroundSize: '100% 100%, 100% 100%, 54px 54px, 54px 54px'
-        }}
+    <div className="relative min-h-full w-full flex flex-col justify-between overflow-x-hidden select-none bg-[#191817] text-[#ede8e1] font-['Plus_Jakarta_Sans',sans-serif]">
+      {/* Hidden file inputs for multiple uploads */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleMultipleFiles}
+        multiple
+        className="hidden"
+      />
+      <input
+        type="file"
+        ref={imageInputRef}
+        onChange={handleMultipleFiles}
+        accept="image/*"
+        multiple
+        className="hidden"
       />
 
-      {/* Top Navigation Bar - Matching Image 2 */}
-      <header className="relative z-20 w-full px-4 sm:px-10 py-3.5 sm:py-5 flex items-center justify-between">
-        {/* Left: Echo Logo & Brand Name */}
-        <div className="flex items-center gap-2 sm:gap-3">
-          {onToggleSidebar && (
-            <button
-              id="empty-state-sidebar-btn"
-              type="button"
-              onClick={onToggleSidebar}
-              className="p-1.5 -ml-1 text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer touch-manipulation"
-              title="Open menu"
-            >
-              <Menu className="w-5 h-5" />
-            </button>
-          )}
-          <div className="flex items-center gap-2 select-none">
-            <img
-              src={SAPPHIRE_LOGO_URL}
-              alt={SAPPHIRE_APP_NAME}
-              className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl object-contain bg-white shadow-2xs border border-blue-100"
-            />
-            <span className="text-2xl sm:text-[26px] font-bold tracking-tight text-[#1d59f2] font-sans">
-              sapphire
-            </span>
-          </div>
-        </div>
-
-        {/* Right: Get App + Language Toggle (Exact match to Image 2, NO API button) */}
-        <div className="flex items-center gap-2.5 sm:gap-6">
-          {/* Get App Text Button - Compact 2-line stacked on mobile, inline on desktop */}
+      {/* Top Banner (Centered): Free plan · Upgrade */}
+      <div className="w-full pt-4 sm:pt-6 flex justify-center z-10">
+        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#201f1d] border border-[#33312e] text-xs text-[#a19e97] shadow-xs">
+          <span>Free plan</span>
+          <span>·</span>
           <button
             type="button"
             onClick={onOpenGetApp}
-            className="text-slate-700 hover:text-[#1d59f2] font-semibold sm:font-medium transition-colors cursor-pointer py-1 px-2 rounded-lg hover:bg-slate-100/60 active:scale-95 flex flex-col sm:flex-row items-center justify-center leading-[1.1] text-xs sm:text-base touch-manipulation"
-            title="Download APK & EXE"
+            className="text-[#d97757] hover:text-[#e88869] font-medium transition-colors cursor-pointer"
           >
-            <span>Get</span>
-            <span className="sm:ml-1">App</span>
-          </button>
-
-          {/* Language Selector Capsule: 中文 | EN */}
-          <button
-            type="button"
-            onClick={onOpenLanguageModal}
-            className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3.5 py-1.5 sm:py-1 rounded-full bg-white/95 hover:bg-white text-slate-700 border border-slate-200/90 text-xs sm:text-sm font-normal shadow-2xs hover:shadow-xs transition-all cursor-pointer active:scale-95 touch-manipulation"
-            title="Switch Language"
-          >
-            <span className={selectedLanguage === 'zh' ? 'text-[#1d59f2] font-bold' : 'text-slate-600'}>中文</span>
-            <span className="text-slate-300">|</span>
-            <span className={selectedLanguage !== 'zh' ? 'text-[#1d59f2] font-bold' : 'text-slate-600'}>EN</span>
+            Upgrade
           </button>
         </div>
-      </header>
-
-      {/* Hero Center Section */}
-      <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-3.5 sm:px-6 py-4 sm:py-6 max-w-4xl mx-auto w-full text-center">
-        {/* Announcement Pill - Compact, sleek with subtle float */}
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: [0, -3, 0] }}
-          transition={{
-            opacity: { duration: 0.5 },
-            y: { repeat: Infinity, duration: 4, ease: "easeInOut" }
-          }}
-          onClick={onOpenGetApp}
-          className="group inline-flex items-center gap-1.5 px-3 py-1 sm:px-4 sm:py-1.5 rounded-full bg-white/90 hover:bg-white border border-blue-100/90 text-slate-600 hover:text-[#1d59f2] text-[11px] sm:text-xs transition-all mb-4 sm:mb-6 cursor-pointer max-w-[92%] sm:max-w-xl text-center leading-tight backdrop-blur-xs shadow-2xs hover:shadow-xs active:scale-[0.99] touch-manipulation"
-        >
-          <span className="text-[#3b71fe] text-xs shrink-0 animate-pulse">✦</span>
-          <span className="truncate sm:whitespace-normal">
-            Sapphire-V2.0 is live with multimodal &amp; deep reasoning upgrades.
-          </span>
-          <span className="text-[#3b71fe] font-semibold group-hover:translate-x-0.5 transition-transform ml-0.5 shrink-0">
-            →
-          </span>
-        </motion.div>
-
-        {/* Big Headline: "Into the Unknown" with Ambient Halo & Float Animation */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 15 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-          className="relative mb-5 sm:mb-7 select-none"
-        >
-          {/* Ambient Glowing Halo Orb */}
-          <motion.div
-            animate={{
-              scale: [1, 1.15, 1],
-              opacity: [0.35, 0.65, 0.35]
-            }}
-            transition={{ repeat: Infinity, duration: 5, ease: "easeInOut" }}
-            className="absolute -top-6 left-1/2 -translate-x-1/2 w-64 sm:w-96 h-28 sm:h-36 bg-gradient-to-r from-blue-300/40 via-indigo-300/30 to-sky-200/40 rounded-full blur-2xl sm:blur-3xl pointer-events-none -z-10"
-          />
-
-          <motion.h1
-            animate={{ y: [0, -4, 0] }}
-            transition={{ repeat: Infinity, duration: 4.5, ease: "easeInOut" }}
-            className="text-4xl xs:text-5xl sm:text-6xl md:text-[68px] font-bold tracking-tight font-sans leading-[1.08]"
-          >
-            <span className="bg-gradient-to-r from-[#111827] via-[#1d59f2] to-[#1e293b] bg-clip-text text-transparent">
-              Into the<br className="sm:hidden" /> Unknown
-            </span>
-          </motion.h1>
-        </motion.div>
-
-        {/* "Chat with Echo" Button & Quick Prompts */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
-          className="flex flex-col items-center justify-center gap-3.5"
-        >
-          <div className="relative inline-flex items-center justify-center">
-            {/* Pulsing ring */}
-            <span className="absolute -inset-1 rounded-full bg-blue-400/25 animate-ping pointer-events-none opacity-40" />
-            <motion.button
-              type="button"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={() => handleSubmit()}
-              className="relative flex items-center gap-2 px-6 py-2.5 rounded-full bg-white hover:bg-slate-50 text-slate-700 hover:text-[#1d59f2] border border-slate-200 text-xs sm:text-sm font-medium transition-all shadow-2xs hover:shadow-xs cursor-pointer touch-manipulation"
-            >
-              <MessageSquare className="w-4 h-4 text-[#1d59f2]" />
-              <span>Chat with Sapphire</span>
-            </motion.button>
-          </div>
-
-          {/* Staggered Animated Quick Starter Prompts */}
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.3 }}
-            className="flex items-center justify-center gap-2 flex-wrap max-w-lg mx-auto pt-1"
-          >
-            {[
-              { label: 'index.html web page', icon: FileCode, prompt: 'Create a responsive index.html page with modern CSS and JavaScript' },
-              { label: 'main.py script', icon: Terminal, prompt: 'Write a clean main.py script with official structure and comments' },
-              { label: 'style.css layout', icon: Palette, prompt: 'Write an official style.css stylesheet with flexbox and animations' }
-            ].map((item, idx) => {
-              const IconComponent = item.icon;
-              return (
-                <motion.button
-                  key={idx}
-                  type="button"
-                  whileHover={{ y: -2, scale: 1.04 }}
-                  whileTap={{ scale: 0.96 }}
-                  onClick={() => onSendMessage(item.prompt)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/95 hover:bg-white text-slate-700 hover:text-[#1d59f2] text-xs font-medium border border-slate-200/90 shadow-2xs hover:shadow-xs transition-all cursor-pointer"
-                >
-                  <IconComponent className="w-3.5 h-3.5 text-slate-700" />
-                  <span>{item.label}</span>
-                </motion.button>
-              );
-            })}
-          </motion.div>
-        </motion.div>
       </div>
 
-      {/* Bottom Search / Prompt Input Card Section (Docked niche/bottom right above footer) */}
-      <motion.div
-        initial={{ opacity: 0, y: 15 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, delay: 0.25 }}
-        className="relative z-10 w-full max-w-[760px] mx-auto px-3.5 sm:px-6 mb-2 sm:mb-4"
-      >
-        <div className="w-full bg-white rounded-2xl sm:rounded-3xl border border-slate-200/90 shadow-[0_10px_35px_rgba(30,64,175,0.06)] hover:shadow-[0_14px_45px_rgba(30,64,175,0.09)] transition-all p-3.5 sm:p-5 text-left space-y-3 sm:space-y-4">
-          {/* Textarea Input - Min 16px to prevent iOS zoom */}
+      {/* Center Welcome & Search Area */}
+      <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-4 sm:px-6 py-6 max-w-3xl mx-auto w-full text-center">
+        {/* Dynamic Greeting with Claude-style Terracotta Sunburst */}
+        <div className="flex items-center justify-center gap-2.5 sm:gap-3.5 mb-6 sm:mb-8 select-none">
+          {/* Terracotta Sunburst/Asterisk SVG icon matching image */}
+          <svg
+            className="w-7 h-7 sm:w-8 sm:h-8 text-[#d97757] shrink-0"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+          >
+            <path d="M12 2a1 1 0 0 1 1 1v5.07l3.58-3.58a1 1 0 1 1 1.42 1.42L14.42 9.5H19.5a1 1 0 0 1 0 2h-5.08l3.58 3.58a1 1 0 1 1-1.42 1.42L13 12.92V18a1 1 0 0 1-2 0v-5.08l-3.58 3.58a1 1 0 0 1-1.42-1.42L9.58 11.5H4.5a1 1 0 0 1 0-2h5.08L6 5.92a1 1 0 1 1 1.42-1.42L11 8.07V3a1 1 0 0 1 1-1z" />
+          </svg>
+          <h1 className="text-3xl sm:text-4xl md:text-[42px] font-claude-serif text-[#ede8e1] tracking-tight font-normal">
+            {greetingTime}, {firstName}?
+          </h1>
+        </div>
+
+        {/* Central Claude-style Prompt Card */}
+        <div className="w-full relative bg-[#201f1d] rounded-2xl sm:rounded-3xl border border-[#33312e] shadow-xl hover:border-[#423f3b] transition-all p-3.5 sm:p-5 text-left">
+          {/* Attached Files Pills if any */}
+          {attachedFiles.length > 0 && (
+            <div className="flex flex-wrap items-center gap-1.5 mb-2.5">
+              {attachedFiles.map((file, idx) => (
+                <div
+                  key={idx}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-[#282724] border border-[#383633] text-xs text-[#ede8e1]"
+                >
+                  <FileCode className="w-3.5 h-3.5 text-[#d97757]" />
+                  <span className="truncate max-w-[150px]">{file.name}</span>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setAttachedFiles((prev) => prev.filter((_, i) => i !== idx))
+                    }
+                    className="text-[#a19e97] hover:text-white cursor-pointer ml-1"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Text Input Area */}
           <textarea
             value={promptText}
             onChange={(e) => setPromptText(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Ask Sapphire..."
+            placeholder="How can I help you today?"
             rows={2}
-            autoFocus
-            className="w-full bg-transparent text-base sm:text-[17px] text-slate-800 placeholder-slate-400 resize-none focus:outline-none leading-relaxed font-sans min-h-[48px] sm:min-h-[56px]"
+            className="w-full bg-transparent text-[#ede8e1] placeholder-[#a19e97]/70 text-sm sm:text-base focus:outline-none resize-none leading-relaxed"
           />
 
-          {/* Bottom Controls Row: DeepThink + Search pills on left, Blue Arrow on right */}
-          <div className="flex items-center justify-between pt-1">
-            {/* Left Action Pills */}
-            <div className="flex items-center gap-1.5 sm:gap-2">
-              {/* DeepThink Pill Toggle */}
+          {/* Controls Bottom Bar */}
+          <div className="pt-2 sm:pt-3 flex items-center justify-between gap-2">
+            {/* Left: ONLY + Button (No sharp ends, no text inside) */}
+            <div className="relative">
               <button
                 type="button"
-                onClick={() => setIsDeepThinkActive(!isDeepThinkActive)}
-                className={`flex items-center gap-1 sm:gap-1.5 px-3 sm:px-3.5 py-1.5 rounded-full text-xs font-medium transition-all cursor-pointer select-none active:scale-95 touch-manipulation ${
-                  isDeepThinkActive
-                    ? 'bg-blue-50 text-[#1d59f2] border border-blue-200/80'
-                    : 'bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200/80'
-                }`}
+                id="empty-state-plus-btn"
+                onClick={() => setIsPlusMenuOpen((prev) => !prev)}
+                className="w-8 h-8 rounded-full bg-[#282724] hover:bg-[#32302c] text-[#ede8e1] flex items-center justify-center transition-colors cursor-pointer border border-[#383633]"
+                title="Add files or images"
               >
-                <Atom className={`w-3.5 h-3.5 ${isDeepThinkActive ? 'text-[#1d59f2]' : 'text-slate-400'}`} />
-                <span>DeepThink</span>
+                <span className="text-lg leading-none font-light mb-0.5">+</span>
               </button>
 
-              {/* Search Pill Toggle */}
-              <button
-                type="button"
-                onClick={() => setUseSearchGrounding(!useSearchGrounding)}
-                className={`flex items-center gap-1 sm:gap-1.5 px-3 sm:px-3.5 py-1.5 rounded-full text-xs font-medium transition-all cursor-pointer select-none active:scale-95 touch-manipulation ${
-                  useSearchGrounding
-                    ? 'bg-blue-50 text-[#1d59f2] border border-blue-200/80'
-                    : 'bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200/80'
-                }`}
-              >
-                <Globe className={`w-3.5 h-3.5 ${useSearchGrounding ? 'text-[#1d59f2]' : 'text-slate-400'}`} />
-                <span>Search</span>
-              </button>
+              {/* Popover Menu with strictly Upload File & Upload Image */}
+              <AnimatePresence>
+                {isPlusMenuOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                    className="absolute left-0 bottom-10 z-50 w-48 bg-[#201f1d] border border-[#383633] rounded-2xl shadow-2xl p-1.5 space-y-1 text-xs text-[#ede8e1]"
+                  >
+                    {/* 1. Upload File */}
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="w-full px-3 py-2 rounded-xl hover:bg-[#2c2a27] flex items-center gap-2.5 transition-colors cursor-pointer text-left"
+                    >
+                      <Paperclip className="w-4 h-4 text-[#d97757]" />
+                      <span>Upload file</span>
+                    </button>
+
+                    {/* 2. Upload Image */}
+                    <button
+                      type="button"
+                      onClick={() => imageInputRef.current?.click()}
+                      className="w-full px-3 py-2 rounded-xl hover:bg-[#2c2a27] flex items-center gap-2.5 transition-colors cursor-pointer text-left"
+                    >
+                      <ImageIcon className="w-4 h-4 text-[#d97757]" />
+                      <span>Upload image</span>
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
 
-            {/* Blue Circular Send Button - Min 40px touch area on mobile */}
-            <button
-              type="button"
-              onClick={() => handleSubmit()}
-              className={`w-10 h-10 sm:w-9 sm:h-9 rounded-full flex items-center justify-center transition-all cursor-pointer select-none touch-manipulation ${
-                promptText.trim()
-                  ? 'bg-[#1d59f2] hover:bg-[#1546cb] text-white shadow-md hover:scale-105 active:scale-95'
-                  : 'bg-[#1d59f2] hover:bg-[#1546cb] text-white opacity-85 active:scale-95'
-              }`}
-              title="Send (Enter)"
-            >
-              <ArrowUp className="w-4 h-4 stroke-[2.5]" />
-            </button>
+            {/* Right Tools: Model Picker, Web Search 🌐, Mic, Waveform, Send */}
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              {/* Model Picker (Sonnet 5 Medium style) */}
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setIsModelDropdownOpen((prev) => !prev)}
+                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-[#282724] hover:bg-[#32302c] text-xs text-[#ede8e1] border border-[#383633] transition-colors cursor-pointer"
+                >
+                  <span className="font-medium text-[#ede8e1]">{selectedModel}</span>
+                  <ChevronDown className="w-3.5 h-3.5 text-[#a19e97]" />
+                </button>
+
+                <AnimatePresence>
+                  {isModelDropdownOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 5 }}
+                      className="absolute right-0 bottom-10 z-50 w-52 bg-[#201f1d] border border-[#383633] rounded-2xl shadow-2xl p-1.5 space-y-1 text-xs text-[#ede8e1]"
+                    >
+                      {[
+                        { name: 'Sonnet 5 Medium', sub: 'Fast multimodal reasoning' },
+                        { name: 'Sapphire Flash', sub: 'Low latency real-time coder' },
+                        { name: 'Gemini Pro Thinker', sub: 'Deep algorithmic architecture' }
+                      ].map((item) => (
+                        <button
+                          key={item.name}
+                          type="button"
+                          onClick={() => {
+                            setSelectedModel(item.name);
+                            setIsModelDropdownOpen(false);
+                          }}
+                          className={`w-full px-3 py-2 rounded-xl flex flex-col text-left transition-colors cursor-pointer ${
+                            selectedModel === item.name
+                              ? 'bg-[#2e2c29] text-[#ede8e1]'
+                              : 'hover:bg-[#282724] text-[#a19e97]'
+                          }`}
+                        >
+                          <span className="font-semibold text-white">{item.name}</span>
+                          <span className="text-[10px] text-[#86837c]">{item.sub}</span>
+                        </button>
+                      ))}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
+              {/* Web Search 🌐 Toggle */}
+              <button
+                type="button"
+                onClick={() => setUseSearchGrounding((prev) => !prev)}
+                className={`p-1.5 sm:px-2 sm:py-1.5 rounded-xl text-xs flex items-center gap-1 transition-all cursor-pointer border ${
+                  useSearchGrounding
+                    ? 'bg-[#d97757]/20 text-[#d97757] border-[#d97757]/50'
+                    : 'bg-[#282724] hover:bg-[#32302c] text-[#a19e97] border-[#383633]'
+                }`}
+                title="Toggle Live Web Search"
+              >
+                <Globe className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Search</span>
+              </button>
+
+              {/* Voice Microphone */}
+              <button
+                type="button"
+                onClick={toggleRecording}
+                className={`p-2 rounded-xl transition-all cursor-pointer border ${
+                  isRecording
+                    ? 'bg-rose-600 text-white animate-pulse border-rose-500'
+                    : 'bg-[#282724] hover:bg-[#32302c] text-[#a19e97] hover:text-[#ede8e1] border-[#383633]'
+                }`}
+                title="Voice dictation"
+              >
+                {isRecording ? <MicOff className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
+              </button>
+
+              {/* Audio Waveform icon */}
+              <button
+                type="button"
+                onClick={onStartChat}
+                className="p-2 rounded-xl bg-[#282724] hover:bg-[#32302c] text-[#a19e97] hover:text-[#ede8e1] border border-[#383633] transition-colors cursor-pointer"
+                title="Voice mode"
+              >
+                <AudioWaveform className="w-3.5 h-3.5" />
+              </button>
+
+              {/* Send Button */}
+              {promptText.trim() && (
+                <button
+                  type="button"
+                  onClick={handleSubmit}
+                  className="w-8 h-8 rounded-xl bg-[#d97757] hover:bg-[#e88869] text-white flex items-center justify-center transition-all cursor-pointer active:scale-95 shadow-md"
+                  title="Send message"
+                >
+                  <ArrowUp className="w-4 h-4" />
+                </button>
+              )}
+            </div>
           </div>
         </div>
-      </motion.div>
 
-      {/* Footer */}
-      <footer className="relative z-10 py-3 sm:py-4 px-4 text-center text-[11px] text-slate-400 select-none">
-        Sapphire can make mistakes. Verify critical information.
-      </footer>
+        {/* Quick Suggestion Chips matching screenshot */}
+        <div className="flex items-center justify-center gap-2 flex-wrap max-w-2xl mx-auto pt-4 sm:pt-6">
+          {suggestionChips.map((chip, idx) => {
+            const IconComp = chip.icon;
+            return (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => onSendMessage(chip.prompt)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#201f1d] hover:bg-[#282724] text-[#a19e97] hover:text-[#ede8e1] text-xs font-medium border border-[#33312e] transition-all cursor-pointer active:scale-95 shadow-2xs"
+              >
+                <IconComp className="w-3.5 h-3.5 text-[#a19e97]" />
+                <span>{chip.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Empty bottom spacer for balance */}
+      <div className="h-6 sm:h-10" />
     </div>
   );
 };

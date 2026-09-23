@@ -610,17 +610,7 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ language, meta, value, onPreview,
           <button
             type="button"
             onClick={() => {
-              downloadSingleFileDirectly({
-                id: cleanName,
-                name: cleanName,
-                path: `/${cleanName}`,
-                content: code,
-                language: language || 'text',
-                createdAt: Date.now(),
-                updatedAt: Date.now(),
-                autoSaved: true,
-                source: 'ai-generated'
-              });
+              downloadSingleFileDirectly(cleanName, currentCode);
             }}
             className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-medium text-slate-300 hover:text-white bg-[#222120] hover:bg-[#2e2c29] border border-[#383633] transition-all active:scale-95 cursor-pointer"
             title={`Download ${cleanName}`}

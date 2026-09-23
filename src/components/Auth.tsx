@@ -2,18 +2,18 @@ import React, { useState } from 'react';
 import {
   signInWithPopup,
   signInWithRedirect,
-  GoogleAuthProvider,
   User
 } from 'firebase/auth';
 import { auth, googleProvider } from '../services/firebase';
-import { SAPPHIRE_LOGO_URL, SAPPHIRE_APP_NAME } from '../data/constants';
-import { ShieldCheck, Sparkles, AlertCircle, ArrowRight } from 'lucide-react';
+import { SAPPHIRE_APP_NAME } from '../data/constants';
+import { ShieldCheck, UserCheck, AlertCircle } from 'lucide-react';
 
 interface AuthProps {
   onLoginSuccess?: (user: User) => void;
+  onContinueAsGuest?: () => void;
 }
 
-export const Auth: React.FC<AuthProps> = ({ onLoginSuccess }) => {
+export const Auth: React.FC<AuthProps> = ({ onLoginSuccess, onContinueAsGuest }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -27,7 +27,6 @@ export const Auth: React.FC<AuthProps> = ({ onLoginSuccess }) => {
       }
     } catch (err: any) {
       console.warn('Firebase popup sign-in notice, attempting redirect fallback:', err);
-      // If popup was blocked or iframe restriction
       if (err.code === 'auth/popup-blocked' || err.code === 'auth/cancelled-popup-request') {
         try {
           await signInWithRedirect(auth, googleProvider);
@@ -36,7 +35,7 @@ export const Auth: React.FC<AuthProps> = ({ onLoginSuccess }) => {
           setError(redirErr.message || 'Authentication error occurred.');
         }
       } else {
-        setError(err.message || 'Unable to sign in with Google. Please try again.');
+        setError(err.message || 'Unable to sign in with Google. You can continue as Guest.');
       }
     } finally {
       setLoading(false);
@@ -44,58 +43,59 @@ export const Auth: React.FC<AuthProps> = ({ onLoginSuccess }) => {
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-slate-950 p-4 sm:p-6 relative overflow-hidden select-none">
-      {/* Subtle Ambient Background Gradients */}
-      <div className="absolute top-1/4 -left-20 w-80 h-80 bg-blue-600/15 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-1/4 -right-20 w-80 h-80 bg-indigo-600/15 rounded-full blur-3xl pointer-events-none" />
+    <div className="min-h-screen w-full flex items-center justify-center bg-[#191817] text-[#ede8e1] p-4 sm:p-6 relative overflow-hidden select-none font-['Plus_Jakarta_Sans',sans-serif]">
+      {/* Subtle Warm Ambient Glow */}
+      <div className="absolute top-1/4 -left-20 w-80 h-80 bg-[#d97757]/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-1/4 -right-20 w-80 h-80 bg-amber-700/10 rounded-full blur-3xl pointer-events-none" />
 
-      {/* Main Login Card */}
-      <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl relative z-10 flex flex-col items-center text-center space-y-6">
-        {/* Logo and Identity */}
+      {/* Main Login Card - Claude Aesthetic */}
+      <div className="w-full max-w-md bg-[#201f1d] border border-[#33312e] rounded-3xl p-6 sm:p-8 shadow-2xl relative z-10 flex flex-col items-center text-center space-y-6">
+        {/* Warm Terracotta Sunburst Icon */}
         <div className="relative group">
-          <div className="w-20 h-20 rounded-2xl bg-slate-800/80 p-2.5 border border-slate-700/80 shadow-xl flex items-center justify-center">
-            <img
-              src={SAPPHIRE_LOGO_URL}
-              alt={SAPPHIRE_APP_NAME}
-              className="w-full h-full object-contain rounded-xl"
-            />
+          <div className="w-16 h-16 rounded-2xl bg-[#282724] p-3 border border-[#383633] shadow-lg flex items-center justify-center">
+            <svg
+              className="w-10 h-10 text-[#d97757]"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+            >
+              {/* Elegant 10-point asterisk matching Claude icon in screenshot */}
+              <path d="M12 2a1 1 0 0 1 1 1v5.07l3.58-3.58a1 1 0 1 1 1.42 1.42L14.42 9.5H19.5a1 1 0 0 1 0 2h-5.08l3.58 3.58a1 1 0 1 1-1.42 1.42L13 12.92V18a1 1 0 0 1-2 0v-5.08l-3.58 3.58a1 1 0 0 1-1.42-1.42L9.58 11.5H4.5a1 1 0 0 1 0-2h5.08L6 5.92a1 1 0 1 1 1.42-1.42L11 8.07V3a1 1 0 0 1 1-1z" />
+            </svg>
           </div>
-          <span className="absolute -bottom-1 -right-1 p-1 bg-blue-600 rounded-full text-white shadow-md">
-            <Sparkles className="w-3.5 h-3.5" />
-          </span>
         </div>
 
         {/* Title & Tagline */}
         <div className="space-y-1.5">
-          <h1 className="text-2xl font-bold text-white tracking-tight">
+          <h1 className="text-2xl font-claude-serif text-[#ede8e1] tracking-tight">
             Welcome to {SAPPHIRE_APP_NAME}
           </h1>
-          <p className="text-sm text-slate-400 max-w-xs mx-auto">
-            Your high-speed autonomous AI engineering assistant and cloud workspace.
+          <p className="text-xs text-[#a19e97] max-w-xs mx-auto leading-relaxed">
+            Autonomous multi-file architecture, Codex app builder, and global intelligent assistant.
           </p>
         </div>
 
         {/* Error notification */}
         {error && (
-          <div className="w-full p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs flex items-center gap-2 text-left">
+          <div className="w-full p-3 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-xs flex items-center gap-2 text-left">
             <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
             <span className="flex-1">{error}</span>
           </div>
         )}
 
-        {/* Google Sign-In Button */}
-        <div className="w-full space-y-3 pt-2">
+        {/* Action Buttons */}
+        <div className="w-full space-y-3 pt-1">
+          {/* Google Sign-In Button */}
           <button
             id="google-signin-btn"
             type="button"
             disabled={loading}
             onClick={handleGoogleSignIn}
-            className="w-full py-3.5 px-4 bg-white hover:bg-slate-100 active:scale-[0.98] text-slate-900 rounded-2xl font-semibold text-sm shadow-md transition-all flex items-center justify-center gap-3 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+            className="w-full py-3 px-4 bg-white hover:bg-slate-100 active:scale-[0.98] text-[#191817] rounded-2xl font-semibold text-xs shadow-md transition-all flex items-center justify-center gap-2.5 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {loading ? (
-              <div className="w-5 h-5 border-2 border-slate-400 border-t-slate-900 rounded-full animate-spin" />
+              <div className="w-4 h-4 border-2 border-slate-400 border-t-slate-900 rounded-full animate-spin" />
             ) : (
-              <svg className="w-5 h-5" viewBox="0 0 24 24">
+              <svg className="w-4 h-4" viewBox="0 0 24 24">
                 <path
                   fill="#4285F4"
                   d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"
@@ -114,12 +114,23 @@ export const Auth: React.FC<AuthProps> = ({ onLoginSuccess }) => {
                 />
               </svg>
             )}
-            <span>{loading ? 'Signing In...' : 'Continue with Google'}</span>
+            <span>{loading ? 'Connecting...' : 'Continue with Google'}</span>
           </button>
 
-          <p className="text-[11px] text-slate-500 flex items-center justify-center gap-1.5 pt-2">
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
-            <span>Protected with Firebase Authentication & Firestore Cloud</span>
+          {/* Continue as Guest Button (No cloud save, instant access) */}
+          <button
+            id="guest-signin-btn"
+            type="button"
+            onClick={onContinueAsGuest}
+            className="w-full py-3 px-4 bg-[#282724] hover:bg-[#32302c] active:scale-[0.98] text-[#ede8e1] border border-[#383633] rounded-2xl font-semibold text-xs transition-all flex items-center justify-center gap-2 cursor-pointer"
+          >
+            <UserCheck className="w-4 h-4 text-[#d97757]" />
+            <span>Continue as Guest (No Sign-in)</span>
+          </button>
+
+          <p className="text-[11px] text-[#86837c] flex items-center justify-center gap-1.5 pt-2">
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+            <span>Guest mode stores data locally without saving to cloud</span>
           </p>
         </div>
       </div>

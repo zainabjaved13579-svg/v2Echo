@@ -445,6 +445,9 @@ export function autoSaveAiCodeBlocks(
 export function buildLivePreviewBundle(file: WorkspaceFile, allFiles: WorkspaceFile[] = []): string {
   const lang = (file.language || getLanguageFromFileName(file.name)).toLowerCase();
 
+  // If allFiles is empty, load from persistent workspace
+  const workspaceFiles = allFiles.length > 0 ? allFiles : loadWorkspaceFiles();
+
   // If already full HTML document
   if (lang === 'html' || file.name.endsWith('.html')) {
     let html = file.content;
@@ -467,16 +470,31 @@ ${html}
 </html>`;
     }
 
-    // Try linking adjacent css / js in workspace if not already bundled
-    const cssFile = allFiles.find((f) => f.name.endsWith('.css') && f.path.startsWith('/workspace'));
-    const jsFile = allFiles.find((f) => f.name.endsWith('.js') && f.path.startsWith('/workspace'));
+    // Auto-link all adjacent css and js files in workspace (e.g. style.css, script.js)
+    const cssFiles = workspaceFiles.filter((f) => f.name.endsWith('.css') && f.id !== file.id);
+    const jsFiles = workspaceFiles.filter(
+      (f) => (f.name.endsWith('.js') || f.name.endsWith('.ts')) && f.id !== file.id
+    );
 
-    if (cssFile && !html.includes(cssFile.content.slice(0, 30))) {
-      html = html.replace('</head>', `<style>\n/* Auto-linked from ${cssFile.path} */\n${cssFile.content}\n</style>\n</head>`);
-    }
-    if (jsFile && !html.includes(jsFile.content.slice(0, 30))) {
-      html = html.replace('</body>', `<script>\n/* Auto-linked from ${jsFile.path} */\n${jsFile.content}\n</script>\n</body>`);
-    }
+    cssFiles.forEach((cssFile) => {
+      if (!html.includes(cssFile.content.slice(0, 30))) {
+        if (html.includes('</head>')) {
+          html = html.replace('</head>', `<style>\n/* Auto-bundled: ${cssFile.name} */\n${cssFile.content}\n</style>\n</head>`);
+        } else {
+          html = `<style>\n/* Auto-bundled: ${cssFile.name} */\n${cssFile.content}\n</style>\n${html}`;
+        }
+      }
+    });
+
+    jsFiles.forEach((jsFile) => {
+      if (!html.includes(jsFile.content.slice(0, 30))) {
+        if (html.includes('</body>')) {
+          html = html.replace('</body>', `<script>\n/* Auto-bundled: ${jsFile.name} */\n${jsFile.content}\n</script>\n</body>`);
+        } else {
+          html = `${html}\n<script>\n/* Auto-bundled: ${jsFile.name} */\n${jsFile.content}\n</script>`;
+        }
+      }
+    });
 
     return html;
   }
