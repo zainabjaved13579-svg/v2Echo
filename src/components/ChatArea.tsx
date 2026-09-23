@@ -48,7 +48,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
     <div
       ref={chatContainerRef}
       onScroll={onScroll}
-      className="flex-1 overflow-y-auto px-3 sm:px-6 py-4 space-y-5 scroll-smooth relative"
+      className="flex-1 overflow-y-auto px-3 sm:px-6 py-4 space-y-5 scroll-smooth relative bg-[#151515]"
     >
       {isStartingScreen ? (
         <EmptyState

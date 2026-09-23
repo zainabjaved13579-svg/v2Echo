@@ -98,14 +98,14 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
   const initial = userName.charAt(0).toLowerCase();
 
   const sidebarContent = (
-    <div className="w-full lg:w-64 h-full flex flex-col shrink-0 min-w-0 bg-[#191817] text-[#ede8e1] border-r border-[#2a2926] select-none font-['Plus_Jakarta_Sans',sans-serif]">
+    <div className="w-full lg:w-64 h-full flex flex-col shrink-0 min-w-0 bg-[#111111] text-[#ede8e1] border-r border-[#222222] select-none font-['Plus_Jakarta_Sans',sans-serif]">
       {/* Brand Header */}
-      <div className="p-3 pb-2.5 flex items-center justify-between border-b border-[#2a2926]">
+      <div className="p-3 pb-2.5 flex items-center justify-between border-b border-[#222222]">
         <div className="flex items-center gap-2.5">
           <img
             src={SAPPHIRE_LOGO_URL}
             alt="Sapphire"
-            className="w-7 h-7 rounded-xl object-cover ring-1 ring-[#d97757]/40 shadow-xs bg-[#201f1d]"
+            className="w-7 h-7 rounded-xl object-cover ring-1 ring-[#d97757]/40 shadow-xs bg-[#1a1a1a]"
           />
           <div className="flex flex-col">
             <span className="font-semibold text-xs text-[#f5f2eb] tracking-tight">Sapphire</span>
@@ -126,7 +126,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
             onNewChat();
             if (window.innerWidth < 1024) onClose();
           }}
-          className="w-full py-2 px-3 bg-[#201f1d] hover:bg-[#282724] text-[#ede8e1] rounded-xl text-xs font-medium flex items-center gap-2 transition-all border border-[#33312e] active:scale-[0.99] cursor-pointer shadow-xs"
+          className="w-full py-2 px-3 bg-[#1a1a1a] hover:bg-[#222222] text-[#ede8e1] rounded-xl text-xs font-medium flex items-center gap-2 transition-all border border-[#2a2a2a] active:scale-[0.99] cursor-pointer shadow-xs"
         >
           <Plus className="w-3.5 h-3.5 text-[#d97757]" />
           <span>New</span>
@@ -142,8 +142,8 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
           }}
           className={`w-full py-1.5 px-2.5 rounded-xl text-xs font-normal flex items-center justify-between transition-colors cursor-pointer ${
             activeNavTab === 'projects' || activeNavTab === 'workspace'
-              ? 'bg-[#282724] text-[#ede8e1] font-medium'
-              : 'text-[#a19e97] hover:bg-[#201f1d] hover:text-[#ede8e1]'
+              ? 'bg-[#222222] text-[#ede8e1] font-medium'
+              : 'text-[#a19e97] hover:bg-[#1a1a1a] hover:text-[#ede8e1]'
           }`}
           title="Workspace (normal coding & multi-file preview)"
         >
@@ -162,8 +162,8 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
           }}
           className={`w-full py-1.5 px-2.5 rounded-xl text-xs font-normal flex items-center justify-between transition-colors cursor-pointer ${
             activeNavTab === 'codex'
-              ? 'bg-[#282724] text-[#ede8e1] font-medium'
-              : 'text-[#a19e97] hover:bg-[#201f1d] hover:text-[#ede8e1]'
+              ? 'bg-[#222222] text-[#ede8e1] font-medium'
+              : 'text-[#a19e97] hover:bg-[#1a1a1a] hover:text-[#ede8e1]'
           }`}
           title="Codex (Google AI Studio app builder & all files preview)"
         >
@@ -183,8 +183,8 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
           }}
           className={`w-full py-1.5 px-2.5 rounded-xl text-xs font-normal flex items-center justify-between transition-colors cursor-pointer ${
             activeNavTab === 'customize'
-              ? 'bg-[#282724] text-[#ede8e1] font-medium'
-              : 'text-[#a19e97] hover:bg-[#201f1d] hover:text-[#ede8e1]'
+              ? 'bg-[#222222] text-[#ede8e1] font-medium'
+              : 'text-[#a19e97] hover:bg-[#1a1a1a] hover:text-[#ede8e1]'
           }`}
           title="Customize"
         >
@@ -202,14 +202,14 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
               onOpenGetApp();
               if (window.innerWidth < 1024) onClose();
             }}
-            className="w-full py-1.5 px-2.5 rounded-xl text-xs font-normal flex items-center justify-between text-[#a19e97] hover:bg-[#201f1d] hover:text-[#ede8e1] transition-colors cursor-pointer"
+            className="w-full py-1.5 px-2.5 rounded-xl text-xs font-normal flex items-center justify-between text-[#a19e97] hover:bg-[#1a1a1a] hover:text-[#ede8e1] transition-colors cursor-pointer"
             title="Download / Install PWA App"
           >
             <div className="flex items-center gap-2.5">
               <Download className="w-3.5 h-3.5 text-[#d97757]" />
               <span>Download PWA</span>
             </div>
-            <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-[#282724] text-[#d97757] font-medium">App</span>
+            <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-[#222222] text-[#d97757] font-medium">App</span>
           </button>
         )}
       </div>
@@ -245,7 +245,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
             placeholder="Search..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-[#201f1d] border border-[#33312e] rounded-xl px-2.5 py-1 text-xs text-[#ede8e1] placeholder-[#86837c] focus:outline-none"
+            className="w-full bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-2.5 py-1 text-xs text-[#ede8e1] placeholder-[#86837c] focus:outline-none"
           />
         </div>
       )}
@@ -270,8 +270,8 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
                 }}
                 className={`group relative flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs transition-colors cursor-pointer ${
                   isSelected
-                    ? 'bg-[#282724] text-[#ede8e1] font-medium'
-                    : 'text-[#a19e97] hover:bg-[#201f1d] hover:text-[#ede8e1]'
+                    ? 'bg-[#222222] text-[#ede8e1] font-medium'
+                    : 'text-[#a19e97] hover:bg-[#1a1a1a] hover:text-[#ede8e1]'
                 }`}
               >
                 <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -288,7 +288,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
                         if (e.key === 'Enter') handleSaveRename(session.id, e as any);
                         if (e.key === 'Escape') handleCancelRename(e as any);
                       }}
-                      className="w-full bg-[#191817] text-white px-1.5 py-0.5 rounded text-xs border border-[#383633] focus:outline-none"
+                      className="w-full bg-[#111111] text-white px-1.5 py-0.5 rounded text-xs border border-[#2a2a2a] focus:outline-none"
                       autoFocus
                     />
                   ) : (
@@ -339,7 +339,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
       </div>
 
       {/* User Profile Pill at Bottom */}
-      <div className="p-3 border-t border-[#2a2926] flex items-center justify-between gap-2 shrink-0">
+      <div className="p-3 border-t border-[#222222] flex items-center justify-between gap-2 shrink-0">
         <button
           type="button"
           onClick={() => {
@@ -349,7 +349,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
           className="flex items-center gap-2 min-w-0 text-left hover:opacity-85 transition-opacity cursor-pointer flex-1"
         >
           {/* Square avatar with soft rounded edges */}
-          <div className="w-6 h-6 rounded-lg bg-[#201f1d] border border-[#33312e] text-[#ede8e1] flex items-center justify-center text-[11px] font-semibold shrink-0">
+          <div className="w-6 h-6 rounded-lg bg-[#1a1a1a] border border-[#2a2a2a] text-[#ede8e1] flex items-center justify-center text-[11px] font-semibold shrink-0">
             {initial.toUpperCase()}
           </div>
           <div className="min-w-0 flex items-center gap-1.5 text-xs text-[#ede8e1] truncate">
@@ -362,7 +362,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
         <button
           type="button"
           onClick={onOpenGetApp}
-          className="p-1.5 text-[#86837c] hover:text-[#ede8e1] rounded-lg transition-colors cursor-pointer shrink-0 hover:bg-[#201f1d]"
+          className="p-1.5 text-[#86837c] hover:text-[#ede8e1] rounded-lg transition-colors cursor-pointer shrink-0 hover:bg-[#1a1a1a]"
           title="Download App / PWA"
         >
           <Download className="w-3.5 h-3.5" />

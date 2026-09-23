@@ -72,11 +72,9 @@ const GeneratedVisualCard: React.FC<{
 
   const handleError = () => {
     if (retryCount === 0 && !src.includes('/api/image/proxy')) {
-      // First fallback: route through backend proxy
       setRetryCount(1);
       setSrc(`/api/image/proxy?url=${encodeURIComponent(imgUrl)}`);
     } else if (retryCount === 1) {
-      // Second fallback: alternate high-entropy seed
       setRetryCount(2);
       const cleanP = (prompt || 'vibrant visual artwork').replace(/[^a-zA-Z0-9\s]/g, ' ').trim();
       const altUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(cleanP)}?seed=${Math.floor(Math.random() * 900000 + 100000)}&width=1024&height=1024&nologo=true`;
@@ -116,22 +114,22 @@ const GeneratedVisualCard: React.FC<{
 
   return (
     <>
-      <div className="group/genimg relative rounded-2xl overflow-hidden border border-slate-700/60 bg-[#0a0f1d] shadow-md transition-all hover:shadow-indigo-500/10 hover:border-indigo-500/40">
+      <div className="group/genimg relative rounded-2xl overflow-hidden border border-slate-200 bg-slate-50 shadow-md transition-all hover:shadow-lg hover:border-indigo-300">
         {isLoading && (
-          <div className="w-full h-64 sm:h-72 bg-gradient-to-r from-slate-900 via-slate-850 to-slate-900 animate-pulse flex flex-col items-center justify-center gap-2.5 text-slate-400 p-4">
-            <div className="p-3 rounded-2xl bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 animate-spin">
+          <div className="w-full h-64 sm:h-72 bg-gradient-to-r from-slate-100 via-slate-200 to-slate-100 animate-pulse flex flex-col items-center justify-center gap-2.5 text-slate-500 p-4">
+            <div className="p-3 rounded-2xl bg-indigo-100 text-indigo-500 border border-indigo-200 animate-spin">
               <Sparkles className="w-6 h-6" />
             </div>
-            <p className="text-xs font-medium text-slate-200">Synthesizing high-res visual...</p>
-            <p className="text-[11px] text-indigo-400 font-mono">Neural Generative Diffusion</p>
+            <p className="text-xs font-medium text-slate-700">Synthesizing high-res visual...</p>
+            <p className="text-[11px] text-indigo-500 font-mono">Neural Generative Diffusion</p>
           </div>
         )}
 
         {hasError ? (
-          <div className="w-full h-60 bg-slate-900 flex flex-col items-center justify-center p-4 text-center">
-            <AlertTriangle className="w-6 h-6 text-amber-400 mb-2" />
-            <p className="text-xs font-semibold text-slate-200">Unable to display visual</p>
-            <p className="text-[11px] text-slate-400 mt-1 max-w-xs truncate">{prompt}</p>
+          <div className="w-full h-60 bg-slate-100 flex flex-col items-center justify-center p-4 text-center">
+            <AlertTriangle className="w-6 h-6 text-amber-500 mb-2" />
+            <p className="text-xs font-semibold text-slate-700">Unable to display visual</p>
+            <p className="text-[11px] text-slate-500 mt-1 max-w-xs truncate">{prompt}</p>
             <button
               onClick={() => {
                 setHasError(false);
@@ -169,7 +167,7 @@ const GeneratedVisualCard: React.FC<{
                 <span className="text-[11px] font-medium">Download</span>
               </button>
             </div>
-            <div className="p-2.5 bg-slate-950/95 backdrop-blur-md text-white flex items-center justify-between text-[11px] border-t border-white/5">
+            <div className="p-2.5 bg-slate-900/95 backdrop-blur-md text-white flex items-center justify-between text-[11px] border-t border-white/5">
               <span className="flex items-center gap-1.5 text-indigo-300 font-semibold truncate max-w-[220px]">
                 <Sparkles className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
                 <span className="truncate">{prompt || 'Echo Generative Visual'}</span>
@@ -244,14 +242,12 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
   const [isThinkingExpanded, setIsThinkingExpanded] = useState(false);
   const [thinkingElapsed, setThinkingElapsed] = useState(1);
 
-  // Keep thinking collapsed by default like Image 2; ensure collapsed when answer text is present
   useEffect(() => {
     if (message.text) {
       setIsThinkingExpanded(false);
     }
   }, [message.text]);
 
-  // Thinking live timer
   useEffect(() => {
     if (!message.isThinking) return;
     const timer = setInterval(() => {
@@ -263,13 +259,11 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
   const openWorkspaceHandler = onOpenFileWorkspace || onOpenFileInManager;
   const isUser = message.role === 'user';
 
-  // Extract multiple code files if present in AI response
   const extractedFiles = useMemo(() => {
     if (isUser || !message.text) return [];
     return extractCodeFilesFromMarkdown(message.text);
   }, [isUser, message.text]);
 
-  // Handler to download all generated files as a full ZIP folder
   const handleDownloadFullFolderZip = async () => {
     if (extractedFiles.length === 0 || isZipping) return;
     setIsZipping(true);
@@ -291,7 +285,6 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
     }
   };
 
-  // Handler to save all files from message into File & Workspace
   const handleSaveAllToWorkspace = () => {
     if (extractedFiles.length === 0) return;
     let firstFileId = '';
@@ -314,7 +307,6 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
     if (!message.modifiedFileContent) return;
     const fileName = message.modifiedFileName || 'updated_file.txt';
 
-    // Try direct file handle write if available from File System Access API
     const handle = message.attachedFile?.fileHandle;
     if (handle && typeof handle.createWritable === 'function') {
       try {
@@ -326,7 +318,6 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
       }
     }
 
-    // Trigger instant browser download with the original filename so file is saved locally
     const blob = new Blob([message.modifiedFileContent], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -341,12 +332,10 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
     setTimeout(() => setFileSavedFeedback(false), 3000);
   };
 
-  // Auto-detect Urdu vs English
   const detectedIsUrdu = useMemo(() => {
     return detectScriptLanguage(message.text) === 'ur';
   }, [message.text]);
 
-  // Listen to speech service state
   useEffect(() => {
     const unsubscribe = speechService.subscribe((state) => {
       setIsSpeakingThis(state.isSpeaking && state.currentMessageId === message.id);
@@ -360,7 +349,6 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
       speechService.stop();
     } else {
       speechService.stop();
-      // Auto-detect language (Urdu if Urdu script or Roman Urdu, English if English)
       const script = detectScriptLanguage(message.text);
       const targetLang = language && language !== 'auto' ? language : script;
 
@@ -437,11 +425,11 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
         className={`group w-full py-4 sm:py-5 transition-colors ${
-          isUser ? 'bg-transparent text-[#ede8e1]' : 'bg-[#191817] text-[#ede8e1]'
+          isUser ? 'bg-transparent text-[#ede8e1]' : 'bg-white text-slate-900'
         }`}
       >
         <div className="w-full max-w-3xl mx-auto px-3 sm:px-4 flex gap-3 sm:gap-4 items-start">
-          {/* Avatar - Square with rounded edges (not sharp, not circle) */}
+          {/* Avatar */}
           <div className="shrink-0 mt-0.5">
             {isUser ? (
               userAvatar ? (
@@ -470,14 +458,14 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
           </div>
 
           {/* Message Content Body */}
-          <div className={`flex-1 min-w-0 ${isUser ? 'bg-[#201f1d] text-[#ede8e1] px-4 py-3 rounded-2xl border border-[#33312e] max-w-2xl' : 'space-y-3 py-0.5 text-[#ede8e1]'}`}>
-            {/* Header row: Author & timestamp without model badges */}
+          <div className={`flex-1 min-w-0 ${isUser ? 'bg-[#201f1d] text-[#ede8e1] px-4 py-3 rounded-2xl border border-[#33312e] max-w-2xl' : 'space-y-3 py-0.5 text-slate-900'}`}>
+            {/* Header row */}
             <div className="flex items-center justify-between gap-2 mb-1">
               <div className="flex items-center gap-2">
-                <span className="font-medium text-xs sm:text-sm text-[#f5f2eb]">
+                <span className={`font-medium text-xs sm:text-sm ${isUser ? 'text-[#f5f2eb]' : 'text-slate-900'}`}>
                   {isUser ? userName : 'Sapphire'}
                 </span>
-                <span className="text-[11px] text-[#86837c]">
+                <span className={`text-[11px] ${isUser ? 'text-[#86837c]' : 'text-slate-500'}`}>
                   {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </span>
               </div>
@@ -502,7 +490,7 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
               </div>
             )}
 
-            {/* AI Rewritten / Modified File Card with Auto-Save */}
+            {/* AI Rewritten / Modified File Card */}
             {!isUser && message.modifiedFileContent && (
               <div className="mb-3 p-3 sm:p-3.5 rounded-xl bg-emerald-50/80 border border-emerald-200 shadow-2xs space-y-2">
                 <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -520,13 +508,11 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
                     </div>
                   </div>
 
-                  {/* Auto-Save & Download Button */}
                   <div className="flex items-center gap-1.5">
                     <button
                       type="button"
                       onClick={handleSaveToFileLocation}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition-all shadow-2xs active:scale-95 cursor-pointer"
-                      title="Auto-save and download this rewritten file to your file location"
                     >
                       {fileSavedFeedback ? (
                         <>
@@ -546,7 +532,6 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
                         type="button"
                         onClick={() => openWorkspaceHandler()}
                         className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-semibold transition-all shadow-2xs cursor-pointer"
-                        title="Open in File & Workspace"
                       >
                         <FolderCode className="w-3.5 h-3.5 text-indigo-600" />
                         <span className="hidden sm:inline">File & Workspace</span>
@@ -605,14 +590,14 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
 
             {/* Multiple Files Project Folder Download Banner */}
             {!isUser && extractedFiles.length > 1 && (
-              <div className="mb-3 p-3.5 rounded-2xl bg-gradient-to-br from-indigo-950/95 via-slate-900 to-slate-950 border border-indigo-500/30 text-white shadow-md">
+              <div className="mb-3 p-3.5 rounded-2xl bg-gradient-to-br from-indigo-50 via-slate-50 to-white border border-indigo-200 text-slate-900 shadow-md">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div className="space-y-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <div className="p-1.5 rounded-lg bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">
+                      <div className="p-1.5 rounded-lg bg-indigo-100 text-indigo-600 border border-indigo-200">
                         <Archive className="w-4 h-4" />
                       </div>
-                      <span className="font-bold text-sm text-slate-100">
+                      <span className="font-bold text-sm text-slate-900">
                         Generated Project Folder ({extractedFiles.length} files)
                       </span>
                     </div>
@@ -620,9 +605,9 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
                       {extractedFiles.map((f, i) => (
                         <span
                           key={i}
-                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-800 text-slate-200 text-[11px] font-mono border border-slate-700/60"
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[11px] font-mono border border-slate-200"
                         >
-                          <FileCode className="w-3 h-3 text-indigo-400" />
+                          <FileCode className="w-3 h-3 text-indigo-500" />
                           <span>{f.name}</span>
                         </span>
                       ))}
@@ -630,7 +615,6 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
                   </div>
 
                   <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap shrink-0">
-                    {/* Preview All Files (Live App Sandbox) Button */}
                     <button
                       type="button"
                       onClick={() => {
@@ -649,18 +633,15 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
                         }
                       }}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#d97757] hover:bg-[#c66b4d] text-white text-xs font-semibold shadow-xs active:scale-95 transition-all cursor-pointer whitespace-nowrap"
-                      title="Preview all generated files together in live app sandbox"
                     >
                       <Eye className="w-3.5 h-3.5" />
                       <span>Preview All Files</span>
                     </button>
 
-                    {/* Full Folder ZIP Download Button */}
                     <button
                       type="button"
                       onClick={handleDownloadFullFolderZip}
-                      className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#242320] hover:bg-[#2e2c29] border border-[#383633] text-white text-xs font-semibold shadow-xs active:scale-95 transition-all cursor-pointer whitespace-nowrap"
-                      title="Download all files in this project as a full ZIP folder"
+                      className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-white text-xs font-semibold shadow-xs active:scale-95 transition-all cursor-pointer whitespace-nowrap"
                     >
                       {isZipping ? (
                         <>
@@ -680,13 +661,11 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
                       )}
                     </button>
 
-                    {/* Open All in File & Workspace */}
                     {openWorkspaceHandler && (
                       <button
                         type="button"
                         onClick={handleSaveAllToWorkspace}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#242320] hover:bg-[#2e2c29] border border-[#383633] text-slate-200 text-xs font-medium transition-all active:scale-95 cursor-pointer whitespace-nowrap"
-                        title="Open all generated files in File & Workspace"
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-medium transition-all active:scale-95 cursor-pointer whitespace-nowrap"
                       >
                         <Folder className="w-3.5 h-3.5 text-[#d97757]" />
                         <span>Open in Workspace</span>
@@ -699,21 +678,21 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
 
             {/* Quoted Reply Preview */}
             {message.replyTo && (
-              <div className="mb-2.5 p-2 rounded-xl bg-[#201f1d] border-l-3 border-[#d97757] text-xs text-[#a19e97] flex items-start gap-2 shadow-2xs">
+              <div className="mb-2.5 p-2 rounded-xl bg-slate-50 border-l-4 border-[#d97757] text-xs text-slate-600 flex items-start gap-2 shadow-2xs">
                 <Reply className="w-3.5 h-3.5 text-[#d97757] shrink-0 mt-0.5" />
                 <div className="min-w-0 flex-1">
-                  <span className="font-bold text-[#ede8e1] block text-[11px]">
+                  <span className="font-bold text-slate-900 block text-[11px]">
                     {message.replyTo.role === 'model' ? 'Sapphire AI' : 'You'}
                   </span>
-                  <p className="truncate text-[#86837c] text-[11px] italic">
+                  <p className="truncate text-slate-500 text-[11px] italic">
                     "{message.replyTo.text}"
                   </p>
                 </div>
               </div>
             )}
 
-            {/* Text Content - Clear high-contrast text */}
-            <div className="text-[#ede8e1] break-words">
+            {/* Text Content */}
+            <div className={`break-words ${isUser ? 'text-[#ede8e1]' : 'text-slate-900'}`}>
               {isUser ? (
                 <div className="whitespace-pre-wrap text-sm leading-relaxed text-[#ede8e1] font-normal">
                   {message.text}
@@ -727,14 +706,13 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
                       onOpenFileWorkspace={openWorkspaceHandler}
                     />
                   ) : message.isStreaming ? (
-                    <div className="flex items-center gap-1.5 py-2 text-[#a19e97]">
+                    <div className="flex items-center gap-1.5 py-2 text-slate-500">
                       <motion.span animate={{ y: [0, -4, 0] }} transition={{ repeat: Infinity, duration: 0.6, delay: 0 }} className="w-2 h-2 rounded-full bg-[#d97757]" />
                       <motion.span animate={{ y: [0, -4, 0] }} transition={{ repeat: Infinity, duration: 0.6, delay: 0.2 }} className="w-2 h-2 rounded-full bg-[#d97757]" />
                       <motion.span animate={{ y: [0, -4, 0] }} transition={{ repeat: Infinity, duration: 0.6, delay: 0.4 }} className="w-2 h-2 rounded-full bg-[#d97757]" />
                     </div>
                   ) : null}
 
-                  {/* Blinking streaming cursor when text is actively arriving */}
                   {message.isStreaming && message.text && (
                     <span className="inline-block w-2 h-4 ml-1 bg-[#d97757] animate-pulse rounded-xs align-middle" />
                   )}
@@ -744,11 +722,11 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
 
             {/* Error Banner */}
             {message.error && (
-              <div className="mt-3 p-3.5 rounded-xl bg-rose-950/40 border border-rose-800/40 text-rose-200 text-sm flex items-start gap-3">
-                <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+              <div className="mt-3 p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-sm flex items-start gap-3">
+                <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
                 <div className="flex-1">
-                  <p className="font-medium text-rose-100">Sapphire Notice</p>
-                  <p className="text-xs text-rose-300 mt-0.5">{message.error}</p>
+                  <p className="font-medium text-rose-900">Sapphire Notice</p>
+                  <p className="text-xs text-rose-700 mt-0.5">{message.error}</p>
                   {onRegenerate && (
                     <button
                       id={`retry-btn-${message.id}`}
@@ -765,26 +743,24 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
 
             {/* Minimalist 5-Icon Action Bar */}
             {!message.isStreaming && !message.error && message.text && !isUser && (
-              <div className="flex items-center gap-1.5 pt-2 text-[#86837c] select-none">
-                {/* 1. Copy icon */}
+              <div className="flex items-center gap-1.5 pt-2 text-slate-500 select-none">
                 <button
                   type="button"
                   id={`copy-msg-${message.id}`}
                   onClick={handleCopy}
-                  className="p-1 text-[#86837c] hover:text-[#ede8e1] transition-colors cursor-pointer rounded-lg hover:bg-[#282724]"
+                  className="p-1 text-slate-500 hover:text-slate-900 transition-colors cursor-pointer rounded-lg hover:bg-slate-100"
                   title={copied ? 'Copied' : 'Copy'}
                   aria-label="Copy"
                 >
-                  {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                  {copied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
                 </button>
 
-                {/* 2. Speaker icon */}
                 <button
                   type="button"
                   id={`speak-msg-${message.id}`}
                   onClick={handleToggleSpeech}
-                  className={`p-1 transition-colors cursor-pointer rounded-lg hover:bg-[#282724] ${
-                    isSpeakingThis ? 'text-[#d97757]' : 'text-[#86837c] hover:text-[#ede8e1]'
+                  className={`p-1 transition-colors cursor-pointer rounded-lg hover:bg-slate-100 ${
+                    isSpeakingThis ? 'text-[#d97757]' : 'text-slate-500 hover:text-slate-900'
                   }`}
                   title={isSpeakingThis ? 'Stop voice' : 'Listen with voice'}
                   aria-label="Listen"
@@ -792,12 +768,11 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
                   {isSpeakingThis ? <VolumeX className="w-4 h-4 text-[#d97757] animate-pulse" /> : <Volume2 className="w-4 h-4" />}
                 </button>
 
-                {/* 3. Thumbs up icon */}
                 <button
                   type="button"
                   onClick={() => setFeedback(feedback === 'up' ? null : 'up')}
-                  className={`p-1 transition-colors cursor-pointer rounded-lg hover:bg-[#282724] ${
-                    feedback === 'up' ? 'text-[#d97757]' : 'text-[#86837c] hover:text-[#ede8e1]'
+                  className={`p-1 transition-colors cursor-pointer rounded-lg hover:bg-slate-100 ${
+                    feedback === 'up' ? 'text-[#d97757]' : 'text-slate-500 hover:text-slate-900'
                   }`}
                   title="Good response"
                   aria-label="Thumbs up"
@@ -805,26 +780,24 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
                   <ThumbsUp className={`w-4 h-4 ${feedback === 'up' ? 'fill-[#d97757]/30' : ''}`} />
                 </button>
 
-                {/* 4. Thumbs down icon */}
                 <button
                   type="button"
                   onClick={() => setFeedback(feedback === 'down' ? null : 'down')}
-                  className={`p-1 transition-colors cursor-pointer rounded-lg hover:bg-[#282724] ${
-                    feedback === 'down' ? 'text-rose-400' : 'text-[#86837c] hover:text-[#ede8e1]'
+                  className={`p-1 transition-colors cursor-pointer rounded-lg hover:bg-slate-100 ${
+                    feedback === 'down' ? 'text-rose-500' : 'text-slate-500 hover:text-slate-900'
                   }`}
                   title="Bad response"
                   aria-label="Thumbs down"
                 >
-                  <ThumbsDown className={`w-4 h-4 ${feedback === 'down' ? 'fill-rose-400/30' : ''}`} />
+                  <ThumbsDown className={`w-4 h-4 ${feedback === 'down' ? 'fill-rose-500/30' : ''}`} />
                 </button>
 
-                {/* 5. Regenerate icon */}
                 {onRegenerate && (
                   <button
                     type="button"
                     id={`regenerate-msg-${message.id}`}
                     onClick={onRegenerate}
-                    className="p-1 text-[#86837c] hover:text-[#ede8e1] transition-colors cursor-pointer rounded-lg hover:bg-[#282724]"
+                    className="p-1 text-slate-500 hover:text-slate-900 transition-colors cursor-pointer rounded-lg hover:bg-slate-100"
                     title="Regenerate response"
                     aria-label="Regenerate"
                   >
@@ -832,9 +805,8 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
                   </button>
                 )}
 
-                {/* Active Speaking Indicator */}
                 {isSpeakingThis && (
-                  <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[#201f1d] border border-[#33312e] text-[#ede8e1] text-[11px] font-medium animate-fadeIn ml-2">
+                  <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-slate-700 text-[11px] font-medium animate-fadeIn ml-2">
                     <span className="flex items-center gap-0.5">
                       <span className="w-1 h-2 bg-[#d97757] rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
                       <span className="w-1 h-3.5 bg-[#d97757] rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
@@ -883,4 +855,3 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
     </>
   );
 };
-
