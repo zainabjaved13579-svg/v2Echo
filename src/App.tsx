@@ -34,6 +34,7 @@ import { loadUserProfile, hasUserCompletedSetup, syncUserDataToCloud } from './s
 import { loadWorkspaceFiles } from './services/fileStorageService';
 import { speechService, detectScriptLanguage } from './services/speechService';
 import { SAPPHIRE_LOGO_URL } from './data/constants';
+import { useAppTheme } from './context/ThemeContext';
 
 const STORAGE_KEY_SESSIONS = 'sapphire_ai_chat_sessions_v1';
 const STORAGE_KEY_SETTINGS = 'sapphire_ai_chat_settings_v1';
@@ -129,10 +130,12 @@ export default function App() {
   const [authUser, setAuthUser] = useState<User | null>(null);
   const [authLoading, setAuthLoading] = useState(true);
 
-  // Guest Mode State (no cloud save, instant access)
+  // Guest Mode State (no cloud save, instant access, no history saved)
   const [isGuestMode, setIsGuestMode] = useState<boolean>(() => {
     return localStorage.getItem('sapphire_guest_mode') === 'true';
   });
+
+  const { theme } = useAppTheme();
 
   // Active navigation tab ('chat' | 'workspace' | 'codex' | 'projects' | 'artifacts' | 'customize')
   const [activeNavTab, setActiveNavTab] = useState<string>('chat');
@@ -163,24 +166,25 @@ export default function App() {
   useEffect(() => {
     const hasSeenOnboarding = localStorage.getItem('echo_profile_onboarding_shown');
     const isCompleted = hasUserCompletedSetup();
-    if (!hasSeenOnboarding && !isCompleted) {
+    if (!hasSeenOnboarding && !isCompleted && !isGuestMode) {
       const timer = setTimeout(() => {
         setIsUserProfileModalOpen(true);
         localStorage.setItem('echo_profile_onboarding_shown', 'true');
       }, 1500);
       return () => clearTimeout(timer);
     }
-  }, []);
+  }, [isGuestMode]);
 
-  // Automatic Cloud Sync for user data & files
+  // Automatic Cloud Sync for user data & files (STRICTLY DISABLED IN GUEST MODE)
   useEffect(() => {
+    if (isGuestMode) return;
     if (sessions.length > 0 && currentUserProfile) {
       const timer = setTimeout(() => {
         syncUserDataToCloud(currentUserProfile, sessions, loadWorkspaceFiles()).catch(() => {});
       }, 5000);
       return () => clearTimeout(timer);
     }
-  }, [sessions, currentUserProfile]);
+  }, [sessions, currentUserProfile, isGuestMode]);
 
   // Reply tracking state
   const [replyTo, setReplyTo] = useState<{
@@ -214,14 +218,15 @@ export default function App() {
   const currentSession =
     sessions.find((s) => s.id === currentSessionId) || sessions[0] || createNewSession(settings);
 
-  // Save sessions to localStorage
+  // Save sessions to localStorage (STRICTLY DISABLED IN GUEST MODE: NO HISTORY SAVED)
   useEffect(() => {
+    if (isGuestMode) return;
     try {
       localStorage.setItem(STORAGE_KEY_SESSIONS, JSON.stringify(sessions));
     } catch (e) {
       console.error('Failed to save sessions:', e);
     }
-  }, [sessions]);
+  }, [sessions, isGuestMode]);
 
   // Save settings to localStorage
   useEffect(() => {
@@ -324,8 +329,8 @@ export default function App() {
     setInput('');
     setReplyTo(null);
 
-    // Sync to Firestore if authenticated
-    if (authUser?.uid) {
+    // Sync to Firestore if authenticated and not in guest mode
+    if (!isGuestMode && authUser?.uid) {
       syncTabToFirestore(authUser.uid, fresh);
     }
   };
@@ -333,7 +338,7 @@ export default function App() {
   // Close session tab - if all closed, creates a fresh new tab
   const handleCloseSessionTab = (sessionId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (authUser?.uid) {
+    if (!isGuestMode && authUser?.uid) {
       deleteTabFromFirestore(authUser.uid, sessionId);
     }
     setSessions((prev) => {
@@ -342,7 +347,7 @@ export default function App() {
         const fresh = createNewSession(settings);
         setCurrentSessionId(fresh.id);
         setIsStartingScreen(false);
-        if (authUser?.uid) {
+        if (!isGuestMode && authUser?.uid) {
           syncTabToFirestore(authUser.uid, fresh);
         }
         return [fresh];
@@ -365,7 +370,7 @@ export default function App() {
 
   // Delete session
   const handleDeleteSession = (id: string) => {
-    if (authUser?.uid) {
+    if (!isGuestMode && authUser?.uid) {
       deleteTabFromFirestore(authUser.uid, id);
     }
     setSessions((prev) => {
@@ -374,7 +379,7 @@ export default function App() {
         const fresh = createNewSession(settings);
         setCurrentSessionId(fresh.id);
         setIsStartingScreen(false);
-        if (authUser?.uid) {
+        if (!isGuestMode && authUser?.uid) {
           syncTabToFirestore(authUser.uid, fresh);
         }
         return [fresh];
@@ -846,7 +851,9 @@ Please carefully examine, understand, and analyze this uploaded document/file an
   };
 
   return (
-    <div className="flex h-full w-full bg-[#0e0f12] text-[#edeef2] overflow-hidden select-none sm:select-auto font-['Plus_Jakarta_Sans',sans-serif]">
+    <div className={`flex h-full w-full ${
+      theme === 'moon' ? 'bg-[#151515] text-white' : 'bg-[#191817] text-[#edeef2]'
+    } overflow-hidden select-none sm:select-auto font-['Plus_Jakarta_Sans',sans-serif]`}>
       {/* Sidebar: Shown in chat view or toggled open */}
       <AnimatePresence>
         {(!isStartingScreen || isSidebarOpen) && activeNavTab !== 'codex' && (
@@ -885,14 +892,20 @@ Please carefully examine, understand, and analyze this uploaded document/file an
       </AnimatePresence>
 
       {/* Main Content View */}
-      <main className="flex-1 flex flex-col h-full min-w-0 relative bg-[#191817] overflow-hidden">
+      <main className={`flex-1 flex flex-col h-full min-w-0 relative ${
+        theme === 'moon' ? 'bg-[#151515]' : 'bg-[#191817]'
+      } overflow-hidden`}>
         {/* Sleek Floating Menu Button when sidebar is collapsed */}
         {!isSidebarOpen && (
           <button
             type="button"
             id="floating-sidebar-toggle-btn"
             onClick={() => setIsSidebarOpen(true)}
-            className="absolute top-3.5 left-3.5 z-30 p-2.5 rounded-xl bg-[#201f1d] hover:bg-[#282724] border border-[#33312e] text-[#a19e97] hover:text-[#ede8e1] shadow-lg transition-all active:scale-95 cursor-pointer"
+            className={`absolute top-3.5 left-3.5 z-30 p-2.5 rounded-xl border shadow-lg transition-all active:scale-95 cursor-pointer ${
+              theme === 'moon'
+                ? 'bg-[#20201f] hover:bg-[#282724] border-[#2b2b2a] text-white'
+                : 'bg-[#201f1d] hover:bg-[#282724] border-[#33312e] text-[#a19e97] hover:text-[#ede8e1]'
+            }`}
             title="Open Sidebar"
             aria-label="Open Sidebar"
           >
@@ -928,7 +941,9 @@ Please carefully examine, understand, and analyze this uploaded document/file an
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.25, ease: 'easeInOut' }}
-              className="flex-1 h-full w-full overflow-y-auto bg-[#0e0f12]"
+              className={`flex-1 h-full w-full overflow-y-auto ${
+                theme === 'moon' ? 'bg-[#151515]' : 'bg-[#0e0f12]'
+              }`}
             >
               <EmptyState
                 onSendMessage={(text) => handleSendMessage(text)}
@@ -956,39 +971,88 @@ Please carefully examine, understand, and analyze this uploaded document/file an
               />
             </motion.div>
           ) : (
-            /* Active Chat Stream View - Clean No-Bar Design */
+            /* Active Chat Stream View */
             <motion.div
               key="chat-view"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.25, ease: 'easeInOut' }}
-              className="flex-1 flex flex-col h-full min-w-0 relative bg-[#0e0f12] overflow-hidden"
+              className={`flex-1 flex flex-col h-full min-w-0 relative ${
+                theme === 'moon' ? 'bg-[#151515]' : 'bg-white'
+              } overflow-hidden`}
             >
+              {/* Header with Theme Toggle & controls */}
+              <ChatHeader
+                currentSession={currentSession}
+                userProfile={currentUserProfile}
+                onOpenProfile={() => setIsUserProfileModalOpen(true)}
+                onToggleSidebar={() => setIsSidebarOpen((prev) => !prev)}
+                onNewChat={handleNewChat}
+                onClearMessages={handleClearMessages}
+                onRenameSession={(title) => handleRenameSession(currentSession.id, title)}
+                onOpenSettings={() => setIsSettingsModalOpen(true)}
+                onOpenFileManager={handleOpenFileManager}
+                onOpenFileWorkspace={() => {
+                  setActiveNavTab('workspace');
+                  setIsWorkspaceOpen(true);
+                }}
+                onOpenGetApp={() => setIsDownloadModalOpen(true)}
+                onExportChat={handleExportChat}
+                onGoHome={() => setIsStartingScreen(true)}
+              />
+
+              {/* Guest Mode Banner: no history saved, no firebase */}
+              {isGuestMode && (
+                <div className={`px-4 py-1.5 flex items-center justify-between text-xs border-b ${
+                  theme === 'moon' ? 'bg-[#20201f] border-[#2b2b2a] text-white' : 'bg-amber-50 border-amber-200 text-amber-900'
+                }`}>
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-amber-400" />
+                    <span className="font-semibold">Guest Mode</span>
+                    <span className="hidden sm:inline text-xs opacity-75">— No chat history saved, Firebase database bypassed</span>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setIsGuestMode(false);
+                      localStorage.removeItem('sapphire_guest_mode');
+                      setAuthUser(null);
+                    }}
+                    className="text-xs text-[#d97757] hover:underline cursor-pointer font-medium"
+                  >
+                    Sign In
+                  </button>
+                </div>
+              )}
+
               {/* Scrollable Conversation Stream */}
               <div
                 ref={chatContainerRef}
                 onScroll={handleScroll}
-                className="flex-1 overflow-y-auto overflow-x-hidden scroll-smooth flex flex-col bg-[#0e0f12]"
+                className={`flex-1 overflow-y-auto overflow-x-hidden scroll-smooth flex flex-col ${
+                  theme === 'moon' ? 'bg-[#151515]' : 'bg-white'
+                }`}
               >
                 {currentSession.messages.length === 0 ? (
                   <div className="flex-1 flex flex-col items-center justify-center p-6 text-center max-w-xl mx-auto my-auto animate-fadeIn">
-                    <div className="w-12 h-12 rounded-xl bg-[#18191e] border border-[#272a33] p-1.5 flex items-center justify-center mb-3 shadow-md">
+                    <div className={`w-14 h-14 rounded-2xl p-1.5 flex items-center justify-center mb-3 shadow-md ${
+                      theme === 'moon' ? 'bg-[#20201f] border border-[#2b2b2a]' : 'bg-slate-100 border border-slate-200'
+                    }`}>
                       <img
                         src={SAPPHIRE_LOGO_URL}
                         alt="Sapphire"
-                        className="w-full h-full rounded-lg object-cover ring-1 ring-blue-500/30"
+                        className="w-full h-full rounded-xl object-cover ring-1 ring-[#d97757]/30"
                       />
                     </div>
-                    <h3 className="font-medium text-xl text-[#edeef2] mb-1">
+                    <h3 className={`font-semibold text-xl mb-1 ${theme === 'moon' ? 'text-white' : 'text-slate-900'}`}>
                       Sapphire Chat
                     </h3>
-                    <p className="text-xs text-[#9ca3af] max-w-md">
+                    <p className={`text-xs max-w-md ${theme === 'moon' ? 'text-[#a19e97]' : 'text-slate-500'}`}>
                       Ask questions, brainstorm, or generate and preview responsive code.
                     </p>
                   </div>
                 ) : (
-                  <div className="divide-y divide-[#1f222b]">
+                  <div className="space-y-1 py-2">
                     {currentSession.messages.map((msg) => (
                       <ChatMessageItem
                         key={msg.id}

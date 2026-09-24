@@ -13,6 +13,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { ImageAttachment, UploadedFileAttachment, SupportedLanguage } from '../types';
 import { createSpeechRecognition, speechService } from '../services/speechService';
+import { useAppTheme } from '../context/ThemeContext';
 
 const MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024; // 25MB
 
@@ -49,6 +50,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   replyTo,
   onCancelReply
 }) => {
+  const { theme } = useAppTheme();
   const [attachedImage, setAttachedImage] = useState<ImageAttachment | null>(null);
   const [attachedFile, setAttachedFile] = useState<UploadedFileAttachment | null>(null);
   const [fileErrorMessage, setFileErrorMessage] = useState<string | null>(null);
@@ -269,17 +271,23 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         </div>
       )}
 
-      {/* Main Input Card - Sapphire Brown W Theme */}
+      {/* Main Input Card - Moon #20201f / #2b2b2a or Sun Theme */}
       <div
-        className={`relative w-full rounded-2xl sm:rounded-3xl bg-[#201f1d] border transition-all shadow-xl ${
+        className={`relative w-full rounded-3xl transition-all shadow-xl ${
+          theme === 'moon' ? 'bg-[#20201f]' : 'bg-white'
+        } border ${
           isDragging
             ? 'border-[#d97757] ring-2 ring-[#d97757]/30'
-            : 'border-[#33312e] focus-within:border-[#d97757]/60'
+            : theme === 'moon'
+            ? 'border-[#2b2b2a] focus-within:border-[#d97757]/60'
+            : 'border-slate-200 focus-within:border-[#d97757]/60'
         }`}
       >
         {/* Attached File Preview */}
         {attachedFile && (
-          <div className="mx-3 mt-2.5 p-2 bg-[#282724] border border-[#383633] rounded-xl flex items-center justify-between gap-3 text-xs text-[#ede8e1]">
+          <div className={`mx-3 mt-2.5 p-2 rounded-2xl flex items-center justify-between gap-3 text-xs border ${
+            theme === 'moon' ? 'bg-[#151515] border-[#2b2b2a] text-white' : 'bg-slate-100 border-slate-200 text-slate-800'
+          }`}>
             <div className="flex items-center gap-2 min-w-0">
               <FileCode className="w-4 h-4 text-[#d97757] shrink-0" />
               <span className="truncate max-w-[200px] sm:max-w-sm">{attachedFile.name}</span>
@@ -296,12 +304,16 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
         {/* Attached Image Preview */}
         {attachedImage && (
-          <div className="mx-3 mt-2.5 p-2 bg-[#282724] border border-[#383633] rounded-xl flex items-center justify-between gap-3 text-xs text-[#ede8e1]">
+          <div className={`mx-3 mt-2.5 p-2 rounded-2xl flex items-center justify-between gap-3 text-xs border ${
+            theme === 'moon' ? 'bg-[#151515] border-[#2b2b2a] text-white' : 'bg-slate-100 border-slate-200 text-slate-800'
+          }`}>
             <div className="flex items-center gap-2 min-w-0">
               <img
                 src={attachedImage.dataUrl}
                 alt="Uploaded"
-                className="w-8 h-8 rounded-lg object-cover border border-[#383633]"
+                className={`w-8 h-8 rounded-xl object-cover border ${
+                  theme === 'moon' ? 'border-[#2b2b2a]' : 'border-slate-200'
+                }`}
               />
               <span className="truncate max-w-[200px]">{attachedImage.name || 'Image'}</span>
             </div>
@@ -316,7 +328,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
         )}
 
         {/* Text Area */}
-        <div className="px-3.5 pt-3 pb-1.5">
+        <div className="px-4 pt-3 pb-1.5">
           <textarea
             ref={textareaRef}
             id="chat-input-textarea"
@@ -332,19 +344,27 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                 ? 'Ask about this image...'
                 : 'How can I help you today?'
             }
-            className="w-full bg-transparent text-[#ede8e1] placeholder-[#86837c] text-sm sm:text-base focus:outline-none resize-none max-h-40 leading-relaxed font-normal"
+            className={`w-full bg-transparent text-sm sm:text-base focus:outline-none resize-none max-h-40 leading-relaxed font-normal ${
+              theme === 'moon' ? 'text-white placeholder-[#737373]' : 'text-slate-900 placeholder-slate-400'
+            }`}
           />
         </div>
 
         {/* Bottom Bar: ONLY + on the left, Search 🌐 + Mic + Send on the right */}
-        <div className="px-3 pb-2.5 pt-1 flex items-center justify-between gap-2 border-t border-[#2a2926]">
-          {/* Left: ONLY + icon button (Square with soft rounded corners) */}
+        <div className={`px-3.5 pb-2.5 pt-1.5 flex items-center justify-between gap-2 border-t ${
+          theme === 'moon' ? 'border-[#2b2b2a]' : 'border-slate-100'
+        }`}>
+          {/* Left: ONLY + icon button */}
           <div className="relative">
             <button
               type="button"
               id="chat-plus-menu-btn"
               onClick={() => setIsPlusMenuOpen((prev) => !prev)}
-              className="w-7 h-7 rounded-xl bg-[#282724] hover:bg-[#32302c] text-[#ede8e1] flex items-center justify-center transition-colors cursor-pointer border border-[#383633]"
+              className={`w-7 h-7 rounded-2xl flex items-center justify-center transition-colors cursor-pointer border ${
+                theme === 'moon'
+                  ? 'bg-[#151515] hover:bg-[#282724] text-white border-[#2b2b2a]'
+                  : 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-200'
+              }`}
               title="Upload file or image"
             >
               <span className="text-lg leading-none font-light mb-0.5">+</span>
@@ -357,12 +377,18 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                   initial={{ opacity: 0, scale: 0.95, y: 10 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                  className="absolute left-0 bottom-9 z-50 w-44 bg-[#201f1d] border border-[#33312e] rounded-2xl shadow-2xl p-1.5 space-y-1 text-xs text-[#ede8e1]"
+                  className={`absolute left-0 bottom-9 z-50 w-44 rounded-2xl shadow-2xl p-1.5 space-y-1 text-xs border ${
+                    theme === 'moon'
+                      ? 'bg-[#20201f] border-[#2b2b2a] text-white'
+                      : 'bg-white border-slate-200 text-slate-800 shadow-xl'
+                  }`}
                 >
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="w-full px-3 py-2 rounded-xl hover:bg-[#282724] flex items-center gap-2.5 transition-colors cursor-pointer text-left"
+                    className={`w-full px-3 py-2 rounded-xl flex items-center gap-2.5 transition-colors cursor-pointer text-left ${
+                      theme === 'moon' ? 'hover:bg-[#151515]' : 'hover:bg-slate-100'
+                    }`}
                   >
                     <Paperclip className="w-4 h-4 text-[#d97757]" />
                     <span>Upload file</span>
@@ -371,7 +397,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                   <button
                     type="button"
                     onClick={() => imageInputRef.current?.click()}
-                    className="w-full px-3 py-2 rounded-xl hover:bg-[#282724] flex items-center gap-2.5 transition-colors cursor-pointer text-left"
+                    className={`w-full px-3 py-2 rounded-xl flex items-center gap-2.5 transition-colors cursor-pointer text-left ${
+                      theme === 'moon' ? 'hover:bg-[#151515]' : 'hover:bg-slate-100'
+                    }`}
                   >
                     <ImageIcon className="w-4 h-4 text-[#d97757]" />
                     <span>Upload image</span>
@@ -388,10 +416,12 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               type="button"
               id="search-grounding-btn"
               onClick={() => setUseSearchGrounding((prev) => !prev)}
-              className={`p-1.5 sm:px-2 sm:py-1 rounded-xl text-xs flex items-center gap-1 transition-all cursor-pointer border ${
+              className={`p-1.5 sm:px-2.5 sm:py-1 rounded-2xl text-xs flex items-center gap-1.5 transition-all cursor-pointer border ${
                 useSearchGrounding
-                  ? 'bg-[#d97757]/20 text-[#d97757] border-[#d97757]/50 font-medium'
-                  : 'bg-[#282724] hover:bg-[#32302c] text-[#a19e97] border-[#383633]'
+                  ? 'bg-[#d97757]/20 text-[#d97757] border-[#d97757]/50 font-semibold'
+                  : theme === 'moon'
+                  ? 'bg-[#151515] hover:bg-[#282724] text-[#a3a3a3] hover:text-white border-[#2b2b2a]'
+                  : 'bg-slate-100 hover:bg-slate-200 text-slate-600 border-slate-200'
               }`}
               title="Toggle Live Web Search"
             >
@@ -404,10 +434,12 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               type="button"
               id="voice-mic-btn"
               onClick={toggleRecording}
-              className={`p-1.5 rounded-xl transition-all cursor-pointer border ${
+              className={`p-1.5 rounded-2xl transition-all cursor-pointer border ${
                 isRecording
                   ? 'bg-rose-600 text-white animate-pulse border-rose-500'
-                  : 'bg-[#282724] hover:bg-[#32302c] text-[#a19e97] hover:text-[#ede8e1] border-[#383633]'
+                  : theme === 'moon'
+                  ? 'bg-[#151515] hover:bg-[#282724] text-[#a3a3a3] hover:text-white border-[#2b2b2a]'
+                  : 'bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 border-slate-200'
               }`}
               title="Voice dictation"
             >

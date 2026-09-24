@@ -470,28 +470,40 @@ ${html}
 </html>`;
     }
 
-    // Auto-link all adjacent css and js files in workspace (e.g. style.css, script.js)
+    // Fix invalid tailwind browser script if present
+    html = html.replace(
+      /<script[^>]*src="[^"]*@tailwindcss\/browser[^"]*"[^>]*><\/script>/gi,
+      '<script src="https://cdn.tailwindcss.com"></script>'
+    );
+
+    // Auto-link and inline all adjacent css and js files in workspace (e.g. style.css, script.js)
     const cssFiles = workspaceFiles.filter((f) => f.name.endsWith('.css') && f.id !== file.id);
     const jsFiles = workspaceFiles.filter(
-      (f) => (f.name.endsWith('.js') || f.name.endsWith('.ts')) && f.id !== file.id
+      (f) => (f.name.endsWith('.js') || f.name.endsWith('.ts') || f.name.endsWith('.jsx') || f.name.endsWith('.tsx')) && f.id !== file.id
     );
 
     cssFiles.forEach((cssFile) => {
-      if (!html.includes(cssFile.content.slice(0, 30))) {
+      const linkRegex = new RegExp(`<link[^>]*href=["'](?:\\.\\/)?${cssFile.name.replace('.', '\\.')}["'][^>]*>`, 'gi');
+      if (linkRegex.test(html)) {
+        html = html.replace(linkRegex, `<style data-inlined="${cssFile.name}">\n/* Auto-bundled: ${cssFile.name} */\n${cssFile.content}\n</style>`);
+      } else if (!html.includes(cssFile.content.slice(0, 30))) {
         if (html.includes('</head>')) {
-          html = html.replace('</head>', `<style>\n/* Auto-bundled: ${cssFile.name} */\n${cssFile.content}\n</style>\n</head>`);
+          html = html.replace('</head>', `<style data-inlined="${cssFile.name}">\n/* Auto-bundled: ${cssFile.name} */\n${cssFile.content}\n</style>\n</head>`);
         } else {
-          html = `<style>\n/* Auto-bundled: ${cssFile.name} */\n${cssFile.content}\n</style>\n${html}`;
+          html = `<style data-inlined="${cssFile.name}">\n/* Auto-bundled: ${cssFile.name} */\n${cssFile.content}\n</style>\n${html}`;
         }
       }
     });
 
     jsFiles.forEach((jsFile) => {
+      const scriptRegex = new RegExp(`<script[^>]*src=["'](?:\\.\\/)?${jsFile.name.replace('.', '\\.')}["'][^>]*>\\s*<\\/script>`, 'gi');
+      html = html.replace(scriptRegex, '');
       if (!html.includes(jsFile.content.slice(0, 30))) {
+        const injected = `<script data-inlined="${jsFile.name}">\n// Auto-bundled: ${jsFile.name}\ntry {\n${jsFile.content}\n} catch (e) { console.error('Error in ${jsFile.name}:', e); }\n</script>`;
         if (html.includes('</body>')) {
-          html = html.replace('</body>', `<script>\n/* Auto-bundled: ${jsFile.name} */\n${jsFile.content}\n</script>\n</body>`);
+          html = html.replace('</body>', `${injected}\n</body>`);
         } else {
-          html = `${html}\n<script>\n/* Auto-bundled: ${jsFile.name} */\n${jsFile.content}\n</script>`;
+          html = `${html}\n${injected}`;
         }
       }
     });
@@ -520,31 +532,33 @@ ${html}
 </html>`;
   }
 
-  // If JavaScript / TypeScript: create live runner sandbox with interactive console
-  if (lang === 'javascript' || lang === 'typescript' || lang === 'js' || lang === 'ts') {
+  // If JavaScript / TypeScript / JSX: create live runner sandbox with interactive console & Babel
+  if (lang === 'javascript' || lang === 'typescript' || lang === 'js' || lang === 'ts' || lang === 'jsx' || lang === 'tsx') {
+    const safeContent = JSON.stringify(file.content);
     return `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
   <title>JS Runner - ${file.name}</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.6/babel.min.js"></script>
   <style>
     * { box-sizing: border-box; }
-    body { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; background: #090d16; color: #e2e8f0; padding: 20px; font-size: 13.5px; }
-    #console-logs { background: #0f172a; border: 1px solid #1e293b; border-radius: 8px; padding: 16px; min-height: 200px; max-height: 500px; overflow-y: auto; line-height: 1.6; }
-    .log-line { border-bottom: 1px solid #1e293b; padding: 4px 0; display: flex; gap: 8px; }
+    body { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; background: #090d16; color: #e2e8f0; padding: 20px; font-size: 13.5px; margin: 0; }
+    #console-logs { background: #0f172a; border: 1px solid #1e293b; border-radius: 12px; padding: 16px; min-height: 240px; max-height: 520px; overflow-y: auto; line-height: 1.6; }
+    .log-line { border-bottom: 1px solid #1e293b; padding: 5px 0; display: flex; gap: 8px; font-size: 12.5px; }
     .log-time { color: #64748b; font-size: 11px; }
     .log-info { color: #38bdf8; }
-    .log-error { color: #f43f5e; }
+    .log-error { color: #f43f5e; font-weight: bold; }
     .log-warn { color: #fbbf24; }
     .header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-    .badge { background: #4f46e5; color: white; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; }
+    .badge { background: #d97757; color: white; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: bold; }
     #canvas-container { margin-top: 16px; }
   </style>
 </head>
 <body>
   <div class="header-bar">
     <div><strong>Live JS/TS Execution Console</strong> <span class="badge">${file.name}</span></div>
-    <div style="color: #94a3b8; font-size: 12px;">Auto-executed sandbox</div>
+    <div style="color: #94a3b8; font-size: 12px;">Auto-transpiled sandbox</div>
   </div>
   <div id="console-logs"></div>
   <div id="canvas-container"></div>
@@ -566,10 +580,22 @@ ${html}
 
     try {
       printLog('info', '▶️ Executing ${file.name}...');
-      ${file.content}
+      const rawCode = ${safeContent};
+      let executable = rawCode;
+      if (window.Babel) {
+        try {
+          const res = Babel.transform(rawCode, { presets: ['env', 'typescript', 'react'] });
+          executable = res.code;
+        } catch (babelErr) {
+          // If babel transpile had syntax issue, log warning and try raw
+          printLog('warn', 'Babel note: ' + babelErr.message);
+        }
+      }
+      const runFn = new Function('console', 'printLog', executable);
+      runFn(console, printLog);
       printLog('info', '✅ Script completed execution.');
     } catch (err) {
-      printLog('error', 'Execution Error: ' + err.message);
+      printLog('error', 'Execution Error: ' + (err ? err.message : String(err)));
     }
   </script>
 </body>

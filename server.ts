@@ -662,25 +662,7 @@ app.post('/api/chat/stream', async (req, res) => {
     effectiveSystemInstruction += '\n[LOGICAL THINKING DIRECTIVE]: The user specifically requested a logical conceptual diagram (e.g., Venn diagram or comparison table). Explain the logic in clear text and present a structured Markdown comparison table detailing all sets and the intersection. Do NOT draw text-based ASCII art diagrams.';
   }
 
-  const isBasicGreeting = /^(hi|hello|hey|salam|assalam|aoa|hola|sup|good morning|good evening|good afternoon)[\s!.]*$/i.test(lastUserText);
-  if (isBasicGreeting) {
-    const greetingReplies = [
-      "Hello! I'm Sapphire AI, your principal AI software architect and coding assistant. What can I build, code, or solve for you today?",
-      "Hi there! Sapphire AI is ready. Whether you need full-stack web code, bug fixes, or rapid answers, let's get started!",
-      "Hey! Sapphire AI here, running fast and ready. What project or question are we working on?"
-    ];
-    const reply = greetingReplies[Math.floor(Math.random() * greetingReplies.length)];
-    const words = reply.split(' ');
-    for (let i = 0; i < words.length; i += 3) {
-      const chunk = words.slice(i, i + 3).join(' ');
-      res.write(`data: ${JSON.stringify({ text: (i === 0 ? '' : ' ') + chunk })}\n\n`);
-      await new Promise((r) => setTimeout(r, 6));
-    }
-    res.write(`data: [DONE]\n\n`);
-    res.end();
-    return;
-  }
-
+  // Delegate all prompts directly to Gemini models for dynamic, high-quality, non-repeating answers
   // If live API key is present, use official Google Gemini API with low-latency streaming
   if (apiKey) {
     try {
@@ -729,10 +711,11 @@ Be fast, clear, and articulate. Do NOT include unnecessary internal monologue or
         config.tools = [{ googleSearch: {} }];
       }
 
-      // Fast, verified models: gemini-3.8-flash and gemini-3.6-flash provide sub-second latency
+      // Fast, active models per official guidelines:
+      // gemini-flash-latest, gemini-3.1-flash-lite, gemini-3.8-flash, and gemini-3.1-pro-preview
       const candidateModels = isCodingRequest
-        ? ['gemini-3.8-flash', 'gemini-3.6-flash', 'gemini-3.1-pro-preview']
-        : ['gemini-3.8-flash', 'gemini-3.6-flash', 'gemini-flash-latest'];
+        ? ['gemini-flash-latest', 'gemini-3.1-flash-lite', 'gemini-3.8-flash', 'gemini-3.1-pro-preview']
+        : ['gemini-flash-latest', 'gemini-3.1-flash-lite', 'gemini-3.8-flash'];
 
       let streamedAny = false;
 
@@ -772,8 +755,11 @@ Be fast, clear, and articulate. Do NOT include unnecessary internal monologue or
             return;
           }
         } catch (streamErr: any) {
-          console.warn(`Gemini stream attempt notice (${currModel}):`, streamErr?.message?.slice(0, 100));
+          const errMsg = streamErr?.message || String(streamErr);
+          console.warn(`Gemini stream attempt notice (${currModel}):`, errMsg.slice(0, 120));
+          // If stream already started sending chunks to client, don't try another model
           if (streamedAny) break;
+          // Otherwise continue to next model in candidateModels
         }
       }
     } catch (error: any) {
@@ -887,11 +873,10 @@ app.post('/api/chat', async (req, res) => {
         }
       });
 
-      let targetModel = 'gemini-3.7-flash';
+      let targetModel = 'gemini-flash-latest';
       if (model.includes('3.1-pro') || model.includes('pro')) targetModel = 'gemini-3.1-pro-preview';
       else if (model.includes('lite')) targetModel = 'gemini-3.1-flash-lite';
-      else if (model.includes('flash-latest')) targetModel = 'gemini-flash-latest';
-      else if (model.includes('3.7') || model.includes('flash') || model.includes('echo')) targetModel = 'gemini-3.7-flash';
+      else if (model.includes('flash-latest') || model.includes('flash') || model.includes('echo') || model.includes('sapphire')) targetModel = 'gemini-flash-latest';
       else if (model.startsWith('gemini-')) targetModel = model;
 
       const baseOwnerInstruction = "The creator and developer of this AI is Shaheer Hassan. Do NOT advertise or state who created you unprompted or in routine greetings. ONLY when a user explicitly asks who created you, who made you, who is your developer, who is your owner, who built Echo, or who is Shaheer Hassan, clearly and politely state that Shaheer Hassan is your creator and developer. Always generate clean, production-ready, complete code directly without unsolicited boilerplate example files.";
@@ -908,10 +893,10 @@ app.post('/api/chat', async (req, res) => {
         config.tools = [{ googleSearch: {} }];
       }
 
-      // Resilient fallback candidate list with high-capacity models
+      // Resilient fallback candidate list with active official models
       const candidateModels = targetModel === 'gemini-3.1-pro-preview'
-        ? ['gemini-3.1-pro-preview', 'gemini-3.1-flash-lite', 'gemini-flash-latest']
-        : ['gemini-3.1-flash-lite', targetModel, 'gemini-flash-latest', 'gemini-2.5-flash', 'gemini-3.8-flash'].filter((m, i, arr) => arr.indexOf(m) === i);
+        ? ['gemini-3.1-pro-preview', 'gemini-flash-latest', 'gemini-3.1-flash-lite']
+        : ['gemini-flash-latest', 'gemini-3.1-flash-lite', 'gemini-3.8-flash'].filter((m, i, arr) => arr.indexOf(m) === i);
 
       for (const currModel of candidateModels) {
         try {
@@ -1131,11 +1116,9 @@ Return your response formatted cleanly with code blocks showing the filename or 
   // 2. High-performance models for code generation (Gemini 3.1 Flash Lite / Flash Latest)
   if (geminiKey) {
     const candidateModels = [
-      'gemini-3.1-flash-lite',
       'gemini-flash-latest',
-      'gemini-2.5-flash',
+      'gemini-3.1-flash-lite',
       'gemini-3.8-flash',
-      'gemini-3-flash-preview',
       'gemini-3.1-pro-preview'
     ];
 
@@ -1795,10 +1778,9 @@ ${commandPrompt}`;
   // 2. Try Gemini with high-resiliency candidate models
   if (geminiKey) {
     const candidateModels = [
+      'gemini-flash-latest',
       'gemini-3.1-flash-lite',
-      'gemini-3-flash-preview',
-      'gemini-3.8-flash',
-      'gemini-flash-latest'
+      'gemini-3.8-flash'
     ];
 
     for (const model of candidateModels) {

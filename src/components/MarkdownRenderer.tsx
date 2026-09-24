@@ -30,6 +30,7 @@ import {
   resolveOfficialCodeFileName
 } from '../services/fileStorageService';
 import { remakeAiCode } from '../services/codeService';
+import { useAppTheme } from '../context/ThemeContext';
 
 interface MarkdownRendererProps {
   content: string;
@@ -60,10 +61,12 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
   onPreviewCode,
   onOpenFileWorkspace
 }) => {
+  const { theme } = useAppTheme();
+  const isMoon = theme === 'moon';
   const processedContent = useMemo(() => preprocessMarkdown(content), [content]);
 
   return (
-    <div className="prose max-w-none text-slate-700 leading-relaxed text-sm selection:bg-indigo-500/20">
+    <div className={`prose max-w-none ${isMoon ? 'text-white' : 'text-slate-900'} leading-relaxed text-sm selection:bg-[#d97757]/30`}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkMath]}
         rehypePlugins={[rehypeRaw, rehypeKatex]}
@@ -79,26 +82,25 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
               ['exam', 'paper', 'pattern', 'text', 'txt', 'markdown', 'md'].includes(rawLang) &&
               /(###\s*section|section\s+[a-c]:|paper\s*pattern|question\s*paper|marks\s*:|total\s*marks|attempt\s*any|time\s*allowed)/i.test(codeString);
 
-            // If it is an exam or paper pattern, DO NOT render as code block or trigger live preview!
-            // Render it directly as a clean structured examination document card.
+            // If it is an exam or paper pattern, render as a clean card with white text
             if (isExamOrPaperPattern) {
               return (
-                <div className="my-4 p-4 sm:p-6 rounded-2xl bg-white border border-slate-200/90 shadow-2xs space-y-3">
-                  <div className="flex items-center gap-2 pb-2.5 border-b border-slate-100 text-slate-800 font-bold text-xs uppercase tracking-wider">
-                    <GraduationCap className="w-4 h-4 text-indigo-600" />
+                <div className="my-4 p-4 sm:p-6 rounded-2xl bg-[#20201f] border border-[#2b2b2a] shadow-md space-y-3">
+                  <div className="flex items-center gap-2 pb-2.5 border-b border-[#2b2b2a] text-white font-bold text-xs uppercase tracking-wider">
+                    <GraduationCap className="w-4 h-4 text-[#d97757]" />
                     <span>Examination Paper & Answers Document</span>
                   </div>
-                  <div className="prose max-w-none text-slate-800 text-sm">
+                  <div className="prose max-w-none text-white text-sm">
                     <ReactMarkdown
                       remarkPlugins={[remarkGfm, remarkMath]}
                       rehypePlugins={[rehypeRaw, rehypeKatex]}
                       components={{
                         p({ children }: any) {
-                          return <div className="my-2 last:mb-0 leading-relaxed text-slate-800">{children}</div>;
+                          return <div className="my-2 last:mb-0 leading-relaxed text-white">{children}</div>;
                         },
                         mark({ children }) {
                           return (
-                            <mark className="bg-amber-100/90 text-amber-950 font-semibold px-1.5 py-0.5 rounded border-b border-amber-300/80 shadow-2xs inline-block my-0.5">
+                            <mark className="bg-[#d97757]/20 text-[#d97757] font-semibold px-1.5 py-0.5 rounded-lg border-b border-[#d97757]/40 shadow-xs inline-block my-0.5">
                               {children}
                             </mark>
                           );
@@ -131,7 +133,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
 
             return (
               <code
-                className="px-1.5 py-0.5 mx-0.5 rounded-md bg-slate-100 text-indigo-700 font-mono text-[12.5px] border border-slate-200/80 font-medium"
+                className="px-1.5 py-0.5 mx-0.5 rounded-lg bg-[#20201f] text-[#d97757] font-mono text-[12.5px] border border-[#2b2b2a] font-medium"
                 {...props}
               >
                 {children}
@@ -140,15 +142,15 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
           },
           mark({ children }) {
             return (
-              <mark className="bg-amber-100/90 text-amber-950 font-semibold px-1.5 py-0.5 rounded border-b border-amber-300/80 shadow-2xs inline-block my-0.5">
+              <mark className="bg-[#d97757]/20 text-[#d97757] font-semibold px-1.5 py-0.5 rounded-lg border-b border-[#d97757]/40 shadow-xs inline-block my-0.5">
                 {children}
               </mark>
             );
           },
           table({ children }) {
             return (
-              <div className="my-4 overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-2xs">
-                <table className="w-full text-left text-sm text-slate-700 divide-y divide-slate-200">
+              <div className="my-4 overflow-x-auto rounded-2xl border border-[#2b2b2a] bg-[#20201f] shadow-md">
+                <table className="w-full text-left text-sm text-white divide-y divide-[#2b2b2a]">
                   {children}
                 </table>
               </div>
@@ -156,71 +158,68 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
           },
           th({ children }) {
             return (
-              <th className="bg-slate-50 px-4 py-2.5 font-bold text-slate-800 text-xs uppercase tracking-wider">
+              <th className="bg-[#151515] px-4 py-2.5 font-bold text-white text-xs uppercase tracking-wider">
                 {children}
               </th>
             );
           },
           td({ children }) {
-            return <td className="px-4 py-2.5 border-t border-slate-200 text-slate-600">{children}</td>;
+            return <td className="px-4 py-2.5 border-t border-[#2b2b2a] text-white">{children}</td>;
           },
           blockquote({ children }) {
             return (
-              <blockquote className="my-3 border-l-4 border-indigo-500 bg-indigo-50/60 pl-4 py-2.5 rounded-r-xl text-slate-800 italic">
+              <blockquote className="my-3 bg-[#20201f] px-4 py-2.5 rounded-2xl text-white/90 italic">
                 {children}
               </blockquote>
             );
           },
           ul({ children }) {
-            return <ul className="my-2.5 list-disc list-outside pl-5 space-y-1.5 text-slate-700">{children}</ul>;
+            return <ul className="my-2.5 list-disc list-outside pl-5 space-y-1.5 text-white">{children}</ul>;
           },
           ol({ children }) {
-            return <ol className="my-2.5 list-decimal list-outside pl-5 space-y-1.5 text-slate-700">{children}</ol>;
+            return <ol className="my-2.5 list-decimal list-outside pl-5 space-y-1.5 text-white">{children}</ol>;
           },
           li({ children }) {
-            return <li className="text-slate-700">{children}</li>;
+            return <li className="text-white">{children}</li>;
           },
           h1({ children }) {
             return (
-              <div className="mt-6 mb-3 pb-2 border-b border-slate-200">
-                <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-                  <span className="w-1.5 h-6 rounded-full bg-indigo-600 shrink-0" />
-                  <span>{children}</span>
+              <div className="mt-5 mb-2.5">
+                <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+                  {children}
                 </h1>
               </div>
             );
           },
           h2({ children }) {
             return (
-              <h2 className="text-lg sm:text-xl font-extrabold text-slate-900 mt-5 mb-2.5 tracking-tight flex items-center gap-2">
-                <span className="w-1.5 h-4 rounded-full bg-indigo-500 shrink-0" />
-                <span>{children}</span>
+              <h2 className="text-lg sm:text-xl font-extrabold text-white mt-4 mb-2 tracking-tight">
+                {children}
               </h2>
             );
           },
           h3({ children }) {
             return (
-              <h3 className="text-base sm:text-lg font-bold text-indigo-950 mt-4 mb-2 flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 shrink-0" />
-                <span>{children}</span>
+              <h3 className="text-base sm:text-lg font-bold text-white mt-3.5 mb-1.5">
+                {children}
               </h3>
             );
           },
           h4({ children }) {
             return (
-              <h4 className="text-sm sm:text-base font-bold text-slate-800 mt-3 mb-1">
+              <h4 className="text-sm sm:text-base font-bold text-white mt-3 mb-1">
                 {children}
               </h4>
             );
           },
           p({ children }: any) {
-            return <div className="my-2.5 last:mb-0 leading-relaxed text-slate-700">{children}</div>;
+            return <div className="my-2.5 last:mb-0 leading-relaxed text-white">{children}</div>;
           },
           img({ src, alt }: any) {
             return <DiagramImageCard src={src} alt={alt} />;
           },
           strong({ children }) {
-            return <strong className="font-bold text-slate-900">{children}</strong>;
+            return <strong className="font-bold text-white">{children}</strong>;
           },
           a({ href, children }) {
             return (
@@ -228,7 +227,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
                 href={href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-indigo-600 hover:text-indigo-700 underline underline-offset-4 decoration-indigo-300 hover:decoration-indigo-600 transition-colors font-semibold"
+                className="text-[#d97757] hover:underline underline-offset-4 decoration-[#d97757]/60 transition-colors font-semibold"
               >
                 {children}
               </a>

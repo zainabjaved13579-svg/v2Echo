@@ -40,6 +40,7 @@ import {
   autoSaveFile
 } from '../services/fileStorageService';
 import { loadUserProfile } from '../services/userService';
+import { useAppTheme } from '../context/ThemeContext';
 
 interface ChatMessageItemProps {
   message: ChatMessage;
@@ -224,6 +225,7 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
   onOpenFileInManager,
   onReply
 }) => {
+  const { theme } = useAppTheme();
   const activeProfile = userProfile || loadUserProfile();
   const userName = activeProfile?.name && activeProfile.name.trim() ? activeProfile.name.trim() : 'You';
   const userAvatar = activeProfile?.avatar || activeProfile?.avatarUrl;
@@ -424,9 +426,7 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
-        className={`group w-full py-4 sm:py-5 transition-colors ${
-          isUser ? 'bg-transparent text-[#ede8e1]' : 'bg-white text-slate-900'
-        }`}
+        className="group w-full py-3 sm:py-4 transition-colors bg-transparent border-none"
       >
         <div className="w-full max-w-3xl mx-auto px-3 sm:px-4 flex gap-3 sm:gap-4 items-start">
           {/* Avatar */}
@@ -436,10 +436,14 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
                 <img
                   src={userAvatar}
                   alt={userName}
-                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl object-cover bg-[#201f1d] border border-[#33312e]"
+                  className={`w-7 h-7 sm:w-8 sm:h-8 rounded-2xl object-cover border ${
+                    theme === 'moon' ? 'bg-[#201f1d] border-[#33312e]' : 'bg-slate-100 border-slate-200'
+                  }`}
                 />
               ) : (
-                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-[#201f1d] border border-[#33312e] flex items-center justify-center text-xs font-semibold text-[#ede8e1]">
+                <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-2xl border flex items-center justify-center text-xs font-bold ${
+                  theme === 'moon' ? 'bg-[#201f1d] border-[#33312e] text-white' : 'bg-slate-100 border-slate-200 text-slate-800'
+                }`}>
                   {userName.charAt(0).toUpperCase()}
                 </div>
               )
@@ -448,7 +452,9 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
                 <img
                   src={SAPPHIRE_LOGO_URL}
                   alt="Sapphire AI"
-                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl object-cover ring-1 ring-[#d97757]/40 shadow-xs bg-[#201f1d]"
+                  className={`w-7 h-7 sm:w-8 sm:h-8 rounded-2xl object-cover ring-1 ring-[#d97757]/40 shadow-xs ${
+                    theme === 'moon' ? 'bg-[#201f1d]' : 'bg-white'
+                  }`}
                 />
                 {message.isStreaming && (
                   <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-[#d97757] rounded-full animate-ping" />
@@ -458,14 +464,22 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
           </div>
 
           {/* Message Content Body */}
-          <div className={`flex-1 min-w-0 ${isUser ? 'bg-[#201f1d] text-[#ede8e1] px-4 py-3 rounded-2xl border border-[#33312e] max-w-2xl' : 'space-y-3 py-0.5 text-slate-900'}`}>
+          <div
+            className={`flex-1 min-w-0 ${
+              isUser
+                ? `${theme === 'moon' ? 'bg-[#20201f] border-[#2b2b2a] text-white' : 'bg-slate-100 border-slate-200 text-slate-900'} px-4 py-3 rounded-2xl border max-w-2xl`
+                : `space-y-3 py-0.5 ${theme === 'moon' ? 'text-white' : 'text-slate-900'}`
+            }`}
+          >
             {/* Header row */}
             <div className="flex items-center justify-between gap-2 mb-1">
               <div className="flex items-center gap-2">
-                <span className={`font-medium text-xs sm:text-sm ${isUser ? 'text-[#f5f2eb]' : 'text-slate-900'}`}>
+                <span className={`font-semibold text-xs sm:text-sm ${
+                  theme === 'moon' ? 'text-white' : 'text-slate-900'
+                }`}>
                   {isUser ? userName : 'Sapphire'}
                 </span>
-                <span className={`text-[11px] ${isUser ? 'text-[#86837c]' : 'text-slate-500'}`}>
+                <span className={`text-[11px] ${theme === 'moon' ? 'text-[#a3a3a3]' : 'text-slate-400'}`}>
                   {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </span>
               </div>
@@ -678,13 +692,13 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
 
             {/* Quoted Reply Preview */}
             {message.replyTo && (
-              <div className="mb-2.5 p-2 rounded-xl bg-slate-50 border-l-4 border-[#d97757] text-xs text-slate-600 flex items-start gap-2 shadow-2xs">
+              <div className="mb-2.5 p-2.5 rounded-xl bg-[#20201f] text-xs text-white/80 flex items-start gap-2 shadow-2xs">
                 <Reply className="w-3.5 h-3.5 text-[#d97757] shrink-0 mt-0.5" />
                 <div className="min-w-0 flex-1">
-                  <span className="font-bold text-slate-900 block text-[11px]">
+                  <span className="font-bold text-white block text-[11px]">
                     {message.replyTo.role === 'model' ? 'Sapphire AI' : 'You'}
                   </span>
-                  <p className="truncate text-slate-500 text-[11px] italic">
+                  <p className="truncate text-white/60 text-[11px] italic">
                     "{message.replyTo.text}"
                   </p>
                 </div>
@@ -692,9 +706,9 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
             )}
 
             {/* Text Content */}
-            <div className={`break-words ${isUser ? 'text-[#ede8e1]' : 'text-slate-900'}`}>
+            <div className={`break-words ${theme === 'moon' ? 'text-white' : 'text-slate-900'}`}>
               {isUser ? (
-                <div className="whitespace-pre-wrap text-sm leading-relaxed text-[#ede8e1] font-normal">
+                <div className={`whitespace-pre-wrap text-sm leading-relaxed ${theme === 'moon' ? 'text-white' : 'text-slate-900'} font-normal`}>
                   {message.text}
                 </div>
               ) : (
@@ -706,32 +720,30 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
                       onOpenFileWorkspace={openWorkspaceHandler}
                     />
                   ) : message.isStreaming ? (
-                    <div className="flex items-center gap-1.5 py-2 text-slate-500">
+                    <div className="flex items-center gap-1.5 py-2 text-[#a3a3a3]">
                       <motion.span animate={{ y: [0, -4, 0] }} transition={{ repeat: Infinity, duration: 0.6, delay: 0 }} className="w-2 h-2 rounded-full bg-[#d97757]" />
                       <motion.span animate={{ y: [0, -4, 0] }} transition={{ repeat: Infinity, duration: 0.6, delay: 0.2 }} className="w-2 h-2 rounded-full bg-[#d97757]" />
                       <motion.span animate={{ y: [0, -4, 0] }} transition={{ repeat: Infinity, duration: 0.6, delay: 0.4 }} className="w-2 h-2 rounded-full bg-[#d97757]" />
                     </div>
                   ) : null}
 
-                  {message.isStreaming && message.text && (
-                    <span className="inline-block w-2 h-4 ml-1 bg-[#d97757] animate-pulse rounded-xs align-middle" />
-                  )}
+                  {/* Stream completed or in progress cleanly without cursor bar */}
                 </div>
               )}
             </div>
 
             {/* Error Banner */}
             {message.error && (
-              <div className="mt-3 p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-sm flex items-start gap-3">
-                <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
+              <div className="mt-3 p-3.5 rounded-2xl bg-rose-950/40 border border-rose-800/60 text-rose-200 text-sm flex items-start gap-3">
+                <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
                 <div className="flex-1">
-                  <p className="font-medium text-rose-900">Sapphire Notice</p>
-                  <p className="text-xs text-rose-700 mt-0.5">{message.error}</p>
+                  <p className="font-medium text-rose-200">Sapphire Notice</p>
+                  <p className="text-xs text-rose-300 mt-0.5">{message.error}</p>
                   {onRegenerate && (
                     <button
                       id={`retry-btn-${message.id}`}
                       onClick={onRegenerate}
-                      className="mt-2 text-xs flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#d97757] hover:bg-[#c86b4c] text-white font-medium transition-colors shadow-xs cursor-pointer"
+                      className="mt-2 text-xs flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#d97757] hover:bg-[#c86b4c] text-white font-medium transition-colors shadow-xs cursor-pointer"
                     >
                       <RotateCcw className="w-3 h-3" />
                       Retry with Sapphire
@@ -743,24 +755,24 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
 
             {/* Minimalist 5-Icon Action Bar */}
             {!message.isStreaming && !message.error && message.text && !isUser && (
-              <div className="flex items-center gap-1.5 pt-2 text-slate-500 select-none">
+              <div className="flex items-center gap-1.5 pt-2 text-[#86837c] select-none">
                 <button
                   type="button"
                   id={`copy-msg-${message.id}`}
                   onClick={handleCopy}
-                  className="p-1 text-slate-500 hover:text-slate-900 transition-colors cursor-pointer rounded-lg hover:bg-slate-100"
+                  className="p-1.5 text-[#86837c] hover:text-white transition-colors cursor-pointer rounded-xl hover:bg-[#20201f]"
                   title={copied ? 'Copied' : 'Copy'}
                   aria-label="Copy"
                 >
-                  {copied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+                  {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
                 </button>
 
                 <button
                   type="button"
                   id={`speak-msg-${message.id}`}
                   onClick={handleToggleSpeech}
-                  className={`p-1 transition-colors cursor-pointer rounded-lg hover:bg-slate-100 ${
-                    isSpeakingThis ? 'text-[#d97757]' : 'text-slate-500 hover:text-slate-900'
+                  className={`p-1.5 transition-colors cursor-pointer rounded-xl hover:bg-[#20201f] ${
+                    isSpeakingThis ? 'text-[#d97757]' : 'text-[#86837c] hover:text-white'
                   }`}
                   title={isSpeakingThis ? 'Stop voice' : 'Listen with voice'}
                   aria-label="Listen"
@@ -771,8 +783,8 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
                 <button
                   type="button"
                   onClick={() => setFeedback(feedback === 'up' ? null : 'up')}
-                  className={`p-1 transition-colors cursor-pointer rounded-lg hover:bg-slate-100 ${
-                    feedback === 'up' ? 'text-[#d97757]' : 'text-slate-500 hover:text-slate-900'
+                  className={`p-1.5 transition-colors cursor-pointer rounded-xl hover:bg-[#20201f] ${
+                    feedback === 'up' ? 'text-[#d97757]' : 'text-[#86837c] hover:text-white'
                   }`}
                   title="Good response"
                   aria-label="Thumbs up"
@@ -783,8 +795,8 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
                 <button
                   type="button"
                   onClick={() => setFeedback(feedback === 'down' ? null : 'down')}
-                  className={`p-1 transition-colors cursor-pointer rounded-lg hover:bg-slate-100 ${
-                    feedback === 'down' ? 'text-rose-500' : 'text-slate-500 hover:text-slate-900'
+                  className={`p-1.5 transition-colors cursor-pointer rounded-xl hover:bg-[#20201f] ${
+                    feedback === 'down' ? 'text-rose-400' : 'text-[#86837c] hover:text-white'
                   }`}
                   title="Bad response"
                   aria-label="Thumbs down"
@@ -797,7 +809,7 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
                     type="button"
                     id={`regenerate-msg-${message.id}`}
                     onClick={onRegenerate}
-                    className="p-1 text-slate-500 hover:text-slate-900 transition-colors cursor-pointer rounded-lg hover:bg-slate-100"
+                    className="p-1.5 text-[#86837c] hover:text-white transition-colors cursor-pointer rounded-xl hover:bg-[#20201f]"
                     title="Regenerate response"
                     aria-label="Regenerate"
                   >
@@ -806,7 +818,7 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
                 )}
 
                 {isSpeakingThis && (
-                  <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-slate-100 border border-slate-200 text-slate-700 text-[11px] font-medium animate-fadeIn ml-2">
+                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#20201f] border border-[#2b2b2a] text-white text-[11px] font-medium animate-fadeIn ml-2">
                     <span className="flex items-center gap-0.5">
                       <span className="w-1 h-2 bg-[#d97757] rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
                       <span className="w-1 h-3.5 bg-[#d97757] rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />

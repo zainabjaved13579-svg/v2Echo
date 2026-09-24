@@ -2,6 +2,7 @@ import React, { RefObject } from 'react';
 import { ChatMessageItem } from './ChatMessageItem';
 import { EmptyState } from './EmptyState';
 import { ChatSession, SupportedLanguage, AppSettings, UserProfile } from '../types';
+import { useAppTheme } from '../context/ThemeContext';
 
 interface ChatAreaProps {
   currentSession: ChatSession;
@@ -44,11 +45,15 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
   settings,
   setUseSearchGrounding
 }) => {
+  const { theme } = useAppTheme();
+
   return (
     <div
       ref={chatContainerRef}
       onScroll={onScroll}
-      className="flex-1 overflow-y-auto px-3 sm:px-6 py-4 space-y-5 scroll-smooth relative bg-[#151515]"
+      className={`flex-1 overflow-y-auto px-3 sm:px-6 py-4 space-y-5 scroll-smooth relative ${
+        theme === 'moon' ? 'bg-[#151515]' : 'bg-[#191817]'
+      }`}
     >
       {isStartingScreen ? (
         <EmptyState

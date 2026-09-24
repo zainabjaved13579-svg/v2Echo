@@ -8,8 +8,6 @@ import {
   FileCode,
   Image as ImageIcon,
   ChevronDown,
-  Edit3,
-  GraduationCap,
   Code,
   Coffee,
   Lightbulb,
@@ -19,6 +17,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import { loadUserProfile } from '../services/userService';
 import { createSpeechRecognition } from '../services/speechService';
 import { SAPPHIRE_LOGO_URL } from '../data/constants';
+import { useAppTheme } from '../context/ThemeContext';
+import { ThemeToggle } from './ThemeToggle';
 
 interface EmptyStateProps {
   onSendMessage: (text: string) => void;
@@ -42,6 +42,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   setUseSearchGrounding,
   userName: propUserName
 }) => {
+  const { theme } = useAppTheme();
   const [promptText, setPromptText] = useState('');
   const [isPlusMenuOpen, setIsPlusMenuOpen] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
@@ -53,7 +54,6 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   const imageInputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<any>(null);
 
-  // Dynamic greeting based on time of day matching screenshot
   const [greetingTime, setGreetingTime] = useState('Up late');
   const userDisplayName = propUserName || loadUserProfile().name || 'Shaheer';
   const firstName = userDisplayName.split(' ')[0] || 'Shaheer';
@@ -94,7 +94,6 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
     }
   };
 
-  // Toggle voice dictation
   const toggleRecording = () => {
     if (isRecording) {
       if (recognitionRef.current) recognitionRef.current.stop();
@@ -133,16 +132,21 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   };
 
   const suggestionChips = [
-    { label: 'Write', icon: Edit3, prompt: 'Help me draft a clear, persuasive document or article' },
-    { label: 'Learn', icon: GraduationCap, prompt: 'Explain the core principles of modern distributed systems' },
     { label: 'Code', icon: Code, prompt: 'Build a full responsive web application with index.html and style.css' },
     { label: 'Productivity', icon: Coffee, prompt: 'Give me a structured weekly productivity and wellness schedule' },
     { label: 'Sapphire Pick', icon: Lightbulb, prompt: 'What are the most innovative AI developments right now and why do they matter?' }
   ];
 
   return (
-    <div className="relative min-h-full w-full flex flex-col justify-between overflow-x-hidden select-none bg-[#191817] text-[#ede8e1] font-['Plus_Jakarta_Sans',sans-serif]">
-      {/* Hidden file inputs for multiple uploads */}
+    <div className={`relative min-h-full w-full flex flex-col overflow-x-hidden select-none ${
+      theme === 'moon' ? 'bg-[#151515] text-white' : 'bg-[#191817] text-[#ede8e1]'
+    } font-['Plus_Jakarta_Sans',sans-serif]`}>
+
+      {/* Subtle Glow Orbs */}
+      <div className="absolute top-1/4 left-1/4 w-64 h-64 sm:w-96 sm:h-96 bg-[#d97757]/5 rounded-full blur-[100px] pointer-events-none" />
+      <div className="absolute bottom-1/4 right-1/4 w-64 h-64 sm:w-96 sm:h-96 bg-[#d97757]/4 rounded-full blur-[120px] pointer-events-none" />
+
+      {/* Hidden file inputs */}
       <input
         type="file"
         ref={fileInputRef}
@@ -159,231 +163,317 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
         className="hidden"
       />
 
-      {/* Top spacing */}
-      <div className="w-full pt-4 sm:pt-6" />
+      {/* Top: Theme Toggle */}
+      <div className="w-full pt-3 sm:pt-5 px-4 sm:px-6 flex justify-end relative z-10 shrink-0">
+        <ThemeToggle size="sm" />
+      </div>
 
-      {/* Center Welcome & Search Area */}
-      <div className="relative z-10 flex-1 flex flex-col items-center justify-center px-4 sm:px-6 py-6 max-w-3xl mx-auto w-full text-center">
-        {/* Dynamic Greeting with Sapphire Logo */}
-        <div className="flex items-center justify-center gap-3 sm:gap-4 mb-6 sm:mb-8 select-none">
-          <div className="relative group shrink-0">
-            <img
-              src={SAPPHIRE_LOGO_URL}
-              alt="Sapphire Logo"
-              className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl object-cover ring-1 ring-[#d97757]/40 shadow-lg shadow-black/40 transition-transform duration-200 group-hover:scale-105 bg-[#201f1d]"
-            />
-          </div>
-          <h1 className="text-3xl sm:text-4xl md:text-[40px] text-[#f5f2eb] tracking-tight font-medium">
-            {greetingTime}, {firstName}
-          </h1>
+      {/* Main Content — 3 sections: Greeting (center), Chips+Input (bottom) */}
+      <div className="relative z-10 flex-1 flex flex-col items-center justify-between px-4 sm:px-6 py-4 sm:py-8 max-w-2xl mx-auto w-full">
+
+        {/* TOP SECTION: Greeting (screen ke beech mein) */}
+        <div className="flex-1 flex flex-col items-center justify-center w-full">
+
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, ease: 'easeOut' }}
+            className="flex flex-col items-center justify-center gap-2.5 sm:gap-3 select-none w-full text-center"
+          >
+            <div className="relative group shrink-0">
+              <div className="absolute inset-0 rounded-2xl bg-[#d97757]/25 blur-lg opacity-60 group-hover:opacity-100 transition-opacity" />
+              <img
+                src={SAPPHIRE_LOGO_URL}
+                alt="Sapphire Logo"
+                className={`relative w-11 h-11 sm:w-14 sm:h-14 rounded-2xl object-cover ring-2 ring-[#d97757]/40 shadow-xl shadow-black/40 transition-transform duration-300 group-hover:scale-105 ${
+                  theme === 'moon' ? 'bg-[#111111]' : 'bg-[#201f1d]'
+                }`}
+              />
+            </div>
+
+            <h1 className={`text-[22px] leading-tight sm:text-3xl md:text-4xl tracking-tight font-semibold ${
+              theme === 'moon' ? 'text-white' : 'text-[#f5f2eb]'
+            }`}>
+              {greetingTime},{' '}
+              <span className="bg-gradient-to-r from-[#d97757] to-[#e89a7a] bg-clip-text text-transparent">
+                {firstName}
+              </span>
+            </h1>
+
+            <p className={`hidden xs:block text-[11px] sm:text-xs font-normal ${
+              theme === 'moon' ? 'text-[#737373]' : 'text-[#86837c]'
+            }`}>
+              Your AI companion is ready to build, create & reason
+            </p>
+          </motion.div>
+
         </div>
 
-        {/* Central Clean Prompt Card */}
-        <div className="w-full relative bg-[#201f1d] rounded-2xl sm:rounded-3xl border border-[#33312e] shadow-xl hover:border-[#423f3b] transition-all p-3.5 sm:p-5 text-left">
-          {/* Attached Files Pills if any */}
-          {attachedFiles.length > 0 && (
-            <div className="flex flex-wrap items-center gap-1.5 mb-2.5">
-              {attachedFiles.map((file, idx) => (
-                <div
+        {/* BOTTOM SECTION: Chips + Input (dono neeche saath) */}
+        <div className="w-full flex flex-col items-center gap-3 sm:gap-4">
+
+          {/* Suggestion Chips — Input ke UPAR */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.15, ease: 'easeOut' }}
+            className="flex items-center justify-center gap-1.5 sm:gap-2 flex-wrap max-w-md sm:max-w-2xl mx-auto"
+          >
+            {suggestionChips.map((chip, idx) => {
+              const IconComp = chip.icon;
+              return (
+                <motion.button
                   key={idx}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-[#282724] border border-[#383633] text-xs text-[#ede8e1]"
+                  type="button"
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 + idx * 0.04, duration: 0.25 }}
+                  whileHover={{ y: -2, scale: 1.03 }}
+                  whileTap={{ scale: 0.96 }}
+                  onClick={() => onSendMessage(chip.prompt)}
+                  className={`inline-flex items-center gap-1.5 px-3 sm:px-3.5 py-1.5 rounded-xl text-[11px] sm:text-xs font-medium border transition-colors cursor-pointer shadow-xs ${
+                    theme === 'moon'
+                      ? 'bg-[#20201f] hover:bg-[#282724] hover:border-[#d97757]/40 text-white border-[#2b2b2a]'
+                      : 'bg-[#201f1d] hover:bg-[#282724] hover:border-[#d97757]/40 text-[#a19e97] hover:text-[#ede8e1] border-[#33312e]'
+                  }`}
                 >
-                  <FileCode className="w-3.5 h-3.5 text-[#d97757]" />
-                  <span className="truncate max-w-[150px]">{file.name}</span>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setAttachedFiles((prev) => prev.filter((_, i) => i !== idx))
-                    }
-                    className="text-[#a19e97] hover:text-white cursor-pointer ml-1"
+                  <IconComp className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#d97757]" />
+                  <span>{chip.label}</span>
+                </motion.button>
+              );
+            })}
+          </motion.div>
+
+          {/* Input Box — sabse neeche */}
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: 0.25, ease: 'easeOut' }}
+            className={`w-full relative rounded-2xl sm:rounded-3xl border shadow-xl transition-all p-3 sm:p-4 text-left mb-1 sm:mb-2 ${
+              theme === 'moon'
+                ? 'bg-[#20201f] border-[#2b2b2a] focus-within:border-[#d97757]/50'
+                : 'bg-[#201f1d] border-[#33312e] focus-within:border-[#d97757]/50'
+            }`}
+          >
+            {/* Attached Files */}
+            {attachedFiles.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5 mb-2">
+                {attachedFiles.map((file, idx) => (
+                  <div
+                    key={idx}
+                    className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-lg border text-[11px] ${
+                      theme === 'moon' ? 'bg-[#151515] border-[#2b2b2a] text-white' : 'bg-[#282724] border-[#383633] text-[#ede8e1]'
+                    }`}
                   >
-                    ×
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Text Input Area */}
-          <textarea
-            value={promptText}
-            onChange={(e) => setPromptText(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="How can I help you today?"
-            rows={2}
-            className="w-full bg-transparent text-[#ede8e1] placeholder-[#86837c] text-sm sm:text-base focus:outline-none resize-none leading-relaxed font-normal"
-          />
-
-          {/* Controls Bottom Bar */}
-          <div className="pt-2 sm:pt-3 flex items-center justify-between gap-2 border-t border-[#2a2926]">
-            {/* Left: ONLY + Button (Square with soft rounded corners, no sharp ends, no text inside) */}
-            <div className="relative">
-              <button
-                type="button"
-                id="empty-state-plus-btn"
-                onClick={() => setIsPlusMenuOpen((prev) => !prev)}
-                className="w-8 h-8 rounded-xl bg-[#282724] hover:bg-[#32302c] text-[#ede8e1] flex items-center justify-center transition-colors cursor-pointer border border-[#383633]"
-                title="Add files or images"
-              >
-                <span className="text-lg leading-none font-light mb-0.5">+</span>
-              </button>
-
-              {/* Popover Menu with strictly Upload File & Upload Image */}
-              <AnimatePresence>
-                {isPlusMenuOpen && (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.95, y: 10 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                    className="absolute left-0 bottom-10 z-50 w-48 bg-[#201f1d] border border-[#33312e] rounded-xl shadow-2xl p-1.5 space-y-1 text-xs text-[#ede8e1]"
-                  >
-                    {/* 1. Upload File */}
+                    <FileCode className="w-3 h-3 text-[#d97757]" />
+                    <span className="truncate max-w-[120px]">{file.name}</span>
                     <button
                       type="button"
-                      onClick={() => fileInputRef.current?.click()}
-                      className="w-full px-3 py-2 rounded-lg hover:bg-[#282724] flex items-center gap-2.5 transition-colors cursor-pointer text-left"
+                      onClick={() => setAttachedFiles((prev) => prev.filter((_, i) => i !== idx))}
+                      className="text-[#a19e97] hover:text-white cursor-pointer ml-0.5"
                     >
-                      <Paperclip className="w-4 h-4 text-[#d97757]" />
-                      <span>Upload file</span>
+                      ×
                     </button>
+                  </div>
+                ))}
+              </div>
+            )}
 
-                    {/* 2. Upload Image */}
-                    <button
-                      type="button"
-                      onClick={() => imageInputRef.current?.click()}
-                      className="w-full px-3 py-2 rounded-lg hover:bg-[#282724] flex items-center gap-2.5 transition-colors cursor-pointer text-left"
-                    >
-                      <ImageIcon className="w-4 h-4 text-[#d97757]" />
-                      <span>Upload image</span>
-                    </button>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
+            {/* Textarea */}
+            <textarea
+              value={promptText}
+              onChange={(e) => setPromptText(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="How can I help you today?"
+              rows={2}
+              className={`w-full bg-transparent placeholder-[#737373] text-[13px] sm:text-sm focus:outline-none resize-none leading-relaxed font-normal ${
+                theme === 'moon' ? 'text-white' : 'text-[#ede8e1]'
+              }`}
+            />
 
-            {/* Right Tools: Model Picker, Web Search 🌐, Mic, Waveform, Send */}
-            <div className="flex items-center gap-1.5 sm:gap-2">
-              {/* Sapphire Engine Picker */}
+            {/* Bottom Controls */}
+            <div className={`pt-2 sm:pt-3 flex items-center justify-between gap-2 border-t ${
+              theme === 'moon' ? 'border-[#2b2b2a]' : 'border-[#2a2926]'
+            }`}>
+              {/* Plus Button */}
               <div className="relative">
                 <button
                   type="button"
-                  onClick={() => setIsModelDropdownOpen((prev) => !prev)}
-                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-[#282724] hover:bg-[#32302c] text-xs text-[#ede8e1] border border-[#383633] transition-colors cursor-pointer"
+                  onClick={() => setIsPlusMenuOpen((prev) => !prev)}
+                  className={`w-8 h-8 rounded-xl flex items-center justify-center transition-colors cursor-pointer border ${
+                    theme === 'moon'
+                      ? 'bg-[#151515] hover:bg-[#282724] text-white border-[#2b2b2a]'
+                      : 'bg-[#282724] hover:bg-[#32302c] text-[#ede8e1] border-[#383633]'
+                  }`}
+                  title="Add files or images"
                 >
-                  <span className="font-medium text-[#ede8e1]">{selectedModel}</span>
-                  <ChevronDown className="w-3.5 h-3.5 text-[#a19e97]" />
+                  <span className="text-lg leading-none font-light mb-0.5">+</span>
                 </button>
 
                 <AnimatePresence>
-                  {isModelDropdownOpen && (
+                  {isPlusMenuOpen && (
                     <motion.div
-                      initial={{ opacity: 0, y: 5 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: 5 }}
-                      className="absolute right-0 bottom-10 z-50 w-52 bg-[#201f1d] border border-[#33312e] rounded-xl shadow-2xl p-1.5 space-y-1 text-xs text-[#ede8e1]"
+                      initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                      className={`absolute left-0 bottom-10 z-50 w-44 rounded-xl shadow-2xl p-1.5 space-y-1 text-xs border ${
+                        theme === 'moon'
+                          ? 'bg-[#20201f] border-[#2b2b2a] text-white'
+                          : 'bg-[#201f1d] border-[#33312e] text-[#ede8e1]'
+                      }`}
                     >
-                      {[
-                        { name: 'Sapphire Studio', sub: 'Interactive live app builder' },
-                        { name: 'Sapphire Flash', sub: 'Ultra low latency real-time coder' },
-                        { name: 'Sapphire Ultra', sub: 'Deep algorithmic reasoning' }
-                      ].map((item) => (
-                        <button
-                          key={item.name}
-                          type="button"
-                          onClick={() => {
-                            setSelectedModel(item.name);
-                            setIsModelDropdownOpen(false);
-                          }}
-                          className={`w-full px-3 py-2 rounded-lg flex flex-col text-left transition-colors cursor-pointer ${
-                            selectedModel === item.name
-                              ? 'bg-[#282724] text-[#f5f2eb] font-semibold'
-                              : 'hover:bg-[#252422] text-[#a19e97]'
-                          }`}
-                        >
-                          <span className="font-semibold text-[#ede8e1]">{item.name}</span>
-                          <span className="text-[10px] text-[#86837c]">{item.sub}</span>
-                        </button>
-                      ))}
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className={`w-full px-3 py-2 rounded-lg flex items-center gap-2.5 transition-colors cursor-pointer text-left ${
+                          theme === 'moon' ? 'hover:bg-[#151515]' : 'hover:bg-[#282724]'
+                        }`}
+                      >
+                        <Paperclip className="w-3.5 h-3.5 text-[#d97757]" />
+                        <span>Upload file</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => imageInputRef.current?.click()}
+                        className={`w-full px-3 py-2 rounded-lg flex items-center gap-2.5 transition-colors cursor-pointer text-left ${
+                          theme === 'moon' ? 'hover:bg-[#151515]' : 'hover:bg-[#282724]'
+                        }`}
+                      >
+                        <ImageIcon className="w-3.5 h-3.5 text-[#d97757]" />
+                        <span>Upload image</span>
+                      </button>
                     </motion.div>
                   )}
                 </AnimatePresence>
               </div>
 
-              {/* Web Search 🌐 Toggle */}
-              <button
-                type="button"
-                onClick={() => setUseSearchGrounding((prev) => !prev)}
-                className={`p-1.5 sm:px-2 sm:py-1.5 rounded-xl text-xs flex items-center gap-1 transition-all cursor-pointer border ${
-                  useSearchGrounding
-                    ? 'bg-[#d97757]/20 text-[#d97757] border-[#d97757]/50 font-medium'
-                    : 'bg-[#282724] hover:bg-[#32302c] text-[#a19e97] border-[#383633]'
-                }`}
-                title="Toggle Live Web Search"
-              >
-                <Globe className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Search</span>
-              </button>
+              {/* Right Tools */}
+              <div className="flex items-center gap-1 sm:gap-1.5">
+                {/* Model Picker */}
+                <div className="relative hidden sm:block">
+                  <button
+                    type="button"
+                    onClick={() => setIsModelDropdownOpen((prev) => !prev)}
+                    className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[11px] transition-colors cursor-pointer border ${
+                      theme === 'moon'
+                        ? 'bg-[#151515] hover:bg-[#282724] text-white border-[#2b2b2a]'
+                        : 'bg-[#282724] hover:bg-[#32302c] text-[#ede8e1] border-[#383633]'
+                    }`}
+                  >
+                    <span className="font-medium">{selectedModel}</span>
+                    <ChevronDown className="w-3 h-3 text-[#a19e97]" />
+                  </button>
 
-              {/* Voice Microphone */}
-              <button
-                type="button"
-                onClick={toggleRecording}
-                className={`p-2 rounded-xl transition-all cursor-pointer border ${
-                  isRecording
-                    ? 'bg-rose-600 text-white animate-pulse border-rose-500'
-                    : 'bg-[#282724] hover:bg-[#32302c] text-[#a19e97] hover:text-[#ede8e1] border-[#383633]'
-                }`}
-                title="Voice dictation"
-              >
-                {isRecording ? <MicOff className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
-              </button>
+                  <AnimatePresence>
+                    {isModelDropdownOpen && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: 5 }}
+                        className={`absolute right-0 bottom-10 z-50 w-52 rounded-xl shadow-2xl p-1.5 space-y-1 text-xs border ${
+                          theme === 'moon'
+                            ? 'bg-[#20201f] border-[#2b2b2a] text-white'
+                            : 'bg-[#201f1d] border-[#33312e] text-[#ede8e1]'
+                        }`}
+                      >
+                        {[
+                          { name: 'Sapphire Studio', sub: 'Interactive live app builder' },
+                          { name: 'Sapphire Flash', sub: 'Ultra low latency real-time coder' },
+                          { name: 'Sapphire Ultra', sub: 'Deep algorithmic reasoning' }
+                        ].map((item) => (
+                          <button
+                            key={item.name}
+                            type="button"
+                            onClick={() => {
+                              setSelectedModel(item.name);
+                              setIsModelDropdownOpen(false);
+                            }}
+                            className={`w-full px-3 py-2 rounded-lg flex flex-col text-left transition-colors cursor-pointer ${
+                              selectedModel === item.name
+                                ? 'bg-[#d97757]/20 text-[#d97757] font-semibold'
+                                : theme === 'moon'
+                                ? 'hover:bg-[#151515] text-[#a3a3a3] hover:text-white'
+                                : 'hover:bg-[#252422] text-[#a19e97]'
+                            }`}
+                          >
+                            <span className="font-semibold text-[11px]">{item.name}</span>
+                            <span className="text-[10px] text-[#86837c]">{item.sub}</span>
+                          </button>
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
 
-              {/* Audio Waveform icon */}
-              <button
-                type="button"
-                onClick={onStartChat}
-                className="p-2 rounded-xl bg-[#282724] hover:bg-[#32302c] text-[#a19e97] hover:text-[#ede8e1] border border-[#383633] transition-colors cursor-pointer"
-                title="Voice mode"
-              >
-                <AudioWaveform className="w-3.5 h-3.5" />
-              </button>
-
-              {/* Send Button */}
-              {promptText.trim() && (
+                {/* Web Search */}
                 <button
                   type="button"
-                  onClick={handleSubmit}
-                  className="w-8 h-8 rounded-xl bg-[#d97757] hover:bg-[#c86b4c] text-white flex items-center justify-center transition-all cursor-pointer active:scale-95 shadow-md"
-                  title="Send message"
+                  onClick={() => setUseSearchGrounding((prev) => !prev)}
+                  className={`p-1.5 sm:px-2 sm:py-1.5 rounded-xl text-[11px] flex items-center gap-1 transition-all cursor-pointer border ${
+                    useSearchGrounding
+                      ? 'bg-[#d97757]/20 text-[#d97757] border-[#d97757]/50 font-medium'
+                      : theme === 'moon'
+                      ? 'bg-[#151515] hover:bg-[#282724] text-[#a3a3a3] hover:text-white border-[#2b2b2a]'
+                      : 'bg-[#282724] hover:bg-[#32302c] text-[#a19e97] border-[#383633]'
+                  }`}
+                  title="Toggle Live Web Search"
                 >
-                  <ArrowUp className="w-4 h-4" />
+                  <Globe className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Search</span>
                 </button>
-              )}
+
+                {/* Mic */}
+                <button
+                  type="button"
+                  onClick={toggleRecording}
+                  className={`p-2 rounded-xl transition-all cursor-pointer border ${
+                    isRecording
+                      ? 'bg-rose-600 text-white animate-pulse border-rose-500'
+                      : theme === 'moon'
+                      ? 'bg-[#151515] hover:bg-[#282724] text-[#a3a3a3] hover:text-white border-[#2b2b2a]'
+                      : 'bg-[#282724] hover:bg-[#32302c] text-[#a19e97] hover:text-[#ede8e1] border-[#383633]'
+                  }`}
+                  title="Voice dictation"
+                >
+                  {isRecording ? <MicOff className="w-3.5 h-3.5" /> : <Mic className="w-3.5 h-3.5" />}
+                </button>
+
+                {/* Waveform */}
+                <button
+                  type="button"
+                  onClick={onStartChat}
+                  className={`p-2 rounded-xl transition-colors cursor-pointer border ${
+                    theme === 'moon'
+                      ? 'bg-[#151515] hover:bg-[#282724] text-[#a3a3a3] hover:text-white border-[#2b2b2a]'
+                      : 'bg-[#282724] hover:bg-[#32302c] text-[#a19e97] hover:text-[#ede8e1] border-[#383633]'
+                  }`}
+                  title="Voice mode"
+                >
+                  <AudioWaveform className="w-3.5 h-3.5" />
+                </button>
+
+                {/* Send */}
+                {promptText.trim() && (
+                  <motion.button
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    type="button"
+                    onClick={handleSubmit}
+                    className="w-8 h-8 rounded-xl bg-[#d97757] hover:bg-[#c86b4c] text-white flex items-center justify-center transition-all cursor-pointer active:scale-95 shadow-md"
+                    title="Send message"
+                  >
+                    <ArrowUp className="w-4 h-4" />
+                  </motion.button>
+                )}
+              </div>
             </div>
-          </div>
+          </motion.div>
+
         </div>
 
-        {/* Quick Suggestion Chips */}
-        <div className="flex items-center justify-center gap-2 flex-wrap max-w-2xl mx-auto pt-4 sm:pt-6">
-          {suggestionChips.map((chip, idx) => {
-            const IconComp = chip.icon;
-            return (
-              <button
-                key={idx}
-                type="button"
-                onClick={() => onSendMessage(chip.prompt)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#201f1d] hover:bg-[#282724] text-[#a19e97] hover:text-[#ede8e1] text-xs font-medium border border-[#33312e] transition-all cursor-pointer active:scale-95 shadow-2xs"
-              >
-                <IconComp className="w-3.5 h-3.5 text-[#a19e97]" />
-                <span>{chip.label}</span>
-              </button>
-            );
-          })}
-        </div>
       </div>
-
-      {/* Empty bottom spacer for balance */}
-      <div className="h-6 sm:h-10" />
     </div>
   );
 };
+
+export default EmptyState;

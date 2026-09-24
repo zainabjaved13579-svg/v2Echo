@@ -32,7 +32,7 @@ interface DownloadModalProps {
 }
 
 export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose }) => {
-  const [activeTab, setActiveTab] = useState<'all' | 'pwa' | 'android' | 'windows' | 'qr'>('all');
+  const [activeTab, setActiveTab] = useState<'pwa' | 'all' | 'android' | 'windows' | 'qr'>('pwa');
   const [downloadingPlatform, setDownloadingPlatform] = useState<string | null>(null);
   const [pwaStatusMessage, setPwaStatusMessage] = useState<string | null>(null);
   const [copiedEmail, setCopiedEmail] = useState(false);
@@ -46,11 +46,7 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose })
     const isWindows = /Windows|Win32|Win64|WOW64/i.test(navigator.userAgent || '');
     if (isWindows) {
       setWindowsAutoPrompted(true);
-      setActiveTab('windows');
-      const timer = setTimeout(() => {
-        handleTriggerDownload('windows', WINDOWS_EXE_URL);
-      }, 700);
-      return () => clearTimeout(timer);
+      // Keep on PWA or windows as helpful
     }
   }, [isOpen, windowsAutoPrompted]);
 
@@ -148,17 +144,17 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose })
               />
               <div className="text-left">
                 <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#f5f2eb] flex items-center gap-2">
-                  <span>Get {SAPPHIRE_APP_NAME}</span>
-                  <span className="text-xs px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-semibold">
-                    Free
+                  <span>Sapphire PWA App</span>
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-semibold">
+                    Mobile &amp; PC
                   </span>
                 </h2>
-                <p className="text-xs text-[#86837c]">Available on Android, Windows &amp; Web PWA</p>
+                <p className="text-xs text-[#86837c]">Full Progressive Web App with offline speed &amp; native experience</p>
               </div>
             </div>
 
             <p className="text-xs sm:text-sm text-[#a19e97] max-w-lg mx-auto leading-relaxed">
-              Ultra-fast AI reasoning, instant coding engine, live apps preview, and offline files anywhere.
+              Install Sapphire directly on your Android, iPhone, iPad, Windows, or Mac. No app store login needed.
             </p>
           </div>
 
@@ -167,7 +163,7 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose })
             <motion.div
               initial={{ opacity: 0, y: -5 }}
               animate={{ opacity: 1, y: 0 }}
-              className="p-2.5 rounded-xl bg-[#282724] border border-[#d97757] text-xs text-[#ede8e1] text-center"
+              className="p-3 rounded-2xl bg-[#282724] border border-[#d97757] text-xs text-[#ede8e1] text-center font-medium shadow-md"
             >
               {pwaStatusMessage}
             </motion.div>
@@ -177,61 +173,50 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose })
           <div className="flex items-center justify-center gap-1.5 p-1 bg-[#191817] border border-[#2a2926] rounded-2xl overflow-x-auto text-xs font-medium">
             <button
               type="button"
-              onClick={() => setActiveTab('all')}
-              className={`px-3 py-1.5 rounded-xl transition-all whitespace-nowrap cursor-pointer ${
-                activeTab === 'all'
-                  ? 'bg-[#d97757] text-white shadow-md font-semibold'
-                  : 'text-[#86837c] hover:text-[#ede8e1] hover:bg-[#201f1d]'
-              }`}
-            >
-              All Downloads
-            </button>
-            <button
-              type="button"
               onClick={() => setActiveTab('pwa')}
-              className={`flex items-center gap-1 px-3 py-1.5 rounded-xl transition-all whitespace-nowrap cursor-pointer ${
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-2xl transition-all whitespace-nowrap cursor-pointer ${
                 activeTab === 'pwa'
                   ? 'bg-[#d97757] text-white shadow-md font-semibold'
                   : 'text-[#86837c] hover:text-[#ede8e1] hover:bg-[#201f1d]'
               }`}
             >
-              <Globe className="w-3.5 h-3.5 text-cyan-400" />
-              <span>Web PWA</span>
+              <Smartphone className="w-4 h-4 text-cyan-400" />
+              <span>Mobile &amp; Web PWA</span>
             </button>
             <button
               type="button"
               onClick={() => setActiveTab('android')}
-              className={`flex items-center gap-1 px-3 py-1.5 rounded-xl transition-all whitespace-nowrap cursor-pointer ${
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-2xl transition-all whitespace-nowrap cursor-pointer ${
                 activeTab === 'android'
                   ? 'bg-[#d97757] text-white shadow-md font-semibold'
                   : 'text-[#86837c] hover:text-[#ede8e1] hover:bg-[#201f1d]'
               }`}
             >
-              <Smartphone className="w-3.5 h-3.5 text-emerald-400" />
+              <Smartphone className="w-4 h-4 text-emerald-400" />
               <span>Android APK</span>
             </button>
             <button
               type="button"
               onClick={() => setActiveTab('windows')}
-              className={`flex items-center gap-1 px-3 py-1.5 rounded-xl transition-all whitespace-nowrap cursor-pointer ${
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-2xl transition-all whitespace-nowrap cursor-pointer ${
                 activeTab === 'windows'
                   ? 'bg-[#d97757] text-white shadow-md font-semibold'
                   : 'text-[#86837c] hover:text-[#ede8e1] hover:bg-[#201f1d]'
               }`}
             >
-              <Monitor className="w-3.5 h-3.5 text-blue-400" />
+              <Monitor className="w-4 h-4 text-blue-400" />
               <span>Windows EXE</span>
             </button>
             <button
               type="button"
               onClick={() => setActiveTab('qr')}
-              className={`flex items-center gap-1 px-3 py-1.5 rounded-xl transition-all whitespace-nowrap cursor-pointer ${
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-2xl transition-all whitespace-nowrap cursor-pointer ${
                 activeTab === 'qr'
                   ? 'bg-[#d97757] text-white shadow-md font-semibold'
                   : 'text-[#86837c] hover:text-[#ede8e1] hover:bg-[#201f1d]'
               }`}
             >
-              <QrCode className="w-3.5 h-3.5 text-purple-400" />
+              <QrCode className="w-4 h-4 text-purple-400" />
               <span>QR Code</span>
             </button>
           </div>
@@ -266,7 +251,7 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose })
                     type="button"
                     id="install-pwa-button-direct"
                     onClick={handleInstallPwa}
-                    className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-[#d97757] hover:bg-[#c86b4c] text-white font-bold text-xs sm:text-sm transition-all shadow-md active:scale-95 cursor-pointer"
+                    className="flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-[#d97757] hover:bg-[#c86b4c] text-white font-bold text-xs sm:text-sm transition-all shadow-md active:scale-95 cursor-pointer"
                   >
                     <Download className="w-4 h-4" />
                     <span>Install PWA to Device</span>
@@ -275,7 +260,7 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose })
                   <button
                     type="button"
                     onClick={downloadOfflinePwaPackage}
-                    className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-[#282724] hover:bg-[#32302c] text-[#ede8e1] border border-[#383633] font-semibold text-xs sm:text-sm transition-all active:scale-95 cursor-pointer"
+                    className="flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-[#282724] hover:bg-[#32302c] text-[#ede8e1] border border-[#383633] font-semibold text-xs sm:text-sm transition-all active:scale-95 cursor-pointer"
                   >
                     <HardDrive className="w-4 h-4 text-[#d97757]" />
                     <span>Download Offline Web App</span>
@@ -283,7 +268,7 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose })
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs pt-1">
-                  <div className="p-3 rounded-xl bg-[#201f1d] border border-[#33312e] space-y-1.5">
+                  <div className="p-3.5 rounded-2xl bg-[#201f1d] border border-[#33312e] space-y-1.5">
                     <p className="font-semibold text-cyan-300 flex items-center gap-1.5">
                       <Smartphone className="w-3.5 h-3.5" /> iPhone / iPad (Safari)
                     </p>
@@ -292,7 +277,7 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose })
                     </p>
                   </div>
 
-                  <div className="p-3 rounded-xl bg-[#201f1d] border border-[#33312e] space-y-1.5">
+                  <div className="p-3.5 rounded-2xl bg-[#201f1d] border border-[#33312e] space-y-1.5">
                     <p className="font-semibold text-cyan-300 flex items-center gap-1.5">
                       <Monitor className="w-3.5 h-3.5" /> Chrome / Edge / Android
                     </p>

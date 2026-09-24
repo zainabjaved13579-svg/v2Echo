@@ -145,18 +145,18 @@ export interface StreamChatParams {
 }
 
 // Convert model identifier to official Google Gemini model ID
-function resolveGeminiModelId(modelName: string = 'sapphire-3.8-flash'): string {
+function resolveGeminiModelId(modelName: string = 'sapphire-flash-latest'): string {
   const lower = modelName.toLowerCase();
   if (lower.includes('3.1-pro') || lower.includes('pro')) {
     return 'gemini-3.1-pro-preview';
   }
-  if (lower.includes('flash-latest')) {
-    return 'gemini-flash-latest';
+  if (lower.includes('lite')) {
+    return 'gemini-3.1-flash-lite';
   }
-  if (lower.includes('3.6')) {
-    return 'gemini-3.6-flash';
+  if (lower.includes('3.8')) {
+    return 'gemini-3.8-flash';
   }
-  return 'gemini-3.8-flash';
+  return 'gemini-flash-latest';
 }
 
 /**
@@ -167,7 +167,7 @@ async function callDirectGoogleGemini({
   contents,
   systemInstruction,
   temperature = 0.7,
-  model = 'gemini-3.8-flash',
+  model = 'gemini-flash-latest',
   useSearchGrounding = false,
   onChunk,
   signal
@@ -184,9 +184,9 @@ async function callDirectGoogleGemini({
   const targetModel = resolveGeminiModelId(model);
   const candidateModels = [
     targetModel,
-    'gemini-3.8-flash',
-    'gemini-3.6-flash',
-    'gemini-flash-latest'
+    'gemini-flash-latest',
+    'gemini-3.1-flash-lite',
+    'gemini-3.8-flash'
   ].filter((m, i, arr) => arr.indexOf(m) === i);
 
   let lastErrorMsg = '';
