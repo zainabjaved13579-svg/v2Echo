@@ -1,4 +1,4 @@
-export const SAPPHIRE_LOGO_URL = 'https://i.ibb.co/q37Fs0hH/cropped-circle-image-1.png';
+export const SAPPHIRE_LOGO_URL = 'https://www.magnific.com/free-photos-vectors/logo-symbol';
 export const SAPPHIRE_APP_NAME = 'Sapphire';
 export const SAPPHIRE_POWERED_BY = 'Powered by Sapphire';
 
