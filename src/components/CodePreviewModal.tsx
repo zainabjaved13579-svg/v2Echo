@@ -15,43 +15,80 @@ import {
   Code2,
   ExternalLink,
   Wand2,
-  Sparkles
+  Sparkles,
+  Eye,
+  Layers,
+  FileCode,
+  FileSpreadsheet,
+  Plus,
+  Play
 } from 'lucide-react';
 import { WorkspaceFile } from '../types';
-import { buildLivePreviewBundle, downloadWorkspaceFile, autoSaveFile } from '../services/fileStorageService';
+import {
+  autoSaveFile,
+  downloadWorkspaceFile,
+  exportAllFilesAsZip,
+  loadWorkspaceFiles
+} from '../services/fileStorageService';
+import { buildUnifiedLivePreviewBundle } from '../services/appEngineService';
 import { remakeAiCode } from '../services/codeService';
 
 interface CodePreviewModalProps {
   isOpen: boolean;
   onClose: () => void;
   file?: WorkspaceFile | null;
+  files?: WorkspaceFile[];
   code?: string;
   language?: string;
   filename?: string;
   onOpenFileManager?: (fileId?: string) => void;
+  onOpenCodexWorkspace?: () => void;
 }
 
 export const CodePreviewModal: React.FC<CodePreviewModalProps> = ({
   isOpen,
   onClose,
   file,
+  files: initialFiles,
   code = '',
   language = 'html',
   filename = 'index.html',
-  onOpenFileManager
+  onOpenFileManager,
+  onOpenCodexWorkspace
 }) => {
-  const [copied, setCopied] = useState(false);
+  // All active files for this preview
+  const [projectFiles, setProjectFiles] = useState<WorkspaceFile[]>(() => {
+    if (initialFiles && initialFiles.length > 0) return initialFiles;
+    if (file) return [file];
+    return [
+      {
+        id: 'primary_file',
+        name: filename || 'index.html',
+        path: `/workspace/${filename || 'index.html'}`,
+        content: code || '',
+        language: language || 'html',
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        autoSaved: true,
+        source: 'ai-generated'
+      }
+    ];
+  });
+
+  // Selected file id in multi-file project
+  const [selectedFileId, setSelectedFileId] = useState<string>(() => {
+    return file?.id || projectFiles[0]?.id || 'primary_file';
+  });
+
+  // View modes: 'preview' | 'split' | 'code' | 'all-files'
+  const [activeTab, setActiveTab] = useState<'preview' | 'split' | 'code' | 'all-files'>('preview');
   const [deviceView, setDeviceView] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
-  const [activeTab, setActiveTab] = useState<'preview' | 'code'>('preview');
+  const [copiedCode, setCopiedCode] = useState(false);
+  const [copiedAll, setCopiedAll] = useState(false);
 
-  const activeContent = file?.content || code || '';
-  const activeLang = file?.language || language || 'html';
-  const activeName = file?.name || filename || 'index.html';
-  const activePath = file?.path || `/workspace/${activeName}`;
-
-  const [liveContent, setLiveContent] = useState(activeContent);
+  // Remake states
   const [showRemakeBar, setShowRemakeBar] = useState(false);
   const [remakeInstruction, setRemakeInstruction] = useState(
     'Refactor, modernize layout, fix bugs, and make responsive for mobile and PC'
@@ -59,73 +96,88 @@ export const CodePreviewModal: React.FC<CodePreviewModalProps> = ({
   const [isRemaking, setIsRemaking] = useState(false);
   const [remakeSuccess, setRemakeSuccess] = useState(false);
 
+  // Synchronize when props update
   useEffect(() => {
-    setLiveContent(activeContent);
-  }, [activeContent]);
-
-  // Ensure file is auto-saved in workspace if not already present
-  useEffect(() => {
-    if (isOpen && liveContent && !file?.id) {
-      autoSaveFile({
-        name: activeName,
-        path: activePath,
-        content: liveContent,
-        language: activeLang,
+    if (initialFiles && initialFiles.length > 0) {
+      setProjectFiles(initialFiles);
+      if (!initialFiles.some((f) => f.id === selectedFileId)) {
+        setSelectedFileId(initialFiles[0]?.id || '');
+      }
+    } else if (file) {
+      setProjectFiles([file]);
+      setSelectedFileId(file.id);
+    } else if (code) {
+      const single: WorkspaceFile = {
+        id: 'primary_file',
+        name: filename || 'index.html',
+        path: `/workspace/${filename || 'index.html'}`,
+        content: code,
+        language: language || 'html',
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        autoSaved: true,
         source: 'ai-generated'
-      });
+      };
+      setProjectFiles([single]);
+      setSelectedFileId('primary_file');
     }
-  }, [isOpen, liveContent, file?.id, activeName, activePath, activeLang]);
+  }, [file, initialFiles, code, filename, language]);
 
-  if (!isOpen) return null;
+  const selectedFile = projectFiles.find((f) => f.id === selectedFileId) || projectFiles[0];
 
-  // Build the live preview HTML
-  const previewHtml = buildLivePreviewBundle({
-    id: file?.id || 'temp_preview',
-    name: activeName,
-    path: activePath,
-    content: liveContent,
-    language: activeLang,
-    createdAt: file?.createdAt || Date.now(),
-    updatedAt: Date.now(),
-    autoSaved: true,
-    source: 'ai-generated'
-  });
-
-  const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(liveContent);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (e) {
-      console.error('Failed to copy:', e);
-    }
-  };
-
-  const handleDownload = () => {
-    downloadWorkspaceFile({
-      id: file?.id || 'download_file',
-      name: activeName,
-      path: activePath,
-      content: liveContent,
-      language: activeLang,
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-      autoSaved: true,
+  // Auto-save files
+  const handleUpdateFileContent = (newContent: string) => {
+    if (!selectedFile) return;
+    const updated = projectFiles.map((f) =>
+      f.id === selectedFile.id ? { ...f, content: newContent, updatedAt: Date.now() } : f
+    );
+    setProjectFiles(updated);
+    autoSaveFile({
+      name: selectedFile.name,
+      path: selectedFile.path,
+      content: newContent,
+      language: selectedFile.language,
       source: 'ai-generated'
     });
+    setRefreshKey((k) => k + 1);
+  };
+
+  const handleCopyCurrentFile = async () => {
+    if (!selectedFile) return;
+    try {
+      await navigator.clipboard.writeText(selectedFile.content);
+      setCopiedCode(true);
+      setTimeout(() => setCopiedCode(false), 2000);
+    } catch {}
+  };
+
+  const handleCopyAllFiles = async () => {
+    const combined = projectFiles
+      .map((f) => `// ==========================================\n// File: ${f.name}\n// ==========================================\n${f.content}`)
+      .join('\n\n');
+    try {
+      await navigator.clipboard.writeText(combined);
+      setCopiedAll(true);
+      setTimeout(() => setCopiedAll(false), 2000);
+    } catch {}
+  };
+
+  const handleDownloadCurrentFile = () => {
+    if (!selectedFile) return;
+    downloadWorkspaceFile(selectedFile);
   };
 
   const handleRemakeCode = async (instructionOverride?: string) => {
-    const instructionToUse = (instructionOverride || remakeInstruction).trim();
-    if (!instructionToUse || isRemaking) return;
+    const instruction = (instructionOverride || remakeInstruction).trim();
+    if (!instruction || !selectedFile || isRemaking) return;
 
     setIsRemaking(true);
     try {
       const res = await remakeAiCode({
-        code: liveContent,
-        language: activeLang,
-        filename: activeName,
-        instruction: instructionToUse
+        code: selectedFile.content,
+        language: selectedFile.language,
+        filename: selectedFile.name,
+        instruction
       });
 
       if (res && res.content) {
@@ -135,19 +187,9 @@ export const CodePreviewModal: React.FC<CodePreviewModalProps> = ({
           clean = match[1].trim();
         }
 
-        setLiveContent(clean);
+        handleUpdateFileContent(clean);
         setRemakeSuccess(true);
         setTimeout(() => setRemakeSuccess(false), 3000);
-
-        autoSaveFile({
-          name: activeName,
-          path: activePath,
-          content: clean,
-          language: activeLang,
-          source: 'ai-generated'
-        });
-
-        setRefreshKey((k) => k + 1);
       }
     } catch (err) {
       console.error('Failed to remake code in preview:', err);
@@ -156,182 +198,267 @@ export const CodePreviewModal: React.FC<CodePreviewModalProps> = ({
     }
   };
 
+  if (!isOpen) return null;
+
+  // Build the live preview HTML from all active project files
+  const previewHtml = buildUnifiedLivePreviewBundle(projectFiles);
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200 font-['Plus_Jakarta_Sans',sans-serif] select-none sm:select-auto">
       <div
-        className={`bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl flex flex-col overflow-hidden transition-all duration-300 ${
+        className={`bg-[#151515] border border-[#2b2b2a] rounded-3xl shadow-2xl flex flex-col overflow-hidden transition-all duration-300 ${
           isFullscreen
             ? 'w-full h-full rounded-none'
-            : 'w-full max-w-5xl h-[88vh] max-h-[850px]'
+            : 'w-[98vw] max-w-[1700px] h-[95vh] max-h-[96vh]'
         }`}
       >
-        {/* Modal Top Bar */}
-        <div className="px-4 py-3 bg-slate-950/90 border-b border-slate-800 flex items-center justify-between gap-3 text-slate-300">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-7 h-7 rounded-lg bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 flex items-center justify-center shrink-0">
+        {/* Top Header Bar */}
+        <header className="px-4 py-3 bg-[#111111] border-b border-[#2b2b2a] flex items-center justify-between gap-3 text-white shrink-0 select-none">
+          {/* Left: Brand & Active File */}
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-8 h-8 rounded-2xl bg-gradient-to-tr from-[#d97757] to-[#e69176] flex items-center justify-center font-bold text-white shadow-md shadow-[#d97757]/20 shrink-0">
               <Code2 className="w-4 h-4" />
             </div>
+
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <span className="font-semibold text-sm text-white truncate">{activeName}</span>
-                <span className="px-2 py-0.5 rounded-md bg-emerald-950/80 text-emerald-400 border border-emerald-500/30 text-[10px] font-mono flex items-center gap-1">
-                  <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-                  Auto-Saved in {activePath}
+                <span className="font-bold text-sm text-white tracking-tight truncate">
+                  {selectedFile?.name || 'Studio Preview'}
                 </span>
+                <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-mono">
+                  <CheckCircle2 className="w-3 h-3" />
+                  Live Reactive
+                </span>
+                {projectFiles.length > 1 && (
+                  <span className="text-[11px] px-2 py-0.5 rounded-lg bg-[#20201f] text-[#a19e97] border border-[#2b2b2a]">
+                    {projectFiles.length} files
+                  </span>
+                )}
               </div>
             </div>
           </div>
 
-          {/* Center: Tabs for both Mobile & Desktop */}
-          <div className="flex items-center gap-1 bg-slate-900 border border-slate-800 p-1 rounded-xl">
+          {/* Center: Mode Switcher (Preview | Split | Code | All Files) */}
+          <div className="flex items-center bg-[#20201f] border border-[#2b2b2a] rounded-2xl p-1 gap-1">
             <button
+              type="button"
               onClick={() => setActiveTab('preview')}
-              className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors ${
+              className={`px-3.5 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer flex items-center gap-1.5 ${
                 activeTab === 'preview'
-                  ? 'bg-indigo-600 text-white shadow-xs'
-                  : 'text-slate-400 hover:text-slate-200'
+                  ? 'bg-[#d97757] text-white shadow-xs'
+                  : 'text-[#86837c] hover:text-white'
               }`}
             >
-              Preview
+              <Eye className="w-3.5 h-3.5" />
+              <span>Preview</span>
             </button>
+
             <button
-              onClick={() => setActiveTab('code')}
-              className={`px-3 py-1 rounded-lg text-xs font-semibold transition-colors ${
-                activeTab === 'code'
-                  ? 'bg-indigo-600 text-white shadow-xs'
-                  : 'text-slate-400 hover:text-slate-200'
+              type="button"
+              onClick={() => setActiveTab('split')}
+              className={`hidden md:flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
+                activeTab === 'split'
+                  ? 'bg-[#d97757] text-white shadow-xs'
+                  : 'text-[#86837c] hover:text-white'
               }`}
             >
-              Code
+              <Layers className="w-3.5 h-3.5" />
+              <span>Split</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab('code')}
+              className={`px-3.5 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer flex items-center gap-1.5 ${
+                activeTab === 'code'
+                  ? 'bg-[#d97757] text-white shadow-xs'
+                  : 'text-[#86837c] hover:text-white'
+              }`}
+            >
+              <Code2 className="w-3.5 h-3.5" />
+              <span>Code</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab('all-files')}
+              className={`px-3.5 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer flex items-center gap-1.5 ${
+                activeTab === 'all-files'
+                  ? 'bg-[#d97757] text-white shadow-xs'
+                  : 'text-[#86837c] hover:text-white'
+              }`}
+              title="Full Preview of All Project Files"
+            >
+              <Folder className="w-3.5 h-3.5" />
+              <span>All Files</span>
             </button>
           </div>
 
           {/* Right Controls */}
           <div className="flex items-center gap-1.5">
-            {activeTab === 'preview' && (
-              <div className="hidden sm:flex items-center gap-1 border-r border-slate-800 pr-2 mr-1">
+            {/* Viewport frames (when preview or split active) */}
+            {(activeTab === 'preview' || activeTab === 'split') && (
+              <div className="hidden lg:flex items-center bg-[#20201f] border border-[#2b2b2a] rounded-xl p-0.5 mr-1">
                 <button
+                  type="button"
                   onClick={() => setDeviceView('desktop')}
-                  className={`p-1.5 rounded-lg text-xs ${
-                    deviceView === 'desktop'
-                      ? 'bg-slate-800 text-indigo-400'
-                      : 'text-slate-400 hover:text-white'
+                  className={`p-1.5 rounded-lg text-xs transition-colors cursor-pointer ${
+                    deviceView === 'desktop' ? 'bg-[#d97757] text-white' : 'text-[#86837c] hover:text-white'
                   }`}
                   title="Desktop View (100%)"
                 >
-                  <Monitor className="w-4 h-4" />
+                  <Monitor className="w-3.5 h-3.5" />
                 </button>
                 <button
+                  type="button"
                   onClick={() => setDeviceView('tablet')}
-                  className={`p-1.5 rounded-lg text-xs ${
-                    deviceView === 'tablet'
-                      ? 'bg-slate-800 text-indigo-400'
-                      : 'text-slate-400 hover:text-white'
+                  className={`p-1.5 rounded-lg text-xs transition-colors cursor-pointer ${
+                    deviceView === 'tablet' ? 'bg-[#d97757] text-white' : 'text-[#86837c] hover:text-white'
                   }`}
                   title="Tablet View (768px)"
                 >
-                  <Tablet className="w-4 h-4" />
+                  <Tablet className="w-3.5 h-3.5" />
                 </button>
                 <button
+                  type="button"
                   onClick={() => setDeviceView('mobile')}
-                  className={`p-1.5 rounded-lg text-xs ${
-                    deviceView === 'mobile'
-                      ? 'bg-slate-800 text-indigo-400'
-                      : 'text-slate-400 hover:text-white'
+                  className={`p-1.5 rounded-lg text-xs transition-colors cursor-pointer ${
+                    deviceView === 'mobile' ? 'bg-[#d97757] text-white' : 'text-[#86837c] hover:text-white'
                   }`}
                   title="Mobile View (375px)"
                 >
-                  <Smartphone className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => setRefreshKey((k) => k + 1)}
-                  className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
-                  title="Refresh Live Sandbox"
-                >
-                  <RefreshCw className="w-4 h-4" />
+                  <Smartphone className="w-3.5 h-3.5" />
                 </button>
               </div>
             )}
 
-            {/* AI Remake Code Trigger - Hidden on mobile as per user requirement */}
+            {/* Refresh sandbox */}
             <button
-              onClick={() => setShowRemakeBar((b) => !b)}
-              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 bg-purple-950/80 hover:bg-purple-900 text-purple-200 hover:text-white text-xs font-semibold rounded-lg border border-purple-500/40 transition-all shadow-xs active:scale-95 cursor-pointer"
-              title="Remake and refactor this code with AI"
+              type="button"
+              onClick={() => setRefreshKey((k) => k + 1)}
+              className="p-2 rounded-2xl bg-[#20201f] hover:bg-[#282724] border border-[#2b2b2a] text-[#a19e97] hover:text-white transition-colors cursor-pointer"
+              title="Refresh Live Preview"
             >
-              <Wand2 className="w-3.5 h-3.5 text-purple-400" />
+              <RefreshCw className="w-3.5 h-3.5" />
+            </button>
+
+            {/* AI Remake button */}
+            <button
+              type="button"
+              onClick={() => setShowRemakeBar((b) => !b)}
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-[#20201f] hover:bg-[#282724] border border-[#2b2b2a] text-xs font-medium text-[#d97757] hover:text-white transition-all cursor-pointer"
+              title="Remake or optimize code with AI"
+            >
+              <Wand2 className="w-3.5 h-3.5 text-[#d97757]" />
               <span>Remake</span>
             </button>
 
-            {onOpenFileManager && (
+            {/* Export all as zip */}
+            <button
+              type="button"
+              onClick={() => exportAllFilesAsZip(projectFiles)}
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-[#20201f] hover:bg-[#282724] border border-[#2b2b2a] text-xs font-medium text-white transition-colors cursor-pointer"
+              title="Download ZIP of all project files"
+            >
+              <Download className="w-3.5 h-3.5 text-[#d97757]" />
+              <span>Export ZIP</span>
+            </button>
+
+            {/* Open in full Codex Studio if callback provided */}
+            {onOpenCodexWorkspace && (
               <button
-                onClick={() => {
-                  onClose();
-                  onOpenFileManager(file?.id);
-                }}
-                className="hidden md:flex items-center gap-1 px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-medium rounded-lg border border-slate-700 transition-colors"
-                title="Open in Full File Manager"
+                type="button"
+                onClick={onOpenCodexWorkspace}
+                className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-[#d97757] hover:bg-[#c86b4c] text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+                title="Open in Full Codex Studio IDE"
               >
-                <Folder className="w-3.5 h-3.5 text-amber-400" />
-                <span>File Manager</span>
+                <Layers className="w-3.5 h-3.5" />
+                <span>Codex Studio</span>
               </button>
             )}
 
+            {/* Fullscreen Toggle */}
             <button
-              onClick={handleCopy}
-              className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
-              title="Copy Code"
-            >
-              {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
-            </button>
-
-            {/* Prominent Download Button */}
-            <button
-              onClick={handleDownload}
-              className="px-2.5 py-1.5 sm:p-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition-all flex items-center gap-1 text-xs font-semibold cursor-pointer shadow-xs active:scale-95"
-              title="Download File"
-            >
-              <Download className="w-4 h-4" />
-              <span className="sm:hidden">Download</span>
-            </button>
-
-            <button
+              type="button"
               onClick={() => setIsFullscreen((f) => !f)}
-              className="hidden sm:block p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
+              className="p-2 rounded-2xl bg-[#20201f] hover:bg-[#282724] border border-[#2b2b2a] text-[#a19e97] hover:text-white transition-colors cursor-pointer"
               title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
             >
-              {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+              {isFullscreen ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
             </button>
 
+            {/* Close */}
             <button
+              type="button"
               onClick={onClose}
-              className="p-1.5 text-slate-400 hover:text-rose-400 rounded-lg hover:bg-slate-800 transition-colors"
+              className="p-2 rounded-2xl bg-[#20201f] hover:bg-[#282724] border border-[#2b2b2a] text-[#a19e97] hover:text-white transition-colors cursor-pointer"
               title="Close Preview"
             >
               <X className="w-4 h-4" />
             </button>
           </div>
-        </div>
+        </header>
 
-        {/* AI Remake Toolbar - Desktop only */}
+        {/* Multi-File Tab Bar (shown if multiple files or code/split mode) */}
+        {projectFiles.length > 1 && (
+          <div className="h-10 bg-[#121212] border-b border-[#2b2b2a] px-3 flex items-center justify-between gap-2 overflow-x-auto shrink-0 select-none">
+            <div className="flex items-center gap-1.5 overflow-x-auto py-1">
+              {projectFiles.map((f) => {
+                const isSelected = f.id === selectedFileId;
+                return (
+                  <button
+                    key={f.id}
+                    onClick={() => setSelectedFileId(f.id)}
+                    className={`flex items-center gap-2 px-3 py-1 rounded-xl text-xs font-medium transition-all cursor-pointer border ${
+                      isSelected
+                        ? 'bg-[#20201f] text-white border-[#2b2b2a] shadow-xs'
+                        : 'text-[#86837c] hover:text-white border-transparent hover:bg-[#181818]'
+                    }`}
+                  >
+                    <FileCode className="w-3.5 h-3.5 text-[#d97757]" />
+                    <span>{f.name}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button
+                type="button"
+                onClick={handleCopyCurrentFile}
+                className="px-2.5 py-1 rounded-lg bg-[#20201f] hover:bg-[#282724] border border-[#2b2b2a] text-xs text-[#ede8e1] flex items-center gap-1 cursor-pointer"
+                title="Copy active file code"
+              >
+                {copiedCode ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3 text-[#a19e97]" />}
+                <span>{copiedCode ? 'Copied' : 'Copy'}</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleDownloadCurrentFile}
+                className="px-2.5 py-1 rounded-lg bg-[#20201f] hover:bg-[#282724] border border-[#2b2b2a] text-xs text-[#ede8e1] flex items-center gap-1 cursor-pointer"
+                title="Download active file"
+              >
+                <Download className="w-3 h-3 text-[#d97757]" />
+                <span className="hidden sm:inline">Download</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* AI Remake Toolbar */}
         {showRemakeBar && (
-          <div className="hidden sm:block p-3 bg-slate-900 border-b border-purple-500/40 space-y-2 text-xs animate-fadeIn shrink-0">
+          <div className="p-3 bg-[#181817] border-b border-[#33312e] space-y-2 text-xs shrink-0 select-none">
             <div className="flex items-center justify-between">
-              <span className="font-bold text-purple-300 flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-purple-400" />
-                <span>AI Code Remake & Live Sandbox Sync</span>
+              <span className="font-bold text-[#f5f2eb] flex items-center gap-1.5">
+                <Sparkles className="w-3.5 h-3.5 text-[#d97757]" />
+                <span>AI Code Remake & Enhancement Studio</span>
               </span>
-              <div className="flex items-center gap-2">
-                {remakeSuccess && (
-                  <span className="text-[11px] text-emerald-400 font-semibold flex items-center gap-1">
-                    <CheckCircle2 className="w-3 h-3" />
-                    Code Remade & Live Preview Updated!
-                  </span>
-                )}
-                <span className="text-[10px] font-mono text-slate-400 hidden sm:inline">
-                  Optimizes HTML, CSS & JS for PC & Mobile
+              {remakeSuccess && (
+                <span className="text-[11px] text-emerald-400 font-semibold flex items-center gap-1">
+                  <CheckCircle2 className="w-3 h-3" />
+                  Enhanced & Preview Live Updated!
                 </span>
-              </div>
+              )}
             </div>
 
             <div className="flex gap-2">
@@ -340,28 +467,26 @@ export const CodePreviewModal: React.FC<CodePreviewModalProps> = ({
                 value={remakeInstruction}
                 onChange={(e) => setRemakeInstruction(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    handleRemakeCode();
-                  }
+                  if (e.key === 'Enter') handleRemakeCode();
                 }}
                 placeholder="Describe how to remake or optimize this code..."
-                className="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-3 py-1.5 text-slate-200 placeholder-slate-500 text-xs focus:outline-none focus:border-purple-500"
+                className="flex-1 bg-[#101010] border border-[#2e2d2a] rounded-xl px-3 py-1.5 text-white placeholder-[#666] text-xs focus:outline-none focus:border-[#d97757]"
               />
               <button
                 type="button"
                 onClick={() => handleRemakeCode()}
                 disabled={isRemaking || !remakeInstruction.trim()}
-                className="px-4 py-1.5 bg-purple-600 hover:bg-purple-500 disabled:opacity-40 text-white rounded-lg font-semibold flex items-center gap-1.5 transition-all cursor-pointer shrink-0"
+                className="px-4 py-1.5 bg-[#d97757] hover:bg-[#c86b4c] disabled:opacity-40 text-white rounded-xl font-semibold flex items-center gap-1.5 transition-all cursor-pointer shrink-0"
               >
                 {isRemaking ? (
                   <>
                     <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                    <span>Remaking...</span>
+                    <span>Enhancing...</span>
                   </>
                 ) : (
                   <>
                     <Wand2 className="w-3.5 h-3.5" />
-                    <span>Remake Code</span>
+                    <span>Enhance Code</span>
                   </>
                 )}
               </button>
@@ -382,7 +507,7 @@ export const CodePreviewModal: React.FC<CodePreviewModalProps> = ({
                     setRemakeInstruction(preset);
                     handleRemakeCode(preset);
                   }}
-                  className="text-[11px] px-2.5 py-0.5 rounded bg-slate-800 hover:bg-purple-950 text-slate-300 hover:text-purple-200 border border-slate-700/60 transition-all font-sans cursor-pointer"
+                  className="text-[11px] px-2.5 py-0.5 rounded-lg bg-[#20201f] hover:bg-[#282724] text-[#a19e97] hover:text-white border border-[#2e2d2a] transition-all font-sans cursor-pointer"
                 >
                   + {preset}
                 </button>
@@ -391,48 +516,242 @@ export const CodePreviewModal: React.FC<CodePreviewModalProps> = ({
           </div>
         )}
 
-        {/* Modal Body */}
-        <div className="flex-1 bg-slate-950 relative overflow-hidden flex items-center justify-center p-2 sm:p-4">
-          {activeTab === 'preview' ? (
-            <div
-              className={`h-full transition-all duration-300 bg-white rounded-xl shadow-2xl overflow-hidden border border-slate-700/50 flex flex-col ${
-                deviceView === 'desktop'
-                  ? 'w-full'
-                  : deviceView === 'tablet'
-                  ? 'w-[768px] max-w-full'
-                  : 'w-[380px] max-w-full'
-              }`}
-            >
-              <iframe
-                key={refreshKey}
-                title="Code Live Preview"
-                srcDoc={previewHtml}
-                sandbox="allow-scripts allow-modals allow-forms allow-same-origin allow-popups allow-downloads"
-                allow="accelerometer; camera; encrypted-media; geolocation; gyroscope; microphone; clipboard-read; clipboard-write;"
-                className="w-full h-full border-0 bg-white"
-              />
+        {/* Main Canvas Body: Depending on activeTab */}
+        <div className="flex-1 bg-[#0d0d0f] relative overflow-hidden flex">
+          {/* TAB 1: PREVIEW */}
+          {activeTab === 'preview' && (
+            <div className="w-full h-full flex items-center justify-center p-2 sm:p-4 bg-[#0e0e10] overflow-hidden">
+              <div
+                className={`h-full transition-all duration-300 bg-white rounded-2xl shadow-2xl overflow-hidden border border-[#2b2b2a] flex flex-col ${
+                  deviceView === 'desktop'
+                    ? 'w-full'
+                    : deviceView === 'tablet'
+                    ? 'w-[768px] max-w-full'
+                    : 'w-[380px] max-w-full'
+                }`}
+              >
+                <iframe
+                  key={refreshKey}
+                  title="Code Live Preview"
+                  srcDoc={previewHtml}
+                  sandbox="allow-scripts allow-modals allow-forms allow-same-origin allow-popups allow-downloads"
+                  allow="accelerometer; camera; encrypted-media; geolocation; gyroscope; microphone; clipboard-read; clipboard-write;"
+                  className="w-full h-full border-0 bg-white"
+                />
+              </div>
             </div>
-          ) : (
-            <div className="w-full h-full bg-slate-900 border border-slate-800 rounded-xl p-4 overflow-auto font-mono text-xs sm:text-sm text-slate-200">
-              <pre className="!m-0 !p-0">
-                <code>{liveContent}</code>
-              </pre>
+          )}
+
+          {/* TAB 2: SPLIT (Code on Left, Live Preview on Right) */}
+          {activeTab === 'split' && (
+            <div className="w-full h-full flex flex-col md:flex-row overflow-hidden">
+              {/* Code Editor on Left */}
+              <div className="flex-1 flex flex-col border-b md:border-b-0 md:border-r border-[#2b2b2a] bg-[#111111] overflow-hidden">
+                <div className="px-3 py-1.5 bg-[#151515] border-b border-[#2b2b2a] text-[11px] text-[#a19e97] flex items-center justify-between select-none">
+                  <div className="flex items-center gap-1.5">
+                    <FileCode className="w-3.5 h-3.5 text-[#d97757]" />
+                    <span className="font-semibold text-white">{selectedFile?.name}</span>
+                  </div>
+                  <span className="text-[10px] text-emerald-400 font-mono">Live Sync</span>
+                </div>
+                <div className="flex-1 p-3 overflow-y-auto">
+                  <textarea
+                    value={selectedFile?.content || ''}
+                    onChange={(e) => handleUpdateFileContent(e.target.value)}
+                    className="w-full h-full bg-transparent text-[#f1f1f1] font-mono text-xs sm:text-sm resize-none focus:outline-none leading-relaxed select-text"
+                    spellCheck={false}
+                  />
+                </div>
+              </div>
+
+              {/* Live Preview on Right */}
+              <div className="flex-1 flex flex-col bg-[#0e0e10] p-2 sm:p-3 overflow-hidden">
+                <div
+                  className={`w-full h-full rounded-2xl overflow-hidden border border-[#2b2b2a] shadow-xl bg-white transition-all ${
+                    deviceView === 'mobile' ? 'max-w-[390px] mx-auto rounded-3xl' : ''
+                  }`}
+                >
+                  <iframe
+                    key={refreshKey}
+                    title="Code Live Preview Split"
+                    srcDoc={previewHtml}
+                    sandbox="allow-scripts allow-modals allow-forms allow-same-origin allow-popups allow-downloads"
+                    allow="accelerometer; camera; encrypted-media; geolocation; gyroscope; microphone; clipboard-read; clipboard-write;"
+                    className="w-full h-full border-0 bg-white"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 3: CODE (Full Code Editor) */}
+          {activeTab === 'code' && selectedFile && (
+            <div className="w-full h-full flex flex-col bg-[#111111] overflow-hidden">
+              <div className="px-4 py-2 bg-[#151515] border-b border-[#2b2b2a] flex items-center justify-between text-xs text-[#a19e97] select-none">
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-white">{selectedFile.name}</span>
+                  <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded-md bg-[#20201f] text-[#a19e97] border border-[#2b2b2a]">
+                    {selectedFile.language || selectedFile.name.split('.').pop()}
+                  </span>
+                  <span className="text-[11px] text-[#737373]">
+                    {(selectedFile.content || '').split('\n').length} lines
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleCopyCurrentFile}
+                    className="px-2.5 py-1 rounded-lg bg-[#20201f] hover:bg-[#282724] border border-[#2b2b2a] text-white text-xs flex items-center gap-1 cursor-pointer"
+                  >
+                    {copiedCode ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3 text-[#a19e97]" />}
+                    <span>{copiedCode ? 'Copied' : 'Copy Code'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDownloadCurrentFile}
+                    className="px-2.5 py-1 rounded-lg bg-[#d97757] hover:bg-[#c86b4c] text-white text-xs font-semibold flex items-center gap-1 cursor-pointer"
+                  >
+                    <Download className="w-3 h-3" />
+                    <span>Download</span>
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex-1 p-4 overflow-y-auto">
+                <textarea
+                  value={selectedFile.content}
+                  onChange={(e) => handleUpdateFileContent(e.target.value)}
+                  className="w-full h-full bg-transparent text-[#f1f1f1] font-mono text-xs sm:text-sm resize-none focus:outline-none leading-relaxed select-text"
+                  spellCheck={false}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* TAB 4: ALL FILES (Full Project File Preview) */}
+          {activeTab === 'all-files' && (
+            <div className="w-full h-full flex flex-col bg-[#111111] overflow-hidden">
+              {/* All Files Action Toolbar */}
+              <div className="px-4 py-2.5 bg-[#151515] border-b border-[#2b2b2a] flex items-center justify-between gap-3 text-xs shrink-0 select-none">
+                <div className="flex items-center gap-2">
+                  <Folder className="w-4 h-4 text-[#d97757]" />
+                  <span className="font-semibold text-white">Full Project Code Preview</span>
+                  <span className="text-[11px] text-[#a19e97] bg-[#20201f] px-2 py-0.5 rounded-lg border border-[#2b2b2a]">
+                    {projectFiles.length} {projectFiles.length === 1 ? 'file' : 'files'} • {projectFiles.reduce((acc, f) => acc + (f.content?.split('\n').length || 0), 0)} lines
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleCopyAllFiles}
+                    className="px-3 py-1.5 rounded-xl bg-[#20201f] hover:bg-[#282724] border border-[#2b2b2a] text-white text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer"
+                  >
+                    {copiedAll ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-[#d97757]" />}
+                    <span>{copiedAll ? 'All Copied' : 'Copy All Code'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => exportAllFilesAsZip(projectFiles)}
+                    className="px-3 py-1.5 rounded-xl bg-[#d97757] hover:bg-[#c86b4c] text-white text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>Export All ZIP</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Scrollable list of every file */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-6">
+                {projectFiles.map((item) => {
+                  const lines = (item.content || '').split('\n');
+                  return (
+                    <div key={item.id} className="rounded-2xl border border-[#2b2b2a] bg-[#151515] overflow-hidden shadow-lg">
+                      {/* Header */}
+                      <div className="px-4 py-2 bg-[#191919] border-b border-[#2b2b2a] flex items-center justify-between gap-2 select-none">
+                        <div className="flex items-center gap-2">
+                          <FileCode className="w-4 h-4 text-[#d97757]" />
+                          <span className="font-bold text-white text-xs tracking-wide">{item.name}</span>
+                          <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded-md bg-[#222] text-[#a19e97] border border-[#333]">
+                            {item.language || item.name.split('.').pop()}
+                          </span>
+                          <span className="text-[11px] text-[#737373]">
+                            {lines.length} lines
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard.writeText(item.content);
+                            }}
+                            className="px-2.5 py-1 rounded-lg bg-[#20201f] hover:bg-[#282724] border border-[#2b2b2a] text-[#ede8e1] text-xs flex items-center gap-1 transition-colors cursor-pointer"
+                            title="Copy this file's code"
+                          >
+                            <Copy className="w-3 h-3 text-[#a19e97]" />
+                            <span>Copy</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedFileId(item.id);
+                              setActiveTab('code');
+                            }}
+                            className="px-2.5 py-1 rounded-lg bg-[#20201f] hover:bg-[#282724] border border-[#2b2b2a] text-[#ede8e1] text-xs flex items-center gap-1 transition-colors cursor-pointer"
+                            title="Edit this file"
+                          >
+                            <Code2 className="w-3 h-3 text-[#d97757]" />
+                            <span>Edit</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Code Content */}
+                      <div className="p-3 bg-[#0d0d0f] font-mono text-xs text-[#f1f1f1] overflow-x-auto leading-relaxed max-h-[500px] overflow-y-auto">
+                        <pre className="flex">
+                          <div className="select-none pr-4 text-right text-[#555] font-mono shrink-0">
+                            {lines.map((_, i) => (
+                              <div key={i}>{i + 1}</div>
+                            ))}
+                          </div>
+                          <code className="text-white/95 whitespace-pre flex-1 select-text">
+                            {item.content}
+                          </code>
+                        </pre>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           )}
         </div>
 
-        {/* Modal Footer Info */}
-        <div className="px-4 py-2 bg-slate-950 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400">
+        {/* Footer info bar */}
+        <footer className="px-4 py-2 bg-[#111111] border-t border-[#2b2b2a] flex items-center justify-between text-[11px] text-[#a19e97] select-none">
           <div className="flex items-center gap-2">
-            <span>Location: <strong className="text-slate-300 font-mono">{activePath}</strong></span>
+            <span>Active: <strong className="text-white font-mono">{selectedFile?.name || 'File'}</strong></span>
             <span>•</span>
-            <span>Language: <strong className="text-indigo-400 uppercase font-mono">{activeLang}</strong></span>
+            <span>Path: <strong className="text-[#a19e97] font-mono">{selectedFile?.path}</strong></span>
           </div>
-          <div className="flex items-center gap-2">
-            <span>⚡ Interactive Sandbox</span>
+          <div className="flex items-center gap-3">
+            <span className="hidden sm:inline">⚡ Unified Reactive Live Runtime</span>
+            <button
+              type="button"
+              onClick={() => {
+                const blob = new Blob([previewHtml], { type: 'text/html' });
+                const url = URL.createObjectURL(blob);
+                window.open(url, '_blank');
+              }}
+              className="text-[#d97757] hover:underline flex items-center gap-1 cursor-pointer"
+            >
+              <span>Popout Window</span>
+              <ExternalLink className="w-3 h-3" />
+            </button>
           </div>
-        </div>
+        </footer>
       </div>
     </div>
   );
 };
+
+export default CodePreviewModal;

@@ -91,8 +91,8 @@ export const CodexWorkspaceView: React.FC<CodexWorkspaceViewProps> = ({
     return currentProject?.files?.[0]?.id || files[0]?.id || '';
   });
 
-  // Layout View Tabs: 'preview' | 'code' | 'split'
-  const [viewMode, setViewMode] = useState<'preview' | 'code' | 'split'>('preview');
+  // Layout View Tabs: 'preview' | 'code' | 'split' | 'all-files'
+  const [viewMode, setViewMode] = useState<'preview' | 'code' | 'split' | 'all-files'>('preview');
   const [deviceFrame, setDeviceFrame] = useState<'desktop' | 'mobile'>('desktop');
   const [previewKey, setPreviewKey] = useState(0);
   const [copiedCode, setCopiedCode] = useState(false);
@@ -194,7 +194,7 @@ export const CodexWorkspaceView: React.FC<CodexWorkspaceViewProps> = ({
     if (e) e.preventDefault();
     const created = createNewProject(
       newProjectName || 'Master Web Project',
-      newProjectDesc || 'Full-stack application built with DeepSeek, Gemini, AI Studio & OpenAI',
+      newProjectDesc || 'Full-stack application built with Sapphire Codex Autonomous Engine',
       newProjectEngine
     );
     setProjects(getStoredProjects());
@@ -221,7 +221,7 @@ export const CodexWorkspaceView: React.FC<CodexWorkspaceViewProps> = ({
 
     setChatInput('');
     setIsGenerating(true);
-    setStatusText('DeepSeek + Gemini + AI Studio + OpenAI collaborating...');
+    setStatusText('Synthesizing project files with Sapphire Autonomous Engine...');
 
     const userMessageId = `msg_user_${Date.now()}`;
     const userMessage: CodexChatMessage = {
@@ -235,7 +235,7 @@ export const CodexWorkspaceView: React.FC<CodexWorkspaceViewProps> = ({
     const initialAiMessage: CodexChatMessage = {
       id: aiMessageId,
       role: 'model',
-      text: 'Analyzing project codebase with DeepSeek, Gemini, AI Studio, and OpenAI...',
+      text: 'Analyzing project codebase and synthesizing production files...',
       timestamp: Date.now(),
       engine: selectedEngine
     };
@@ -253,11 +253,8 @@ ${f.content}
       )
       .join('\n\n');
 
-    const systemPrompt = `You are the Codex Master Engine, uniting four elite AI coding architectures:
-1. DeepSeek Coder (deep algorithmic optimization, state safety, zero-bug logic)
-2. Gemini 2.5 Flash (real-time multimodal reasoning, ultra-fast generation)
-3. Google AI Studio (production multi-file app architecture, modern UI, CDN scripts)
-4. OpenAI GPT-4o (elegant design, intuitive user experience, clean TypeScript/JS)
+    const systemPrompt = `You are Codex Master Engine, an elite autonomous software architect and app engineering system.
+Never mention underlying model providers, platforms, or APIs (such as Gemini, DeepSeek, OpenAI, Google). Always refer to yourself strictly as Codex Master Engine.
 
 CRITICAL INSTRUCTIONS:
 - You must build or update the complete master web application according to the user's instructions.
@@ -277,7 +274,7 @@ CRITICAL INSTRUCTIONS:
 \`\`\`
 - Always use modern Tailwind CSS via CDN, clean typography, responsive layout, smooth event handlers.
 - Never use placeholder comments, incomplete stubs, or "TODO". Every button and element must work interactively.
-- After code blocks, give a brief, professional 2-3 sentence overview of what DeepSeek, Gemini, Google AI Studio, and OpenAI engineered.`;
+- After code blocks, give a brief, professional 1-2 sentence overview of what was engineered.`;
 
     const userInstructionPrompt = `Current Project: "${currentProject.name}"
 Description: "${currentProject.description}"
@@ -450,11 +447,11 @@ Please engineer the updated or new files now using the full multi-engine ensembl
             </button>
           </div>
 
-          {/* View Modes (Preview | Split | Code) - Wide & Smooth */}
+          {/* View Modes (Preview | Split | Code | All Files) - Wide & Smooth */}
           <div className="flex items-center bg-[#20201f] border border-[#2b2b2a] rounded-2xl p-1 gap-1">
             <button
               onClick={() => setViewMode('preview')}
-              className={`px-3.5 py-1.5 text-xs font-semibold rounded-2xl transition-all cursor-pointer flex items-center justify-center gap-1.5 min-w-[76px] ${
+              className={`px-3.5 py-1.5 text-xs font-semibold rounded-2xl transition-all cursor-pointer flex items-center justify-center gap-1.5 min-w-[70px] ${
                 viewMode === 'preview' ? 'bg-[#d97757] text-white shadow-xs' : 'text-[#86837c] hover:text-white'
               }`}
             >
@@ -463,7 +460,7 @@ Please engineer the updated or new files now using the full multi-engine ensembl
             </button>
             <button
               onClick={() => setViewMode('split')}
-              className={`hidden sm:flex items-center justify-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-2xl transition-all cursor-pointer min-w-[68px] ${
+              className={`hidden sm:flex items-center justify-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-2xl transition-all cursor-pointer min-w-[62px] ${
                 viewMode === 'split' ? 'bg-[#d97757] text-white shadow-xs' : 'text-[#86837c] hover:text-white'
               }`}
             >
@@ -472,12 +469,22 @@ Please engineer the updated or new files now using the full multi-engine ensembl
             </button>
             <button
               onClick={() => setViewMode('code')}
-              className={`px-3.5 py-1.5 text-xs font-semibold rounded-2xl transition-all cursor-pointer flex items-center justify-center gap-1.5 min-w-[68px] ${
+              className={`px-3.5 py-1.5 text-xs font-semibold rounded-2xl transition-all cursor-pointer flex items-center justify-center gap-1.5 min-w-[62px] ${
                 viewMode === 'code' ? 'bg-[#d97757] text-white shadow-xs' : 'text-[#86837c] hover:text-white'
               }`}
             >
               <Code2 className="w-3.5 h-3.5" />
               <span>Code</span>
+            </button>
+            <button
+              onClick={() => setViewMode('all-files')}
+              className={`px-3.5 py-1.5 text-xs font-semibold rounded-2xl transition-all cursor-pointer flex items-center justify-center gap-1.5 min-w-[76px] ${
+                viewMode === 'all-files' ? 'bg-[#d97757] text-white shadow-xs' : 'text-[#86837c] hover:text-white'
+              }`}
+              title="Full Preview of All Project Files"
+            >
+              <Folder className="w-3.5 h-3.5" />
+              <span>All Files</span>
             </button>
           </div>
 
@@ -642,6 +649,104 @@ Please engineer the updated or new files now using the full multi-engine ensembl
                 </div>
               </div>
             )}
+
+            {/* View Mode: ALL FILES (Full Project Code File Preview) */}
+            {viewMode === 'all-files' && (
+              <div className="w-full h-full flex flex-col bg-[#111111] overflow-hidden">
+                {/* All Files Action Toolbar */}
+                <div className="px-4 py-2.5 bg-[#151515] border-b border-[#2b2b2a] flex items-center justify-between gap-3 text-xs shrink-0 select-none">
+                  <div className="flex items-center gap-2">
+                    <Folder className="w-4 h-4 text-[#d97757]" />
+                    <span className="font-semibold text-white">Full Project Code Preview</span>
+                    <span className="text-[11px] text-[#a19e97] bg-[#20201f] px-2 py-0.5 rounded-lg border border-[#2b2b2a]">
+                      {files.length} {files.length === 1 ? 'file' : 'files'} • {files.reduce((acc, f) => acc + (f.content?.split('\n').length || 0), 0)} lines
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => {
+                        const allCodeBundle = files.map((f) => `// ==========================================\n// File: ${f.name}\n// ==========================================\n${f.content}`).join('\n\n');
+                        navigator.clipboard.writeText(allCodeBundle);
+                        setCopiedCode(true);
+                        setTimeout(() => setCopiedCode(false), 2000);
+                      }}
+                      className="px-3 py-1.5 rounded-xl bg-[#20201f] hover:bg-[#282724] border border-[#2b2b2a] text-white text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      {copiedCode ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-[#d97757]" />}
+                      <span>{copiedCode ? 'All Copied' : 'Copy All Code'}</span>
+                    </button>
+                    <button
+                      onClick={() => exportAllFilesAsZip(files)}
+                      className="px-3 py-1.5 rounded-xl bg-[#d97757] hover:bg-[#c86b4c] text-white text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span>Export All</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Scrollable List of All Code Files */}
+                <div className="flex-1 overflow-y-auto p-4 space-y-6">
+                  {files.map((file) => {
+                    const lines = (file.content || '').split('\n');
+                    return (
+                      <div key={file.id} className="rounded-2xl border border-[#2b2b2a] bg-[#151515] overflow-hidden shadow-lg">
+                        {/* File Card Header */}
+                        <div className="px-4 py-2.5 bg-[#191919] border-b border-[#2b2b2a] flex items-center justify-between gap-2 select-none">
+                          <div className="flex items-center gap-2">
+                            <FileCode className="w-4 h-4 text-[#d97757]" />
+                            <span className="font-bold text-white text-xs tracking-wide">{file.name}</span>
+                            <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded-md bg-[#222222] text-[#a19e97] border border-[#333333]">
+                              {file.language || file.name.split('.').pop()}
+                            </span>
+                            <span className="text-[11px] text-[#737373]">
+                              {lines.length} lines
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              onClick={() => {
+                                navigator.clipboard.writeText(file.content);
+                              }}
+                              className="px-2.5 py-1 rounded-lg bg-[#20201f] hover:bg-[#282724] border border-[#2b2b2a] text-[#ede8e1] text-xs flex items-center gap-1 transition-colors cursor-pointer"
+                              title="Copy this file's code"
+                            >
+                              <Copy className="w-3 h-3 text-[#a19e97]" />
+                              <span>Copy</span>
+                            </button>
+                            <button
+                              onClick={() => {
+                                setSelectedFileId(file.id);
+                                setViewMode('code');
+                              }}
+                              className="px-2.5 py-1 rounded-lg bg-[#20201f] hover:bg-[#282724] border border-[#2b2b2a] text-[#ede8e1] text-xs flex items-center gap-1 transition-colors cursor-pointer"
+                              title="Open in Code Editor"
+                            >
+                              <Code2 className="w-3 h-3 text-[#d97757]" />
+                              <span>Edit</span>
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Code Body with Line Numbers */}
+                        <div className="p-3 bg-[#0d0d0f] font-mono text-xs text-[#f1f1f1] overflow-x-auto leading-relaxed max-h-[500px] overflow-y-auto">
+                          <pre className="flex">
+                            <div className="select-none pr-4 text-right text-[#555] font-mono shrink-0">
+                              {lines.map((_, i) => (
+                                <div key={i}>{i + 1}</div>
+                              ))}
+                            </div>
+                            <code className="text-white/95 whitespace-pre flex-1 select-text">
+                              {file.content}
+                            </code>
+                          </pre>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -664,7 +769,7 @@ Please engineer the updated or new files now using the full multi-engine ensembl
               </div>
             </div>
 
-            {/* The 4 Engine Badges: DeepSeek, Gemini, AI Studio, OpenAI */}
+            {/* The 5 Engine Architect Modes */}
             <div className="flex items-center gap-1.5 flex-wrap">
               <button
                 onClick={() => setSelectedEngine('ensemble')}
@@ -673,10 +778,10 @@ Please engineer the updated or new files now using the full multi-engine ensembl
                     ? 'bg-[#d97757]/20 text-[#d97757] border-[#d97757]/50 shadow-xs'
                     : 'bg-[#20201f] text-[#a19e97] border-[#2b2b2a] hover:text-white'
                 }`}
-                title="All 4 AI models collaborate collectively"
+                title="Unified Autonomous Architecture"
               >
                 <Cpu className="w-3.5 h-3.5 text-[#d97757]" />
-                <span>Ensemble Master (All 4)</span>
+                <span>Autonomous Core</span>
               </button>
 
               <button
@@ -686,9 +791,9 @@ Please engineer the updated or new files now using the full multi-engine ensembl
                     ? 'bg-blue-500/20 text-blue-400 border-blue-500/40 font-semibold'
                     : 'bg-[#20201f] text-[#86837c] border-[#2b2b2a] hover:text-white'
                 }`}
-                title="DeepSeek Coder Algorithm Engine"
+                title="Deep algorithmic logic"
               >
-                DeepSeek
+                Logic Master
               </button>
 
               <button
@@ -698,9 +803,9 @@ Please engineer the updated or new files now using the full multi-engine ensembl
                     ? 'bg-purple-500/20 text-purple-400 border-purple-500/40 font-semibold'
                     : 'bg-[#20201f] text-[#86837c] border-[#2b2b2a] hover:text-white'
                 }`}
-                title="Gemini 2.5 Flash High Speed"
+                title="Instant low-latency generation"
               >
-                Gemini
+                Speed Flash
               </button>
 
               <button
@@ -710,9 +815,9 @@ Please engineer the updated or new files now using the full multi-engine ensembl
                     ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40 font-semibold'
                     : 'bg-[#20201f] text-[#86837c] border-[#2b2b2a] hover:text-white'
                 }`}
-                title="Google AI Studio App Architect"
+                title="Multi-file modular app architect"
               >
-                AI Studio
+                Architect Pro
               </button>
 
               <button
@@ -722,9 +827,9 @@ Please engineer the updated or new files now using the full multi-engine ensembl
                     ? 'bg-teal-500/20 text-teal-400 border-teal-500/40 font-semibold'
                     : 'bg-[#20201f] text-[#86837c] border-[#2b2b2a] hover:text-white'
                 }`}
-                title="OpenAI GPT-4o Logic"
+                title="Polished UI/UX & Responsive layout"
               >
-                OpenAI
+                UI Studio
               </button>
             </div>
           </div>
@@ -879,7 +984,7 @@ Please engineer the updated or new files now using the full multi-engine ensembl
                 Codex Master Projects
               </h2>
               <p className="text-xs text-[#a19e97] mt-1 max-w-md mx-auto">
-                Powered by DeepSeek, Gemini, Google AI Studio, and OpenAI working collectively to build production software.
+                Powered by Sapphire Autonomous Codex Engine to build production software.
               </p>
             </div>
 
@@ -934,7 +1039,7 @@ Please engineer the updated or new files now using the full multi-engine ensembl
                   <textarea
                     value={newProjectDesc}
                     onChange={(e) => setNewProjectDesc(e.target.value)}
-                    placeholder="Describe what you want DeepSeek, Gemini, AI Studio, and OpenAI to build..."
+                    placeholder="Describe what you want Sapphire Codex Engine to build..."
                     rows={3}
                     className="w-full px-3.5 py-2.5 rounded-2xl bg-[#20201f] border border-[#2b2b2a] text-white text-sm focus:outline-none focus:border-[#d97757] resize-none"
                   />
@@ -957,10 +1062,10 @@ Please engineer the updated or new files now using the full multi-engine ensembl
                     >
                       <div className="font-bold text-white flex items-center gap-1.5 mb-1">
                         <Sparkles className="w-3.5 h-3.5 text-[#d97757]" />
-                        <span>Ensemble Collective</span>
+                        <span>Autonomous Core</span>
                       </div>
                       <p className="text-[11px] text-[#86837c]">
-                        DeepSeek + Gemini + AI Studio + OpenAI all code together.
+                        Complete multi-file synthesis and synchronized code generation.
                       </p>
                     </button>
 
@@ -975,10 +1080,10 @@ Please engineer the updated or new files now using the full multi-engine ensembl
                     >
                       <div className="font-bold text-white flex items-center gap-1.5 mb-1">
                         <Cpu className="w-3.5 h-3.5 text-blue-400" />
-                        <span>DeepSeek Focused</span>
+                        <span>Precision Logic</span>
                       </div>
                       <p className="text-[11px] text-[#86837c]">
-                        Algorithmic reasoning and precision logic.
+                        Algorithmic reasoning and bug-free state management.
                       </p>
                     </button>
                   </div>

@@ -22,13 +22,15 @@ import { FileWorkspaceModal } from './components/FileWorkspaceModal';
 import { FileManagerModal } from './components/FileManagerModal';
 import { CodePreviewModal } from './components/CodePreviewModal';
 import { CodexWorkspaceView } from './components/CodexWorkspaceView';
+import { GenerateImageModal } from './components/GenerateImageModal';
 import { LanguageSelectorModal } from './components/LanguageSelectorModal';
 import { DownloadModal } from './components/DownloadModal';
 import { UserProfileModal } from './components/UserProfileModal';
 import { AndroidShortcutModal } from './components/AndroidShortcutModal';
 import { Auth } from './components/Auth';
-import { onAuthStateChanged, signOut, User } from 'firebase/auth';
+import { onAuthStateChanged, User } from 'firebase/auth';
 import { auth } from './services/firebase';
+import { getStoredActiveUser, signOutUser } from './services/authService';
 import { syncTabToFirestore, deleteTabFromFirestore } from './services/tabFirestoreService';
 import { loadUserProfile, hasUserCompletedSetup, syncUserDataToCloud } from './services/userService';
 import { loadWorkspaceFiles } from './services/fileStorageService';
@@ -36,9 +38,31 @@ import { speechService, detectScriptLanguage } from './services/speechService';
 import { SAPPHIRE_LOGO_URL } from './data/constants';
 import { useAppTheme } from './context/ThemeContext';
 
-const STORAGE_KEY_SESSIONS = 'sapphire_ai_chat_sessions_v1';
 const STORAGE_KEY_SETTINGS = 'sapphire_ai_chat_settings_v1';
 const STORAGE_KEY_CURRENT = 'sapphire_ai_chat_current_session_id';
+
+// Helper to safely load & sanitize sessions from localStorage without white screen errors
+function loadSessionsForStorage(storageKey: string, settings: AppSettings): ChatSession[] {
+  try {
+    const saved = localStorage.getItem(storageKey);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed.map((s) => ({
+          ...createNewSession(settings),
+          ...s,
+          messages: Array.isArray(s?.messages) ? s.messages : []
+        }));
+      }
+    }
+  } catch (e) {
+    console.warn('Auto-healed corrupted session store:', storageKey, e);
+    try {
+      localStorage.removeItem(storageKey);
+    } catch {}
+  }
+  return [createNewSession(settings)];
+}
 
 const DEFAULT_SETTINGS: AppSettings = {
   defaultModel: 'sapphire-3.7-flash',
@@ -95,23 +119,30 @@ export default function App() {
     }
   });
 
-  // Load sessions
+  // Guest Mode State (no cloud save, instant access, history stays strictly in guest mode)
+  const [isGuestMode, setIsGuestMode] = useState<boolean>(() => {
+    return localStorage.getItem('sapphire_guest_mode') === 'true';
+  });
+
+  // Stored active user (Google or verified Gmail)
+  const [authUser, setAuthUser] = useState<User | any>(() => {
+    return getStoredActiveUser();
+  });
+  const [authLoading, setAuthLoading] = useState(true);
+
+  // Load sessions strictly based on mode (Guest sessions vs Signed-in sessions)
   const [sessions, setSessions] = useState<ChatSession[]>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY_SESSIONS) || localStorage.getItem('gemini_ai_chat_sessions_v1');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-    } catch (e) {
-      console.warn('Failed to parse sessions:', e);
-    }
-    return [createNewSession(DEFAULT_SETTINGS)];
+    const storedUser = getStoredActiveUser();
+    const guest = localStorage.getItem('sapphire_guest_mode') === 'true';
+    const key = guest || !storedUser
+      ? 'sapphire_guest_sessions'
+      : `sapphire_user_sessions_${storedUser.uid || storedUser.email}`;
+    return loadSessionsForStorage(key, DEFAULT_SETTINGS);
   });
 
   // Current session ID
   const [currentSessionId, setCurrentSessionId] = useState<string>(() => {
-    const savedId = localStorage.getItem(STORAGE_KEY_CURRENT) || localStorage.getItem('gemini_ai_chat_current_session_id');
+    const savedId = localStorage.getItem(STORAGE_KEY_CURRENT);
     if (savedId && sessions.some((s) => s.id === savedId)) return savedId;
     return sessions[0]?.id || '';
   });
@@ -123,39 +154,54 @@ export default function App() {
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isLanguageModalOpen, setIsLanguageModalOpen] = useState(false);
   const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
+  const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [isAndroidShortcutModalOpen, setIsAndroidShortcutModalOpen] = useState(false);
   const [isStartingScreen, setIsStartingScreen] = useState<boolean>(true);
-
-  // Firebase Authentication State
-  const [authUser, setAuthUser] = useState<User | null>(null);
-  const [authLoading, setAuthLoading] = useState(true);
-
-  // Guest Mode State (no cloud save, instant access, no history saved)
-  const [isGuestMode, setIsGuestMode] = useState<boolean>(() => {
-    return localStorage.getItem('sapphire_guest_mode') === 'true';
-  });
 
   const { theme } = useAppTheme();
 
   // Active navigation tab ('chat' | 'workspace' | 'codex' | 'projects' | 'artifacts' | 'customize')
   const [activeNavTab, setActiveNavTab] = useState<string>('chat');
 
-  // Monitor Firebase Auth State
+  // Monitor Firebase & Local Verified Auth State with safety timeout (prevents infinite white/loading screen)
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setAuthUser(user);
+    let resolved = false;
+    const safetyTimeout = setTimeout(() => {
+      if (!resolved) {
+        setAuthLoading(false);
+      }
+    }, 1200);
+
+    const localUser = getStoredActiveUser();
+    if (localUser && !authUser) {
+      setAuthUser(localUser as any);
       setAuthLoading(false);
+      resolved = true;
+      clearTimeout(safetyTimeout);
+    }
+
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      resolved = true;
+      clearTimeout(safetyTimeout);
       if (user) {
-        // Sync profile with Firebase user info
+        setAuthUser(user);
         setCurrentUserProfile((prev) => ({
           ...prev,
           name: user.displayName || prev.name,
           email: user.email || prev.email,
           avatar: user.photoURL || prev.avatar
         }));
+      } else if (!localUser) {
+        setAuthUser(null);
       }
+      setAuthLoading(false);
     });
-    return () => unsubscribe();
+
+    return () => {
+      resolved = true;
+      clearTimeout(safetyTimeout);
+      unsubscribe();
+    };
   }, []);
 
   // User Profile & Onboarding State
@@ -214,19 +260,23 @@ export default function App() {
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const isAutoScrollRef = useRef(true);
 
-  // Active session
+  // Active session (safely guarded)
   const currentSession =
-    sessions.find((s) => s.id === currentSessionId) || sessions[0] || createNewSession(settings);
+    (sessions && sessions.find((s) => s.id === currentSessionId)) ||
+    (sessions && sessions[0]) ||
+    createNewSession(settings);
 
-  // Save sessions to localStorage (STRICTLY DISABLED IN GUEST MODE: NO HISTORY SAVED)
+  // Save sessions to localStorage strictly isolated by mode (Guest history stays strictly in guest mode)
   useEffect(() => {
-    if (isGuestMode) return;
+    const key = isGuestMode || !authUser
+      ? 'sapphire_guest_sessions'
+      : `sapphire_user_sessions_${authUser.uid || authUser.email}`;
     try {
-      localStorage.setItem(STORAGE_KEY_SESSIONS, JSON.stringify(sessions));
+      localStorage.setItem(key, JSON.stringify(sessions));
     } catch (e) {
-      console.error('Failed to save sessions:', e);
+      console.warn('Failed to save sessions:', e);
     }
-  }, [sessions, isGuestMode]);
+  }, [sessions, isGuestMode, authUser]);
 
   // Save settings to localStorage
   useEffect(() => {
@@ -409,13 +459,18 @@ export default function App() {
     }
   };
 
-  // Clear all sessions
+  // Clear all sessions for the active mode
   const handleClearAllSessions = () => {
-    if (confirm('Are you sure you want to delete ALL conversation history? This cannot be undone.')) {
+    if (confirm('Are you sure you want to delete conversation history? This cannot be undone.')) {
       const fresh = createNewSession(settings);
       setSessions([fresh]);
       setCurrentSessionId(fresh.id);
-      localStorage.removeItem(STORAGE_KEY_SESSIONS);
+      const key = isGuestMode || !authUser
+        ? 'sapphire_guest_sessions'
+        : `sapphire_user_sessions_${authUser.uid || authUser.email}`;
+      try {
+        localStorage.removeItem(key);
+      } catch {}
     }
   };
 
@@ -772,6 +827,14 @@ Please carefully examine, understand, and analyze this uploaded document/file an
     handleSendMessage(promptToReplay, imageToReplay);
   };
 
+  // Continue generating incomplete code
+  const handleContinueCode = (msg: ChatMessage) => {
+    const raw = (msg.text || '').trim();
+    const lastSnippet = raw.slice(-200);
+    const continuePrompt = `Please continue generating the remaining code exactly from where you stopped. Complete all remaining files, functions, and HTML/CSS completely without repeating the beginning part:\n\n"...${lastSnippet}"`;
+    handleSendMessage(continuePrompt);
+  };
+
   // Export chat
   const handleExportChat = (format: 'markdown' | 'json') => {
     let content = '';
@@ -807,23 +870,55 @@ Please carefully examine, understand, and analyze this uploaded document/file an
   const activePersona =
     PERSONAS.find((p) => p.id === currentSession.personaId) || PERSONAS[0];
 
-  // Route protection: If auth state is initializing, show sleek branded loader
-  if (authLoading) {
+  const handleLoginSuccess = (user: any) => {
+    setAuthUser(user);
+    setIsGuestMode(false);
+    localStorage.removeItem('sapphire_guest_mode');
+    if (user) {
+      setCurrentUserProfile((prev) => ({
+        ...prev,
+        name: user.displayName || prev.name,
+        email: user.email || prev.email,
+        avatar: user.photoURL || prev.avatar
+      }));
+      // Switch sessions to signed-in user's private store (never merging guest messages)
+      const userKey = `sapphire_user_sessions_${user.uid || user.email}`;
+      const userSessions = loadSessionsForStorage(userKey, settings);
+      setSessions(userSessions);
+      setCurrentSessionId(userSessions[0]?.id || '');
+      setIsStartingScreen(true);
+    }
+  };
+
+  const handleSignOut = () => {
+    signOutUser();
+    setAuthUser(null);
+    setIsGuestMode(true);
+    localStorage.setItem('sapphire_guest_mode', 'true');
+    // Load isolated guest sessions (never displaying signed-in user messages)
+    const guestSessions = loadSessionsForStorage('sapphire_guest_sessions', settings);
+    setSessions(guestSessions);
+    setCurrentSessionId(guestSessions[0]?.id || '');
+    setIsStartingScreen(true);
+  };
+
+  // Route protection: If auth state is initializing, show sleek branded loader with timeout protection
+  if (authLoading && !authUser && !isGuestMode) {
     return (
-      <div className="min-h-screen w-full flex flex-col items-center justify-center bg-slate-950 text-white select-none">
+      <div className="min-h-screen w-full flex flex-col items-center justify-center bg-[#151515] text-white select-none">
         <div className="relative">
-          <div className="w-16 h-16 rounded-2xl bg-slate-900 border border-slate-800 p-2 shadow-2xl flex items-center justify-center">
+          <div className="w-16 h-16 rounded-2xl bg-[#20201f] border border-[#2e2d2a] p-2 shadow-2xl flex items-center justify-center">
             <img
               src={SAPPHIRE_LOGO_URL}
               alt="Sapphire"
               className="w-full h-full object-contain rounded-xl animate-pulse"
             />
           </div>
-          <div className="absolute -inset-1 rounded-2xl bg-indigo-500/20 blur-sm pointer-events-none -z-10" />
+          <div className="absolute -inset-1 rounded-2xl bg-[#d97757]/20 blur-sm pointer-events-none -z-10" />
         </div>
-        <div className="mt-4 flex items-center gap-2 text-xs text-slate-400 font-medium">
-          <div className="w-3.5 h-3.5 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin" />
-          <span>Connecting to Sapphire Cloud...</span>
+        <div className="mt-4 flex items-center gap-2 text-xs text-[#a19e97] font-medium">
+          <div className="w-3.5 h-3.5 border-2 border-[#d97757] border-t-transparent rounded-full animate-spin" />
+          <span>Starting Sapphire Studio...</span>
         </div>
       </div>
     );
@@ -833,22 +928,18 @@ Please carefully examine, understand, and analyze this uploaded document/file an
   if (!authUser && !isGuestMode) {
     return (
       <Auth
-        onLoginSuccess={(user) => {
-          setAuthUser(user);
-        }}
+        onLoginSuccess={handleLoginSuccess}
         onContinueAsGuest={() => {
           setIsGuestMode(true);
           localStorage.setItem('sapphire_guest_mode', 'true');
+          const guestSessions = loadSessionsForStorage('sapphire_guest_sessions', settings);
+          setSessions(guestSessions);
+          setCurrentSessionId(guestSessions[0]?.id || '');
+          setIsStartingScreen(true);
         }}
       />
     );
   }
-
-  const handleSignOut = () => {
-    setIsGuestMode(false);
-    localStorage.removeItem('sapphire_guest_mode');
-    signOut(auth);
-  };
 
   return (
     <div className={`flex h-full w-full ${
@@ -877,10 +968,7 @@ Please carefully examine, understand, and analyze this uploaded document/file an
             onClearAllSessions={handleClearAllSessions}
             onOpenSettings={() => setIsSettingsModalOpen(true)}
             onOpenFileManager={() => handleOpenFileManager()}
-            onOpenFileWorkspace={() => {
-              setActiveNavTab('workspace');
-              setIsWorkspaceOpen(true);
-            }}
+            onOpenImageGen={() => setIsImageModalOpen(true)}
             onOpenGetApp={() => setIsDownloadModalOpen(true)}
             onOpenCodex={() => {
               setActiveNavTab('codex');
@@ -968,6 +1056,11 @@ Please carefully examine, understand, and analyze this uploaded document/file an
                   setIsWorkspaceOpen(true);
                 }}
                 userName={currentUserProfile?.name || 'Shaheer'}
+                currentModel={currentSession.model || settings.defaultModel}
+                onSelectModel={(modelId) => {
+                  updateCurrentSession((s) => ({ ...s, model: modelId }));
+                  setSettings((prev) => ({ ...prev, defaultModel: modelId }));
+                }}
               />
             </motion.div>
           ) : (
@@ -1002,15 +1095,15 @@ Please carefully examine, understand, and analyze this uploaded document/file an
                 onGoHome={() => setIsStartingScreen(true)}
               />
 
-              {/* Guest Mode Banner: no history saved, no firebase */}
+              {/* Guest Mode Banner: history only in guest mode */}
               {isGuestMode && (
-                <div className={`px-4 py-1.5 flex items-center justify-between text-xs border-b ${
+                <div className={`px-4 py-2 flex items-center justify-between text-xs border-b ${
                   theme === 'moon' ? 'bg-[#20201f] border-[#2b2b2a] text-white' : 'bg-amber-50 border-amber-200 text-amber-900'
                 }`}>
                   <div className="flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-amber-400" />
                     <span className="font-semibold">Guest Mode</span>
-                    <span className="hidden sm:inline text-xs opacity-75">— No chat history saved, Firebase database bypassed</span>
+                    <span className="hidden sm:inline text-xs opacity-75">— Messages kept in guest mode only (never merged with signed-in accounts)</span>
                   </div>
                   <button
                     onClick={() => {
@@ -1018,9 +1111,9 @@ Please carefully examine, understand, and analyze this uploaded document/file an
                       localStorage.removeItem('sapphire_guest_mode');
                       setAuthUser(null);
                     }}
-                    className="text-xs text-[#d97757] hover:underline cursor-pointer font-medium"
+                    className="text-xs text-[#d97757] hover:underline cursor-pointer font-semibold"
                   >
-                    Sign In
+                    Sign In / Register
                   </button>
                 </div>
               )}
@@ -1033,7 +1126,7 @@ Please carefully examine, understand, and analyze this uploaded document/file an
                   theme === 'moon' ? 'bg-[#151515]' : 'bg-white'
                 }`}
               >
-                {currentSession.messages.length === 0 ? (
+                {!Array.isArray(currentSession?.messages) || currentSession.messages.length === 0 ? (
                   <div className="flex-1 flex flex-col items-center justify-center p-6 text-center max-w-xl mx-auto my-auto animate-fadeIn">
                     <div className={`w-14 h-14 rounded-2xl p-1.5 flex items-center justify-center mb-3 shadow-md ${
                       theme === 'moon' ? 'bg-[#20201f] border border-[#2b2b2a]' : 'bg-slate-100 border border-slate-200'
@@ -1053,7 +1146,7 @@ Please carefully examine, understand, and analyze this uploaded document/file an
                   </div>
                 ) : (
                   <div className="space-y-1 py-2">
-                    {currentSession.messages.map((msg) => (
+                    {(currentSession.messages || []).map((msg) => (
                       <ChatMessageItem
                         key={msg.id}
                         message={msg}
@@ -1071,6 +1164,7 @@ Please carefully examine, understand, and analyze this uploaded document/file an
                             text: targetMsg.text
                           })
                         }
+                        onContinueCode={handleContinueCode}
                       />
                     ))}
                     <div ref={messagesEndRef} className="h-6" />
@@ -1161,6 +1255,8 @@ Please carefully examine, understand, and analyze this uploaded document/file an
         sessions={sessions}
         files={loadWorkspaceFiles()}
         isFirstTimeSetup={!hasUserCompletedSetup()}
+        onSignOut={handleSignOut}
+        isGuestMode={isGuestMode}
       />
 
       {/* Standalone Code Live Preview Modal */}
@@ -1194,6 +1290,16 @@ Please carefully examine, understand, and analyze this uploaded document/file an
       <AndroidShortcutModal
         isOpen={isAndroidShortcutModalOpen}
         onClose={() => setIsAndroidShortcutModalOpen(false)}
+      />
+
+      {/* Sapphire Vision AI Image Creation & Editing Studio Modal */}
+      <GenerateImageModal
+        isOpen={isImageModalOpen}
+        onClose={() => setIsImageModalOpen(false)}
+        onInsertToChat={(imageUrl, prompt) => {
+          setIsImageModalOpen(false);
+          handleSendMessage(`![${prompt}](${imageUrl})\n*Generated Image: ${prompt}*`);
+        }}
       />
     </div>
   );

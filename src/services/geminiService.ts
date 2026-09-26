@@ -210,7 +210,7 @@ When writing code for websites or apps, provide complete runnable multi-file cod
         contents,
         generationConfig: {
           temperature: Number(temperature) || 0.7,
-          maxOutputTokens: 8192
+          maxOutputTokens: 65536
         },
         systemInstruction: {
           parts: [{ text: finalInstruction }]

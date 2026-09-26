@@ -32,6 +32,8 @@ interface EmptyStateProps {
   onOpenFileWorkspace?: () => void;
   onOpenImageGen?: () => void;
   userName?: string;
+  currentModel?: string;
+  onSelectModel?: (modelId: string) => void;
 }
 
 export const EmptyState: React.FC<EmptyStateProps> = ({
@@ -40,15 +42,34 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   onOpenGetApp,
   useSearchGrounding,
   setUseSearchGrounding,
-  userName: propUserName
+  userName: propUserName,
+  currentModel,
+  onSelectModel
 }) => {
   const { theme } = useAppTheme();
   const [promptText, setPromptText] = useState('');
   const [isPlusMenuOpen, setIsPlusMenuOpen] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
-  const [selectedModel, setSelectedModel] = useState('Sapphire Studio');
   const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
   const [attachedFiles, setAttachedFiles] = useState<{ name: string; size: number }[]>([]);
+
+  const modelChoices = [
+    { id: 'openai-gpt-4o-mini', name: 'OpenAI GPT-4o Mini', sub: 'Ultra-fast OpenAI engine' },
+    { id: 'openai-gpt-4o', name: 'OpenAI GPT-4o', sub: 'OpenAI flagship multimodal' },
+    { id: 'sapphire-3.7-flash', name: 'Sapphire 3.7 Flash', sub: 'Recommended low latency' },
+    { id: 'sapphire-flash-latest', name: 'Sapphire Studio', sub: 'Interactive live app builder' },
+    { id: 'sapphire-3.1-pro', name: 'Sapphire Ultra', sub: 'Deep algorithmic reasoning' }
+  ];
+
+  const currentChoice = modelChoices.find((m) => m.id === currentModel) || modelChoices[0];
+  const [selectedModelName, setSelectedModelName] = useState(currentChoice.name);
+
+  useEffect(() => {
+    if (currentModel) {
+      const match = modelChoices.find((m) => m.id === currentModel);
+      if (match) setSelectedModelName(match.name);
+    }
+  }, [currentModel]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -360,7 +381,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
                         : 'bg-[#282724] hover:bg-[#32302c] text-[#ede8e1] border-[#383633]'
                     }`}
                   >
-                    <span className="font-medium">{selectedModel}</span>
+                    <span className="font-medium">{selectedModelName}</span>
                     <ChevronDown className="w-3 h-3 text-[#a19e97]" />
                   </button>
 
@@ -370,26 +391,23 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
                         initial={{ opacity: 0, y: 5 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 5 }}
-                        className={`absolute right-0 bottom-10 z-50 w-52 rounded-xl shadow-2xl p-1.5 space-y-1 text-xs border ${
+                        className={`absolute right-0 bottom-10 z-50 w-56 rounded-xl shadow-2xl p-1.5 space-y-1 text-xs border ${
                           theme === 'moon'
                             ? 'bg-[#20201f] border-[#2b2b2a] text-white'
                             : 'bg-[#201f1d] border-[#33312e] text-[#ede8e1]'
                         }`}
                       >
-                        {[
-                          { name: 'Sapphire Studio', sub: 'Interactive live app builder' },
-                          { name: 'Sapphire Flash', sub: 'Ultra low latency real-time coder' },
-                          { name: 'Sapphire Ultra', sub: 'Deep algorithmic reasoning' }
-                        ].map((item) => (
+                        {modelChoices.map((item) => (
                           <button
-                            key={item.name}
+                            key={item.id}
                             type="button"
                             onClick={() => {
-                              setSelectedModel(item.name);
+                              setSelectedModelName(item.name);
+                              if (onSelectModel) onSelectModel(item.id);
                               setIsModelDropdownOpen(false);
                             }}
                             className={`w-full px-3 py-2 rounded-lg flex flex-col text-left transition-colors cursor-pointer ${
-                              selectedModel === item.name
+                              selectedModelName === item.name
                                 ? 'bg-[#d97757]/20 text-[#d97757] font-semibold'
                                 : theme === 'moon'
                                 ? 'hover:bg-[#151515] text-[#a3a3a3] hover:text-white'

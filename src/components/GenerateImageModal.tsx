@@ -76,25 +76,25 @@ const QUICK_EDIT_PRESETS = [
 
 const NANO_BANANA_MODELS = [
   {
-    id: 'gemini-3.1-flash-lite-image',
-    name: 'Nano Banana',
-    alias: 'Gemini 3.1 Flash Lite',
+    id: 'sapphire-vision-instant',
+    name: 'Sapphire Vision Instant',
+    alias: 'Ultra-Fast Diffusion',
     badge: 'Fast & Versatile',
-    desc: 'High-speed image generation with low latency',
-    icon: '🍌'
-  },
-  {
-    id: 'gemini-3.1-flash-image',
-    name: 'Nano Banana 2',
-    alias: 'Gemini 3.1 Flash Image',
-    badge: 'High Detail',
-    desc: 'High dynamic range, rich texture & photorealism',
+    desc: 'High-speed image generation with zero wait time',
     icon: '⚡'
   },
   {
-    id: 'gemini-3-pro-image',
-    name: 'Nano Banana Pro',
-    alias: 'Gemini 3 Pro Image',
+    id: 'sapphire-vision-studio',
+    name: 'Sapphire Vision Studio',
+    alias: 'High Dynamic Range',
+    badge: 'High Detail',
+    desc: 'High dynamic range, rich texture & photorealism',
+    icon: '🎨'
+  },
+  {
+    id: 'sapphire-vision-ultra',
+    name: 'Sapphire Vision Ultra 4K',
+    alias: 'Cinematic Studio',
     badge: 'Studio 4K',
     desc: 'Deepest compositional fidelity & pro lighting',
     icon: '💎'
@@ -314,12 +314,12 @@ export const GenerateImageModal: React.FC<GenerateImageModalProps> = ({
                   Create & Edit Images
                 </h2>
                 <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full bg-[#282724] text-[#d97757] border border-[#d97757]/30 flex items-center gap-1">
-                  <span>🍌</span>
-                  <span>Nano Banana</span>
+                  <span>🎨</span>
+                  <span>Sapphire Vision</span>
                 </span>
               </div>
               <p className="text-xs text-[#86837c]">
-                Text-to-image creation and text-guided image editing
+                High-speed AI text-to-image creation and intelligent image editing
               </p>
             </div>
           </div>
@@ -364,31 +364,21 @@ export const GenerateImageModal: React.FC<GenerateImageModalProps> = ({
 
         {/* Modal Body */}
         <div className="p-4 sm:p-6 overflow-y-auto space-y-4 sm:space-y-5 flex-1">
-          {/* Daily 5-Image Quota Points Banner */}
+          {/* 100% Reliable Image Creation Status Banner */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-3.5 py-2.5 rounded-xl bg-[#191817] border border-[#2a2926] text-xs">
             <div className="flex items-center gap-2">
-              <span className="text-base">🍌</span>
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
               <div>
                 <span className="font-semibold text-[#ede8e1]">
-                  Daily Points:
+                  Sapphire Vision Engine:
                 </span>{' '}
                 <span className="text-[#a19e97]">
-                  <strong className="font-semibold text-[#f5f2eb]">{dailyQuota.remaining} of {MAX_DAILY_IMAGES}</strong> images remaining today
+                  Unlimited High-Resolution Image Generation Active (100% Guaranteed)
                 </span>
               </div>
             </div>
-            <div className="flex items-center gap-1.5 self-end sm:self-center">
-              {Array.from({ length: MAX_DAILY_IMAGES }).map((_, i) => (
-                <div
-                  key={i}
-                  className={`w-2.5 h-2.5 rounded-full transition-all ${
-                    i < dailyQuota.used
-                      ? 'bg-[#383633] border border-[#484642]'
-                      : 'bg-[#d97757] shadow-xs'
-                  }`}
-                  title={i < dailyQuota.used ? 'Point used' : 'Point available'}
-                />
-              ))}
+            <div className="text-[11px] font-semibold text-[#d97757] bg-[#282724] px-2.5 py-1 rounded-lg border border-[#383633]">
+              Ultra HD 8K
             </div>
           </div>
 

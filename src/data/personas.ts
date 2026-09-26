@@ -82,6 +82,18 @@ export const PROMPT_STARTERS = [
 
 export const AVAILABLE_MODELS = [
   {
+    id: 'openai-gpt-4o-mini',
+    name: 'OpenAI GPT-4o Mini',
+    tag: 'Ultra-Fast Instant',
+    description: 'Official OpenAI high-speed lightweight engine for fast answers and rapid code generation'
+  },
+  {
+    id: 'openai-gpt-4o',
+    name: 'OpenAI GPT-4o',
+    tag: 'OpenAI Flagship',
+    description: 'Premier OpenAI frontier model with high-level intelligence and multi-file reasoning'
+  },
+  {
     id: 'sapphire-3.7-flash',
     name: 'Sapphire 3.7 Flash',
     tag: 'Recommended & Ultra-Fast',

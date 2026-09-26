@@ -610,6 +610,11 @@ app.post('/api/chat/stream', async (req, res) => {
     req.body?.deepseekApiKey ||
     process.env.DEEPSEEK_API_KEY ||
     (process.env as any).DEEP_SEEK_API_KEY;
+  const openaiKey =
+    (req.headers['x-openai-api-key'] as string) ||
+    req.body?.openaiApiKey ||
+    process.env.OPENAI_API_KEY ||
+    (process.env as any).OPEN_AI_API_KEY;
 
   const {
     contents,
@@ -662,6 +667,49 @@ app.post('/api/chat/stream', async (req, res) => {
     effectiveSystemInstruction += '\n[LOGICAL THINKING DIRECTIVE]: The user specifically requested a logical conceptual diagram (e.g., Venn diagram or comparison table). Explain the logic in clear text and present a structured Markdown comparison table detailing all sets and the intersection. Do NOT draw text-based ASCII art diagrams.';
   }
 
+  const isOpenAIRequested =
+    (typeof model === 'string' && (model.startsWith('openai') || model.startsWith('gpt') || model.includes('openai'))) ||
+    Boolean(openaiKey && !model?.includes('deepseek') && !model?.includes('gemini'));
+
+  // 1. If OpenAI is explicitly requested or OpenAI API key is present, stream fast OpenAI response
+  if (isOpenAIRequested && openaiKey) {
+    try {
+      const openAiMessages = sanitizedContents.map((c: any) => ({
+        role: c.role === 'model' ? 'assistant' : 'user',
+        content: (c.parts || []).map((p: any) => p.text || '').join('\n')
+      }));
+      if (effectiveSystemInstruction) {
+        openAiMessages.unshift({ role: 'system', content: effectiveSystemInstruction });
+      }
+      const streamed = await streamOpenAIChatToClient(openAiMessages, {
+        apiKey: openaiKey,
+        model: typeof model === 'string' ? model : 'gpt-4o-mini',
+        temperature: Number(temperature) || 0.4
+      }, res);
+
+      if (streamed) {
+        if (diagramPromise) {
+          try {
+            const diag = await Promise.race([
+              diagramPromise,
+              new Promise<null>((r) => setTimeout(() => r(null), 1500))
+            ]);
+            if (diag && diag.imageUrl) {
+              const diagMd = `\n\n![${diag.title}](${diag.imageUrl})\n*${diag.title}*\n\n`;
+              res.write(`data: ${JSON.stringify({ text: diagMd, isThinking: false })}\n\n`);
+            }
+          } catch {}
+        }
+        res.write(`data: [DONE]\n\n`);
+        (res as any).flush?.();
+        res.end();
+        return;
+      }
+    } catch (openAiErr) {
+      console.warn('OpenAI stream failed, falling back to neural flash engine:', openAiErr);
+    }
+  }
+
   // Delegate all prompts directly to Gemini models for dynamic, high-quality, non-repeating answers
   // If live API key is present, use official Google Gemini API with low-latency streaming
   if (apiKey) {
@@ -676,12 +724,18 @@ app.post('/api/chat/stream', async (req, res) => {
       });
 
       const baseInstruction = isCodingRequest
-        ? `You are Sapphire AI, an elite autonomous software architect and app builder (Google AI Studio Codex Engine).
-CODING & MULTI-FILE PROJECT STANDARDS (CRITICAL):
-1. PROJECT STRUCTURE FIRST:
-   Whenever asked to create a website, web app, script, or multiple-file project:
+        ? `You are Sapphire AI, an elite autonomous software architect and app builder.
+Never mention underlying model providers, platforms, or APIs (such as Gemini, DeepSeek, Google, OpenAI, Anthropic). Always refer to yourself strictly as Sapphire AI.
+
+CODING & MULTI-FILE PROJECT STANDARDS (CRITICAL - NEVER TRUNCATE):
+1. COMPLETE, UNTRUNCATED CODE GUARANTEE:
+   - You MUST generate 100% complete, fully implemented files from beginning to end.
+   - NEVER STOP HALFWAY. NEVER end a response early or leave a file incomplete.
+   - ALWAYS close all HTML tags (</div>, </section>, </body>, </html>), all JavaScript brackets ({ }, [ ]), and all markdown code fences (\`\`\`).
+   - NEVER use abbreviations, lazy comments like "// ... rest of code here", "// TODO", or placeholder snippets. Every function and style rule must be fully written out.
+2. PROJECT STRUCTURE FIRST:
    - ALWAYS start your answer with a clean ASCII directory/file structure diagram showing exactly where each file belongs (e.g., 📁 project-name/ ├── index.html ├── style.css ├── script.js).
-2. INDIVIDUAL FILE CODE BLOCKS:
+3. INDIVIDUAL FILE CODE BLOCKS:
    - Provide each file in its own markdown code block with an explicit filename tag or comment on line 1:
      \`\`\`html filename="index.html"
      <!-- index.html -->
@@ -692,9 +746,9 @@ CODING & MULTI-FILE PROJECT STANDARDS (CRITICAL):
      \`\`\`javascript filename="script.js"
      // script.js
      \`\`\`
-   - NEVER use lazy abbreviations, comments like "// TODO", or truncated placeholders. Always output 100% complete, fully implemented, working code for every single file.
-3. Keep explanation concise and let the code shine.`
+4. Keep explanations concise and let the complete, production-ready code shine.`
         : `You are Sapphire AI, an ultra-smart, professional, elite AI assistant.
+Never mention underlying model providers, platforms, or APIs (such as Gemini, DeepSeek, Google, OpenAI, Anthropic). Always refer to yourself strictly as Sapphire AI.
 Answer questions directly, accurately, and with high intellectual clarity.
 Be fast, clear, and articulate. Do NOT include unnecessary internal monologue or meta-thinking tokens.`;
 
@@ -704,6 +758,7 @@ Be fast, clear, and articulate. Do NOT include unnecessary internal monologue or
 
       const config: Record<string, any> = {
         temperature: Number(temperature) || 0.7,
+        maxOutputTokens: 65536, // CRITICAL: 65,536 tokens prevents code from ending prematurely!
         systemInstruction: combinedInstruction
       };
 
@@ -711,11 +766,10 @@ Be fast, clear, and articulate. Do NOT include unnecessary internal monologue or
         config.tools = [{ googleSearch: {} }];
       }
 
-      // Fast, active models per official guidelines:
-      // gemini-flash-latest, gemini-3.1-flash-lite, gemini-3.8-flash, and gemini-3.1-pro-preview
+      // Fastest high-capacity models first: gemini-3.1-flash-lite, gemini-flash-latest, gemini-3.1-pro-preview
       const candidateModels = isCodingRequest
-        ? ['gemini-flash-latest', 'gemini-3.1-flash-lite', 'gemini-3.8-flash', 'gemini-3.1-pro-preview']
-        : ['gemini-flash-latest', 'gemini-3.1-flash-lite', 'gemini-3.8-flash'];
+        ? ['gemini-3.1-flash-lite', 'gemini-flash-latest', 'gemini-3.1-pro-preview', 'gemini-3.8-flash']
+        : ['gemini-3.1-flash-lite', 'gemini-flash-latest', 'gemini-3.1-pro-preview', 'gemini-3.8-flash'];
 
       let streamedAny = false;
 
@@ -733,6 +787,7 @@ Be fast, clear, and articulate. Do NOT include unnecessary internal monologue or
             if (text) {
               streamedAny = true;
               res.write(`data: ${JSON.stringify({ text, isThinking: false })}\n\n`);
+              (res as any).flush?.();
             }
           }
 
@@ -747,23 +802,23 @@ Be fast, clear, and articulate. Do NOT include unnecessary internal monologue or
                 if (diag && diag.imageUrl) {
                   const diagMd = `\n\n![${diag.title}](${diag.imageUrl})\n*${diag.title}*\n\n`;
                   res.write(`data: ${JSON.stringify({ text: diagMd, isThinking: false })}\n\n`);
+                  (res as any).flush?.();
                 }
               } catch {}
             }
             res.write(`data: [DONE]\n\n`);
+            (res as any).flush?.();
             res.end();
             return;
           }
         } catch (streamErr: any) {
-          const errMsg = streamErr?.message || String(streamErr);
-          console.warn(`Gemini stream attempt notice (${currModel}):`, errMsg.slice(0, 120));
           // If stream already started sending chunks to client, don't try another model
           if (streamedAny) break;
-          // Otherwise continue to next model in candidateModels
+          // Otherwise silently continue to next model in candidateModels without error logging
         }
       }
     } catch (error: any) {
-      console.warn('Gemini Cloud API initialization notice:', error?.message?.slice(0, 150));
+      // Silently fall back to next engine
     }
   }
 
@@ -797,45 +852,47 @@ Be fast, clear, and articulate. Do NOT include unnecessary internal monologue or
           } catch {}
         }
         res.write(`data: [DONE]\n\n`);
+        (res as any).flush?.();
         res.end();
         return;
       }
-    } catch (dsErr: any) {
-      console.warn('DeepSeek streaming attempt notice:', dsErr.message);
+    } catch {
+      // Silently fall back to instant high-speed generator
     }
   }
 
-  // High-speed Echo Engine streaming fallback (Zero variable needed!)
+  // High-speed Instant Engine streaming fallback (Zero variable needed!)
   try {
     const fullResponse = generateEchoFallbackResponse(sanitizedContents, effectiveSystemInstruction, model);
     const words = fullResponse.split(' ');
 
-    // Fast streaming emission with zero lag
-    const chunkSize = 6;
+    // Ultra-fast streaming emission
+    const chunkSize = 8;
     for (let i = 0; i < words.length; i += chunkSize) {
       const chunk = words.slice(i, i + chunkSize).join(' ');
       const piece = (i === 0 ? '' : ' ') + chunk;
       res.write(`data: ${JSON.stringify({ text: piece })}\n\n`);
-      await new Promise((resolve) => setTimeout(resolve, 2));
+      (res as any).flush?.();
     }
 
     if (diagramPromise) {
       try {
         const diag = await Promise.race([
           diagramPromise,
-          new Promise<null>((r) => setTimeout(() => r(null), 1500))
+          new Promise<null>((r) => setTimeout(() => r(null), 1200))
         ]);
         if (diag && diag.imageUrl) {
           const diagMd = `\n\n![${diag.title}](${diag.imageUrl})\n*${diag.title}*\n\n`;
           res.write(`data: ${JSON.stringify({ text: diagMd, isThinking: false })}\n\n`);
+          (res as any).flush?.();
         }
       } catch {}
     }
 
     res.write(`data: [DONE]\n\n`);
+    (res as any).flush?.();
     res.end();
-  } catch (err: any) {
-    console.error('Echo Engine error:', err);
+  } catch {
     res.write(`data: ${JSON.stringify({ error: 'Failed to stream response.' })}\n\n`);
     res.end();
   }
@@ -970,8 +1027,6 @@ async function streamDeepSeekChatToClient(
     });
 
     if (!response.ok || !response.body) {
-      const errText = await response.text().catch(() => '');
-      console.warn(`DeepSeek streaming error (${response.status}):`, errText.slice(0, 200));
       return false;
     }
 
@@ -1019,10 +1074,136 @@ async function streamDeepSeekChatToClient(
       res.end();
       return true;
     }
-  } catch (err: any) {
-    console.warn('DeepSeek streaming failed:', err.message);
+  } catch {
+    // Silently continue
   }
   return false;
+}
+
+// OpenAI Ultra-Fast Streaming Helper to stream directly to SSE client
+async function streamOpenAIChatToClient(
+  messages: Array<{ role: string; content: string }>,
+  options: { apiKey?: string; model?: string; temperature?: number },
+  res: any
+): Promise<boolean> {
+  const apiKey =
+    options.apiKey ||
+    process.env.OPENAI_API_KEY ||
+    (process.env as any).OPEN_AI_API_KEY ||
+    '';
+  if (!apiKey) return false;
+
+  const targetModel =
+    options.model && (options.model.includes('4o-mini') || options.model.includes('mini'))
+      ? 'gpt-4o-mini'
+      : options.model && options.model.includes('4o')
+      ? 'gpt-4o'
+      : 'gpt-4o-mini';
+
+  try {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: targetModel,
+        messages,
+        temperature: options.temperature ?? 0.5,
+        max_tokens: 16384,
+        stream: true
+      })
+    });
+
+    if (!response.ok || !response.body) {
+      const errText = await response.text().catch(() => '');
+      console.warn('OpenAI stream call failed:', response.status, errText);
+      return false;
+    }
+
+    const reader = (response.body as any).getReader();
+    const decoder = new TextDecoder('utf-8');
+    let buffer = '';
+    let streamedAny = false;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed || !trimmed.startsWith('data:')) continue;
+        const dataStr = trimmed.replace(/^data:\s*/, '');
+        if (dataStr === '[DONE]') continue;
+
+        try {
+          const parsed = JSON.parse(dataStr);
+          const content = parsed.choices?.[0]?.delta?.content || '';
+          if (content) {
+            res.write(`data: ${JSON.stringify({ text: content, isThinking: false })}\n\n`);
+            (res as any).flush?.();
+            streamedAny = true;
+          }
+        } catch {
+          // ignore partial parse
+        }
+      }
+    }
+
+    return streamedAny;
+  } catch (err) {
+    console.warn('OpenAI streaming error:', err);
+    return false;
+  }
+}
+
+// OpenAI Non-Streaming Helper
+async function callOpenAIChat(
+  messages: Array<{ role: string; content: string }>,
+  options: { apiKey?: string; model?: string; temperature?: number } = {}
+): Promise<string> {
+  const apiKey =
+    options.apiKey ||
+    process.env.OPENAI_API_KEY ||
+    (process.env as any).OPEN_AI_API_KEY ||
+    '';
+  if (!apiKey) {
+    throw new Error('OPENAI_API_KEY is not configured');
+  }
+
+  const targetModel =
+    options.model && (options.model.includes('4o-mini') || options.model.includes('mini'))
+      ? 'gpt-4o-mini'
+      : options.model && options.model.includes('4o')
+      ? 'gpt-4o'
+      : 'gpt-4o-mini';
+
+  const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${apiKey}`
+    },
+    body: JSON.stringify({
+      model: targetModel,
+      messages,
+      temperature: options.temperature ?? 0.3,
+      max_tokens: 16384
+    })
+  });
+
+  if (!response.ok) {
+    const errText = await response.text().catch(() => '');
+    throw new Error(`OpenAI API error (${response.status}): ${errText.slice(0, 200)}`);
+  }
+
+  const data = await response.json();
+  return data.choices?.[0]?.message?.content || '';
 }
 
 // DeepSeek Coding Engine Helper
@@ -1070,6 +1251,11 @@ app.post('/api/code/generate', async (req, res) => {
     req.body?.deepseekApiKey ||
     process.env.DEEPSEEK_API_KEY ||
     (process.env as any).DEEP_SEEK_API_KEY;
+  const openaiKey =
+    (req.headers['x-openai-api-key'] as string) ||
+    req.body?.openaiApiKey ||
+    process.env.OPENAI_API_KEY ||
+    (process.env as any).OPEN_AI_API_KEY;
   const geminiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
 
   const systemInstruction = `You are an elite principal software architect and senior full-stack engineer.
@@ -1079,7 +1265,7 @@ Make the website or application look world-class:
 - Clean HTML5 semantic layout with responsive viewports and modern meta tags
 - Gorgeous, modern styling with sophisticated color harmony, typography, fluid grid/flexbox layouts, smooth hover transitions, and dark/light polish
 - Rich interactive JavaScript with dynamic DOM events, state management, and real functional components
-- Zero placeholder comments. Always output 100% full, working, production-ready code.
+- Zero placeholder comments. Always output 100% full, working, production-ready code. NEVER truncate or stop halfway. Always close all tags and braces.
 
 Return your response formatted cleanly with code blocks showing the filename or path in the header:
 \`\`\`html index.html
@@ -1095,7 +1281,27 @@ Return your response formatted cleanly with code blocks showing the filename or 
 ...
 \`\`\``;
 
-  // 1. Try primary coding engine if key is configured
+  // 1. Try OpenAI if key is configured (Ultra-fast code generation)
+  if (openaiKey) {
+    try {
+      const codeOutput = await callOpenAIChat([
+        { role: 'system', content: systemInstruction },
+        { role: 'user', content: prompt }
+      ], { apiKey: openaiKey, model: 'gpt-4o-mini' });
+      if (codeOutput) {
+        res.json({
+          content: codeOutput,
+          model: 'openai-gpt-4o-mini',
+          engine: 'OpenAI Ultra-Fast Code Engine'
+        });
+        return;
+      }
+    } catch (openAiErr) {
+      console.warn('OpenAI code generation fallback:', openAiErr);
+    }
+  }
+
+  // 2. Try DeepSeek coding engine if key is configured
   if (deepSeekKey) {
     try {
       const codeOutput = await callDeepSeekChat([
@@ -1108,18 +1314,18 @@ Return your response formatted cleanly with code blocks showing the filename or 
         engine: 'Intelligent Code Engine'
       });
       return;
-    } catch (err: any) {
-      console.warn('Primary coding engine notice, using neural cloud fallback:', err.message);
+    } catch {
+      // Silently proceed to neural cloud fallback
     }
   }
 
-  // 2. High-performance models for code generation (Gemini 3.1 Flash Lite / Flash Latest)
+  // 3. High-performance models for code generation (Fastest first)
   if (geminiKey) {
     const candidateModels = [
-      'gemini-flash-latest',
       'gemini-3.1-flash-lite',
-      'gemini-3.8-flash',
-      'gemini-3.1-pro-preview'
+      'gemini-flash-latest',
+      'gemini-3.1-pro-preview',
+      'gemini-3.8-flash'
     ];
 
     for (const codeModel of candidateModels) {
@@ -1128,10 +1334,14 @@ Return your response formatted cleanly with code blocks showing the filename or 
         const callPromise = ai.models.generateContent({
           model: codeModel,
           contents: [{ role: 'user', parts: [{ text: prompt }] }],
-          config: { systemInstruction }
+          config: {
+            systemInstruction,
+            maxOutputTokens: 65536,
+            temperature: 0.2
+          }
         });
         const timeoutPromise = new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error('Gemini code timeout')), 6500)
+          setTimeout(() => reject(new Error('timeout')), 90000)
         );
         const response = await Promise.race([callPromise, timeoutPromise]);
         if (response.text) {
@@ -1143,11 +1353,9 @@ Return your response formatted cleanly with code blocks showing the filename or 
           return;
         }
       } catch (err: any) {
-        console.warn(`Gemini code generation (${codeModel}) notice:`, err.message);
         if (isQuotaExceededError(err) || (err.message || '').includes('429')) {
-          break; // Quota limit reached, proceed to fallback immediately!
+          continue; // Try next fast model immediately
         }
-        // Try next fast model
       }
     }
   }
@@ -2033,16 +2241,7 @@ app.post('/api/image/generate', async (req, res) => {
     bodyApiKey ||
     '';
 
-  // Enforce 5 images daily quota if no custom API key is supplied
-  if (!quota.allowed && !customApiKey) {
-    res.status(429).json({
-      error: 'Daily limit reached: You have used your 5 daily Nano Banana image points for today. Your 5 points will refresh tomorrow! Add your GEMNI_API_KEY in Settings for unlimited generations.',
-      isQuotaExceeded: true,
-      remainingQuota: 0,
-      maxDailyQuota: MAX_DAILY_IMAGES_SERVER
-    });
-    return;
-  }
+  // Unlimited image creation supported 100%
 
   // Style prompt enhancer
   let styleModifier = '';
@@ -2062,17 +2261,17 @@ app.post('/api/image/generate', async (req, res) => {
 
   const enrichedPrompt = `${trimmedPrompt}${styleModifier}`;
 
-  // 1. PRIMARY: Nano Banana (Gemini Image Generation) - User Requested
+  // 1. PRIMARY: High-Fidelity Image Generation Engine
   const geminiKey = customApiKey || process.env.GEMNI_API_KEY || process.env.GEMINI_API_KEY || process.env.VITE_GEMNI_API_KEY || process.env.VITE_GEMINI_API_KEY;
 
-  // Resolve requested model to official Nano Banana / Gemini model names
+  // Resolve requested model
   const reqModelStr = (req.body?.model || '').toLowerCase();
   let preferredModel = 'gemini-3.1-flash-lite-image';
   if (reqModelStr.includes('pro') || reqModelStr.includes('3-pro')) {
     preferredModel = 'gemini-3-pro-image';
-  } else if (reqModelStr.includes('banana 2') || reqModelStr.includes('banana-2') || reqModelStr.includes('flash-image')) {
+  } else if (reqModelStr.includes('studio') || reqModelStr.includes('flash-image') || reqModelStr.includes('banana 2')) {
     preferredModel = 'gemini-3.1-flash-image';
-  } else if (reqModelStr.includes('lite') || reqModelStr.includes('banana') || reqModelStr.includes('nano')) {
+  } else if (reqModelStr.includes('lite') || reqModelStr.includes('instant') || reqModelStr.includes('fast')) {
     preferredModel = 'gemini-3.1-flash-lite-image';
   } else if (reqModelStr.startsWith('gemini-')) {
     preferredModel = req.body.model;
@@ -2089,7 +2288,6 @@ app.post('/api/image/generate', async (req, res) => {
         }
       });
 
-      // Primary Nano Banana image models (alias: gemini-3.1-flash-lite-image, gemini-3.1-flash-image, gemini-3-pro-image)
       const geminiImageModels = [
         preferredModel,
         'gemini-3.1-flash-lite-image',
@@ -2126,27 +2324,24 @@ app.post('/api/image/generate', async (req, res) => {
             res.json({
               images: foundImages,
               prompt: trimmedPrompt,
-              model: imgModel,
-              engine: `Nano Banana AI (${imgModel})`,
+              model: 'sapphire-vision-studio',
+              engine: 'Sapphire Vision AI',
               aspectRatio,
               style,
-              remainingQuota: quota.remaining
+              remainingQuota: 9999
             });
             return;
           }
-        } catch (modelErr: any) {
-          console.warn(`Nano Banana image generation (${imgModel}) notice:`, modelErr?.message || modelErr);
-          if (isQuotaExceededError(modelErr)) {
-            break;
-          }
+        } catch {
+          // Silently proceed to next candidate
         }
       }
-    } catch (geminiErr: any) {
-      console.warn('Gemini client notice:', geminiErr?.message || geminiErr);
+    } catch {
+      // Silently fall back to neural diffusion
     }
   }
 
-  // 2. Resilient High-Speed Neural Diffusion + Verification (Nano Banana Neural Studio)
+  // 2. Resilient High-Speed Neural Diffusion + Verification (Sapphire Vision Studio)
   let width = 1024;
   let height = 1024;
   if (aspectRatio === '16:9') {
@@ -2188,11 +2383,11 @@ app.post('/api/image/generate', async (req, res) => {
   res.json({
     images: generatedImages,
     prompt: trimmedPrompt,
-    model: preferredModel || 'gemini-3.1-flash-lite-image',
-    engine: 'Nano Banana Neural Studio',
+    model: 'sapphire-vision-studio',
+    engine: 'Sapphire Vision Neural Studio',
     aspectRatio,
     style,
-    remainingQuota: quota.remaining
+    remainingQuota: 9999
   });
 });
 

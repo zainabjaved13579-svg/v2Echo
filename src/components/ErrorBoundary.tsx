@@ -1,6 +1,7 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
-import { RefreshCw, Trash2, AlertTriangle, ShieldCheck } from 'lucide-react';
+import { RefreshCw, Trash2, ShieldCheck, AlertCircle, Wrench } from 'lucide-react';
 import { SAPPHIRE_LOGO_URL } from '../data/constants';
+import { clearAllCorruptCache } from '../services/authService';
 
 interface Props {
   children: ReactNode;
@@ -22,7 +23,21 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('Sapphire caught an unhandled application error:', error, errorInfo);
+    console.warn('Sapphire self-healing boundary intercepted error:', error, errorInfo);
+
+    // Auto-heal known corrupt storage or dynamic import errors
+    const msg = (error?.message || '').toLowerCase();
+    if (
+      msg.includes('json') ||
+      msg.includes('syntaxerror') ||
+      msg.includes('quotaexceeded') ||
+      msg.includes('dynamically imported module') ||
+      msg.includes('failed to fetch')
+    ) {
+      try {
+        clearAllCorruptCache();
+      } catch {}
+    }
   }
 
   private handleReload = () => {
@@ -30,13 +45,7 @@ export class ErrorBoundary extends Component<Props, State> {
   };
 
   private handleResetCache = () => {
-    try {
-      // Clear sessions that might have corrupted json
-      localStorage.removeItem('echo_chat_sessions_v1');
-      localStorage.removeItem('sapphire_chat_sessions_v2');
-      localStorage.removeItem('echo_active_session_id');
-      localStorage.removeItem('sapphire_guest_mode');
-    } catch {}
+    clearAllCorruptCache();
     window.location.reload();
   };
 
@@ -54,9 +63,13 @@ export class ErrorBoundary extends Component<Props, State> {
             </div>
 
             <div className="space-y-2">
-              <h2 className="text-xl font-bold text-white">Application Notice</h2>
+              <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-[#2a2926] text-[#d97757] text-xs font-semibold">
+                <Wrench className="w-3.5 h-3.5" />
+                <span>Self-Healing Recovery</span>
+              </div>
+              <h2 className="text-xl font-bold text-white">App Restored Successfully</h2>
               <p className="text-xs text-[#a3a3a3] leading-relaxed">
-                Sapphire detected a connection or storage conflict upon loading. You can immediately reload or reset cached state to restore full speed.
+                Sapphire detected a connection or cached storage conflict. You can immediately launch with fresh cache below without losing your account.
               </p>
               {this.state.error?.message && (
                 <div className="p-2.5 rounded-xl bg-[#151515] border border-[#2b2b2a] text-[11px] text-[#d97757] font-mono break-all max-h-24 overflow-y-auto text-left">

@@ -4,7 +4,9 @@ import {
   Check,
   Upload,
   Camera,
-  Smile
+  Smile,
+  LogOut,
+  LogIn
 } from 'lucide-react';
 import { UserProfile } from '../types';
 import {
@@ -21,6 +23,8 @@ interface UserProfileModalProps {
   isFirstTimeSetup?: boolean;
   sessions?: any[];
   files?: any[];
+  onSignOut?: () => void;
+  isGuestMode?: boolean;
 }
 
 export const UserProfileModal: React.FC<UserProfileModalProps> = ({
@@ -28,7 +32,9 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
   onClose,
   profile,
   onUpdateProfile,
-  isFirstTimeSetup = false
+  isFirstTimeSetup = false,
+  onSignOut,
+  isGuestMode = false
 }) => {
   const [name, setName] = useState(profile.name && profile.name !== 'Guest User' ? profile.name : '');
   const [avatar, setAvatar] = useState(profile.avatar || ANIMATED_AVATARS[0].url);
@@ -261,7 +267,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
           </div>
 
           {/* Submit Action */}
-          <div className="pt-2">
+          <div className="pt-2 space-y-2">
             <button
               type="submit"
               disabled={!name.trim() || isSaving}
@@ -270,6 +276,24 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
               <Check className="w-4 h-4" />
               <span>{isFirstTimeSetup ? 'Start Using Sapphire' : 'Save Profile'}</span>
             </button>
+
+            {onSignOut && (
+              <button
+                type="button"
+                onClick={() => {
+                  onSignOut();
+                  onClose();
+                }}
+                className={`w-full py-2 px-3 rounded-xl border text-xs font-semibold flex items-center justify-center gap-2 transition-colors cursor-pointer ${
+                  isGuestMode
+                    ? 'border-[#383633] bg-[#191817] hover:bg-[#201f1d] text-[#ede8e1]'
+                    : 'border-rose-500/30 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300'
+                }`}
+              >
+                {isGuestMode ? <LogIn className="w-3.5 h-3.5 text-[#d97757]" /> : <LogOut className="w-3.5 h-3.5" />}
+                <span>{isGuestMode ? 'Sign In / Connect Account' : 'Sign Out of Sapphire'}</span>
+              </button>
+            )}
           </div>
         </form>
       </div>

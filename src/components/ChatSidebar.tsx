@@ -15,7 +15,8 @@ import {
   Check,
   X,
   Code2,
-  Smartphone
+  Smartphone,
+  Image as ImageIcon
 } from 'lucide-react';
 import { ChatSession, UserProfile } from '../types';
 import { SAPPHIRE_LOGO_URL } from '../data/constants';
@@ -42,6 +43,7 @@ interface ChatSidebarProps {
   onOpenProjects?: () => void;
   onOpenArtifacts?: () => void;
   onOpenCustomize?: () => void;
+  onOpenImageGen?: () => void;
   activeNavTab?: string;
 }
 
@@ -64,6 +66,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
   onOpenProjects,
   onOpenArtifacts,
   onOpenCustomize,
+  onOpenImageGen,
   activeNavTab = 'chat'
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -134,30 +137,34 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
           <span>New</span>
         </button>
 
-        {/* 2. Workspace */}
-        <button
-          id="sidebar-workspace-btn"
-          onClick={() => {
-            if (onOpenFileWorkspace) onOpenFileWorkspace();
-            else if (onOpenProjects) onOpenProjects();
-            if (window.innerWidth < 1024) onClose();
-          }}
-          className={`w-full py-2.5 px-3.5 rounded-2xl text-xs font-medium flex items-center justify-between transition-all cursor-pointer ${
-            activeNavTab === 'projects' || activeNavTab === 'workspace'
-              ? isMoon
-                ? 'bg-[#222222] text-[#ede8e1] font-semibold shadow-xs'
-                : 'bg-slate-200 text-slate-900 font-semibold shadow-xs'
-              : isMoon
-              ? 'text-[#a19e97] hover:bg-[#1a1a1a] hover:text-[#ede8e1]'
-              : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-          }`}
-          title="Workspace files and multi-file project editor"
-        >
-          <div className="flex items-center gap-2.5">
-            <Folder className="w-4 h-4 text-[#d97757]" />
-            <span>Workspace</span>
-          </div>
-        </button>
+        {/* 2. Image Studio */}
+        {onOpenImageGen && (
+          <button
+            id="sidebar-image-btn"
+            onClick={() => {
+              onOpenImageGen();
+              if (window.innerWidth < 1024) onClose();
+            }}
+            className={`w-full py-2.5 px-3.5 rounded-2xl text-xs font-medium flex items-center justify-between transition-all cursor-pointer ${
+              activeNavTab === 'image'
+                ? isMoon
+                  ? 'bg-[#222222] text-[#ede8e1] font-semibold shadow-xs'
+                  : 'bg-slate-200 text-slate-900 font-semibold shadow-xs'
+                : isMoon
+                ? 'text-[#a19e97] hover:bg-[#1a1a1a] hover:text-[#ede8e1]'
+                : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+            }`}
+            title="Create and edit AI images"
+          >
+            <div className="flex items-center gap-2.5">
+              <ImageIcon className="w-4 h-4 text-[#d97757]" />
+              <span>Image Studio</span>
+            </div>
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#d97757]/15 text-[#d97757] font-semibold">
+              AI
+            </span>
+          </button>
+        )}
 
         {/* 3. CodeX */}
         <button

@@ -29,7 +29,7 @@ import {
   ThumbsDown
 } from 'lucide-react';
 import { motion } from 'motion/react';
-import { ChatMessage, SupportedLanguage, UserProfile } from '../types';
+import { ChatMessage, SupportedLanguage, UserProfile, WorkspaceFile } from '../types';
 import { MarkdownRenderer } from './MarkdownRenderer';
 import { SAPPHIRE_LOGO_URL } from '../data/constants';
 import { speechService, detectScriptLanguage, translateText } from '../services/speechService';
@@ -48,10 +48,11 @@ interface ChatMessageItemProps {
   userProfile?: UserProfile | null;
   onRegenerate?: () => void;
   onEditPrompt?: (text: string) => void;
-  onPreviewCode?: (code: string, language: string, filename?: string) => void;
+  onPreviewCode?: (code: string, language: string, filename?: string, allFiles?: any[]) => void;
   onOpenFileWorkspace?: (fileId?: string) => void;
   onOpenFileInManager?: (fileId?: string) => void;
   onReply?: (message: ChatMessage) => void;
+  onContinueCode?: (message: ChatMessage) => void;
 }
 
 const GeneratedVisualCard: React.FC<{
@@ -223,7 +224,8 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
   onPreviewCode,
   onOpenFileWorkspace,
   onOpenFileInManager,
-  onReply
+  onReply,
+  onContinueCode
 }) => {
   const { theme } = useAppTheme();
   const activeProfile = userProfile || loadUserProfile();
@@ -265,6 +267,24 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
     if (isUser || !message.text) return [];
     return extractCodeFilesFromMarkdown(message.text);
   }, [isUser, message.text]);
+
+  // Detect if code generation was cut off or ended before completing
+  const isIncompleteCode = useMemo(() => {
+    if (isUser || !message.text || message.isStreaming) return false;
+    const raw = message.text.trim();
+    // 1. Odd count of code fences means an unclosed code block
+    const fenceCount = (raw.match(/```/g) || []).length;
+    if (fenceCount % 2 !== 0) return true;
+
+    // 2. Contains opening html/body without closing tag
+    if (raw.includes('```html') || raw.includes('<!DOCTYPE') || raw.includes('<html')) {
+      if (!raw.includes('</html>') || !raw.includes('</body>')) {
+        return true;
+      }
+    }
+
+    return false;
+  }, [isUser, message.text, message.isStreaming]);
 
   const handleDownloadFullFolderZip = async () => {
     if (extractedFiles.length === 0 || isZipping) return;
@@ -643,10 +663,11 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
                               source: 'ai-generated'
                             });
                           });
-                          onPreviewCode(htmlFile.content, htmlFile.language, htmlFile.name);
+                          onPreviewCode(htmlFile.content, htmlFile.language, htmlFile.name, extractedFiles);
                         }
                       }}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#d97757] hover:bg-[#c66b4d] text-white text-xs font-semibold shadow-xs active:scale-95 transition-all cursor-pointer whitespace-nowrap"
+                      className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#d97757] hover:bg-[#c66b4d] text-white text-xs font-semibold shadow-xs active:scale-95 transition-all cursor-pointer whitespace-nowrap"
+                      title="Open full interactive preview and code editor for all project files"
                     >
                       <Eye className="w-3.5 h-3.5" />
                       <span>Preview All Files</span>
@@ -716,7 +737,7 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
                   {message.text ? (
                     <MarkdownRenderer
                       content={message.text}
-                      onPreviewCode={onPreviewCode}
+                      onPreviewCode={(c, l, fn) => onPreviewCode && onPreviewCode(c, l, fn, extractedFiles.length > 0 ? extractedFiles : undefined)}
                       onOpenFileWorkspace={openWorkspaceHandler}
                     />
                   ) : message.isStreaming ? (
@@ -731,6 +752,30 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
                 </div>
               )}
             </div>
+
+            {/* Incomplete / Truncated Code Continue Banner */}
+            {isIncompleteCode && (
+              <div className={`mt-3 p-3.5 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border shadow-sm ${
+                theme === 'moon'
+                  ? 'bg-amber-950/30 border-amber-800/50 text-amber-200'
+                  : 'bg-amber-50 border-amber-200 text-amber-900'
+              }`}>
+                <div className="flex items-center gap-2">
+                  <div className="p-1 rounded-lg bg-amber-500/20 text-amber-400">
+                    <Sparkles className="w-3.5 h-3.5" />
+                  </div>
+                  <span className="text-xs font-medium">Code ended before completing. Continue generation to finish all files in full.</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onContinueCode && onContinueCode(message)}
+                  className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#d97757] hover:bg-[#c86b4c] text-white text-xs font-semibold shadow-xs transition-all active:scale-95 cursor-pointer whitespace-nowrap"
+                >
+                  <Zap className="w-3.5 h-3.5" />
+                  <span>Continue Code</span>
+                </button>
+              </div>
+            )}
 
             {/* Error Banner */}
             {message.error && (

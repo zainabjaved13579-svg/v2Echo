@@ -86,174 +86,254 @@ export function parseGeneratedProjectFiles(aiResponseText: string): WorkspaceFil
  * Builds an all-in-one unified live interactive bundle preview from files
  */
 export function buildUnifiedLivePreviewBundle(files: WorkspaceFile[]): string {
-  const htmlFile = files.find(f => f.name.toLowerCase().endsWith('.html') || f.name.toLowerCase() === 'index.html') || files[0];
-  const cssFiles = files.filter(f => f.name.toLowerCase().endsWith('.css'));
-  const jsFiles = files.filter(f => 
-    f.name.toLowerCase().endsWith('.js') || 
-    f.name.toLowerCase().endsWith('.jsx') || 
-    f.name.toLowerCase().endsWith('.ts') || 
-    f.name.toLowerCase().endsWith('.tsx')
-  );
-
-  let htmlContent = htmlFile?.content || `<!DOCTYPE html>
+  if (!files || files.length === 0) {
+    return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sapphire Codex Live App</title>
+  <title>Live Preview</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-slate-950 text-white flex items-center justify-center min-h-screen">
-  <div class="p-8 text-center">
-    <h1 class="text-2xl font-bold">Sapphire Codex App</h1>
-    <p class="text-slate-400 mt-2">Generate or select files to preview live app.</p>
+<body class="bg-[#111111] text-white flex items-center justify-center min-h-screen font-sans">
+  <div class="text-center p-8">
+    <div class="w-12 h-12 rounded-2xl bg-[#d97757]/20 border border-[#d97757]/40 text-[#d97757] flex items-center justify-center mx-auto mb-3 font-bold text-xl">
+      &lt;/&gt;
+    </div>
+    <h2 class="text-lg font-bold text-white">No Files in Project</h2>
+    <p class="text-xs text-neutral-400 mt-1">Add or generate code files to start the live preview.</p>
   </div>
 </body>
 </html>`;
+  }
 
-  // Fix Tailwind CDN if invalid or version 4 browser script was used
+  // Look for a genuine HTML host file
+  const htmlFile = files.find(f => {
+    const n = f.name.toLowerCase();
+    const hasHtmlExt = n.endsWith('.html') || n.endsWith('.htm');
+    const content = (f.content || '').toLowerCase();
+    return hasHtmlExt && (content.includes('<html') || content.includes('<!doctype') || content.includes('<body') || content.includes('<div') || content.includes('<main'));
+  });
+
+  const cssFiles = files.filter(f => f.name.toLowerCase().endsWith('.css'));
+  const jsFiles = files.filter(f => {
+    const n = f.name.toLowerCase();
+    return n.endsWith('.js') || n.endsWith('.jsx') || n.endsWith('.ts') || n.endsWith('.tsx') || n.endsWith('.mjs');
+  });
+
+  let htmlContent = '';
+
+  if (htmlFile) {
+    htmlContent = htmlFile.content;
+    // Wrap if fragment without html tags
+    if (!htmlContent.toLowerCase().includes('<html')) {
+      htmlContent = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${htmlFile.name}</title>
+</head>
+<body>
+${htmlContent}
+</body>
+</html>`;
+    }
+  } else {
+    // Check if there is an SVG file
+    const svgFile = files.find(f => f.name.toLowerCase().endsWith('.svg') || f.content.trim().startsWith('<svg'));
+    if (svgFile && jsFiles.length === 0) {
+      return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${svgFile.name}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-[#111111] flex items-center justify-center min-h-screen p-8">
+  <div class="max-w-2xl max-h-[80vh] flex items-center justify-center p-6 bg-[#1a1a19] border border-[#2b2b2a] rounded-3xl shadow-2xl">
+    ${svgFile.content}
+  </div>
+</body>
+</html>`;
+    }
+
+    // Auto-generate clean universal HTML host for React / JS / CSS projects
+    htmlContent = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Live Preview</title>
+</head>
+<body class="bg-[#0f172a] text-slate-100 min-h-screen">
+  <div id="root"></div>
+  <div id="app"></div>
+</body>
+</html>`;
+  }
+
+  // Ensure Tailwind CDN
   htmlContent = htmlContent.replace(
     /<script[^>]*src="[^"]*@tailwindcss\/browser[^"]*"[^>]*><\/script>/gi,
     '<script src="https://cdn.tailwindcss.com"></script>'
   );
-
-  // Inject Tailwind if not present
-  if (!htmlContent.includes('tailwindcss')) {
-    if (htmlContent.includes('<head>')) {
-      htmlContent = htmlContent.replace('<head>', '<head>\n  <script src="https://cdn.tailwindcss.com"></script>');
-    } else {
-      htmlContent = `<script src="https://cdn.tailwindcss.com"></script>\n${htmlContent}`;
-    }
+  if (!htmlContent.includes('tailwindcss.com')) {
+    const twScript = '<script src="https://cdn.tailwindcss.com"></script>';
+    htmlContent = htmlContent.includes('<head>')
+      ? htmlContent.replace('<head>', `<head>\n  ${twScript}`)
+      : `${twScript}\n${htmlContent}`;
   }
 
-  // Inject Lucide icons if not already present
-  if (!htmlContent.includes('lucide') && !htmlContent.includes('lucide.createIcons')) {
-    const lucideScript = '<script src="https://unpkg.com/lucide@latest"></script>';
-    if (htmlContent.includes('<head>')) {
-      htmlContent = htmlContent.replace('<head>', `<head>\n  ${lucideScript}`);
-    } else {
-      htmlContent = `${lucideScript}\n${htmlContent}`;
-    }
+  // Ensure React 18 & ReactDOM UMD are available
+  const hasReactCode = jsFiles.some(f => 
+    f.name.endsWith('.jsx') || 
+    f.name.endsWith('.tsx') || 
+    f.content.includes('React') || 
+    f.content.includes('useState') || 
+    f.content.includes('createRoot') ||
+    f.content.includes('import ')
+  );
+
+  const reactHeaders = `
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.6/babel.min.js"></script>`;
+
+  if (!htmlContent.includes('react.production.min.js')) {
+    htmlContent = htmlContent.includes('<head>')
+      ? htmlContent.replace('<head>', `<head>\n${reactHeaders}`)
+      : `${reactHeaders}\n${htmlContent}`;
   }
 
-  // Inline and replace any local CSS link tags (e.g. href="styles.css" or href="./styles.css")
+  // Inline CSS files
   cssFiles.forEach(c => {
     const linkRegex = new RegExp(`<link[^>]*href=["'](?:\\.\\/)?${c.name.replace('.', '\\.')}["'][^>]*>`, 'gi');
     if (linkRegex.test(htmlContent)) {
-      htmlContent = htmlContent.replace(linkRegex, `<style data-inlined="${c.name}">\n/* Inlined: ${c.name} */\n${c.content}\n</style>`);
+      htmlContent = htmlContent.replace(linkRegex, `<style data-file="${c.name}">\n/* ${c.name} */\n${c.content}\n</style>`);
     }
   });
 
-  // Any remaining CSS files not inlined yet
-  const remainingCss = cssFiles.filter(c => !htmlContent.includes(`/* Inlined: ${c.name} */`));
+  const remainingCss = cssFiles.filter(c => !htmlContent.includes(`/* ${c.name} */`));
   if (remainingCss.length > 0) {
-    const combinedCss = remainingCss.map(c => `/* ${c.name} */\n${c.content}`).join('\n\n');
-    const styleTag = `<style id="injected-workspace-styles">\n${combinedCss}\n</style>`;
-    if (htmlContent.includes('</head>')) {
-      htmlContent = htmlContent.replace('</head>', `${styleTag}\n</head>`);
-    } else {
-      htmlContent = `${styleTag}\n${htmlContent}`;
-    }
+    const combined = remainingCss.map(c => `/* ${c.name} */\n${c.content}`).join('\n\n');
+    const styleTag = `<style id="injected-workspace-styles">\n${combined}\n</style>`;
+    htmlContent = htmlContent.includes('</head>')
+      ? htmlContent.replace('</head>', `${styleTag}\n</head>`)
+      : `${styleTag}\n${htmlContent}`;
   }
 
-  // Remove local script references that will be inlined safely
+  // Strip local <script src="..."> for scripts we are bundling
   jsFiles.forEach(j => {
     const scriptRegex = new RegExp(`<script[^>]*src=["'](?:\\.\\/)?${j.name.replace('.', '\\.')}["'][^>]*>\\s*<\\/script>`, 'gi');
     htmlContent = htmlContent.replace(scriptRegex, '');
   });
 
-  // Check if any script uses JSX or modern syntax requiring Babel
-  const needsBabel = jsFiles.some(j => 
-    j.name.endsWith('.jsx') || 
-    j.name.endsWith('.tsx') || 
-    j.content.includes('<') && j.content.includes('/>') ||
-    j.content.includes('import ') && !j.content.includes('from \'http')
-  );
+  // Prepare environment shim & runner
+  const envShimScript = `
+  <script>
+    window.process = window.process || { env: { NODE_ENV: 'production' } };
+    window.global = window;
+    window.exports = window.exports || {};
+    window.module = window.module || { exports: window.exports };
+    window.require = function(mod) {
+      if (mod === 'react') return window.React;
+      if (mod === 'react-dom' || mod === 'react-dom/client') return window.ReactDOM;
+      if (mod === 'lucide-react') return window.lucide || {};
+      return window[mod] || {};
+    };
 
-  let babelHeader = '';
-  if (needsBabel && !htmlContent.includes('babel')) {
-    babelHeader = '<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.6/babel.min.js"></script>\n';
-  }
+    function showPreviewError(filename, err) {
+      try {
+        var existing = document.getElementById('sapphire-preview-error-toast');
+        if (existing) existing.remove();
+        var errBox = document.createElement('div');
+        errBox.id = 'sapphire-preview-error-toast';
+        errBox.style.cssText = 'position:fixed;bottom:16px;left:16px;right:16px;max-width:540px;margin:0 auto;z-index:999999;background:#18181b;border:1px solid #d97757;border-radius:16px;padding:12px 16px;color:#fecdd3;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;box-shadow:0 12px 30px rgba(0,0,0,0.7);display:flex;align-items:flex-start;gap:12px;line-height:1.4;';
+        errBox.innerHTML = '<span style="font-size:16px;line-height:1;">⚠️</span><div style="flex:1;"><strong style="color:#fff;display:block;margin-bottom:2px;font-size:12px;font-family:system-ui,sans-serif;">Preview Notice (' + filename + ')</strong><span>' + (err && err.message ? err.message : String(err)) + '</span></div><button onclick="this.parentElement.remove()" style="background:none;border:none;color:#999;cursor:pointer;font-size:18px;padding:0 6px;">&times;</button>';
+        document.body.appendChild(errBox);
+      } catch(e) {}
+    }
 
-  // Safe scripts injection: each file in its own script block with try/catch to isolate errors
-  const safeScriptBlocks = jsFiles.map((j, idx) => {
-    const safeSource = JSON.stringify(j.content);
+    window.addEventListener('error', function(e) {
+      showPreviewError(e.filename ? e.filename.split('/').pop() : 'runtime', e.error || e.message);
+    });
+  </script>`;
+
+  // Safe script blocks
+  const scriptBlocks = jsFiles.map((j) => {
+    const safeContent = JSON.stringify(j.content);
     return `
     <script>
       (function() {
         var fileName = ${JSON.stringify(j.name)};
-        var code = ${safeSource};
+        var code = ${safeContent};
         try {
-          if (window.Babel && (fileName.indexOf('.jsx') !== -1 || fileName.indexOf('.tsx') !== -1 || code.indexOf('import ') !== -1 || code.indexOf('export ') !== -1)) {
+          var isJsx = fileName.indexOf('.jsx') !== -1 || fileName.indexOf('.tsx') !== -1 || code.indexOf('import ') !== -1 || code.indexOf('export ') !== -1 || (code.indexOf('<') !== -1 && code.indexOf('/>') !== -1);
+          if (window.Babel && isJsx) {
             try {
-              code = window.Babel.transform(code, { presets: ['env', 'react'] }).code;
+              code = window.Babel.transform(code, {
+                presets: ['env', 'react']
+              }).code;
             } catch(be) {
-              console.warn('Babel note for ' + fileName + ':', be);
+              console.warn('Babel transpile notice for ' + fileName + ':', be);
             }
           }
-          var fn = new Function('console', 'window', 'document', code);
-          fn(console, window, document);
+          var fn = new Function('React', 'ReactDOM', 'require', 'exports', 'module', code);
+          fn(window.React, window.ReactDOM, window.require, window.exports, window.module);
         } catch(err) {
-          console.error('Error in ' + fileName + ':', err);
-          if (typeof showPreviewError === 'function') {
-            showPreviewError(fileName, err);
-          }
+          console.error('Execution error in ' + fileName + ':', err);
+          showPreviewError(fileName, err);
         }
       })();
     </script>`;
   }).join('\n');
 
-  const runnerScript = `
-  ${babelHeader}
+  // React auto-mounter & Lucide activator
+  const autoMountScript = `
   <script>
-    // In-iframe graceful error display with rounded smooth corners
-    function showPreviewError(filename, err) {
-      try {
-        var errBox = document.getElementById('sapphire-preview-error-toast');
-        if (!errBox) {
-          errBox = document.createElement('div');
-          errBox.id = 'sapphire-preview-error-toast';
-          errBox.style.cssText = 'position:fixed;bottom:16px;left:16px;right:16px;max-width:480px;margin:0 auto;z-index:999999;background:#18181b;border:1px solid #d97757;border-radius:18px;padding:12px 18px;color:#fecdd3;font-family:system-ui,-apple-system,sans-serif;font-size:12px;box-shadow:0 12px 30px rgba(0,0,0,0.6);display:flex;align-items:flex-start;gap:12px;line-height:1.4;';
-          errBox.innerHTML = '<span style="font-size:18px;line-height:1;">⚠️</span><div style="flex:1;"><strong style="color:#fff;display:block;margin-bottom:2px;font-size:13px;">Execution Note (' + filename + ')</strong><span>' + (err && err.message ? err.message : String(err)) + '</span></div><button onclick="this.parentElement.remove()" style="background:none;border:none;color:#999;cursor:pointer;font-size:18px;padding:0 6px;">&times;</button>';
-          document.body.appendChild(errBox);
-        }
-      } catch(e) {}
-    }
-
-    window.addEventListener('error', function(e) {
-      if (typeof showPreviewError === 'function') {
-        showPreviewError(e.filename ? e.filename.split('/').pop() : 'script', e.error || e.message);
-      }
-    });
-
-    // Auto-initialize Lucide icons if available
-    function __initIconsAndEvents__() {
-      try {
-        if (window.lucide && typeof window.lucide.createIcons === 'function') {
-          window.lucide.createIcons();
-        }
-      } catch(e) {}
-      setTimeout(function() {
+    (function() {
+      function __initSapphireApp__() {
         try {
-          var evt = new Event('DOMContentLoaded', { bubbles: true, cancelable: true });
-          document.dispatchEvent(evt);
-          window.dispatchEvent(evt);
+          if (window.lucide && typeof window.lucide.createIcons === 'function') {
+            window.lucide.createIcons();
+          }
         } catch(e) {}
-      }, 50);
-    }
 
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', __initIconsAndEvents__);
-    } else {
-      __initIconsAndEvents__();
-    }
-  </script>
-  ${safeScriptBlocks}`;
+        try {
+          var rootEl = document.getElementById('root') || document.getElementById('app');
+          if (rootEl && rootEl.childNodes.length === 0 && window.React && window.ReactDOM) {
+            var AppComp = window.App || (window.exports && (window.exports.default || window.exports.App));
+            if (AppComp) {
+              if (window.ReactDOM.createRoot) {
+                var root = window.ReactDOM.createRoot(rootEl);
+                root.render(window.React.createElement(AppComp));
+              } else {
+                window.ReactDOM.render(window.React.createElement(AppComp), rootEl);
+              }
+            }
+          }
+        } catch(err) {
+          console.warn('Sapphire auto-mount notice:', err);
+        }
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', __initSapphireApp__);
+      } else {
+        setTimeout(__initSapphireApp__, 50);
+      }
+    })();
+  </script>`;
+
+  const bundleFooter = `${envShimScript}\n${scriptBlocks}\n${autoMountScript}`;
 
   if (htmlContent.includes('</body>')) {
-    htmlContent = htmlContent.replace('</body>', `${runnerScript}\n</body>`);
+    htmlContent = htmlContent.replace('</body>', `${bundleFooter}\n</body>`);
   } else {
-    htmlContent = `${htmlContent}\n${runnerScript}`;
+    htmlContent = `${htmlContent}\n${bundleFooter}`;
   }
 
   return htmlContent;

@@ -745,12 +745,20 @@ export interface ExtractedCodeFile {
 // Extract distinct code files from markdown response
 export function extractCodeFilesFromMarkdown(markdown: string): ExtractedCodeFile[] {
   if (!markdown || !markdown.includes('```')) return [];
+
+  // Auto-heal unclosed code blocks if generation ended before completing
+  let normalizedMarkdown = markdown;
+  const fenceCount = (markdown.match(/```/g) || []).length;
+  if (fenceCount % 2 !== 0) {
+    normalizedMarkdown += '\n```';
+  }
+
   const codeBlockRegex = /```(\w+)?(?:\s+([^\n\r]+))?\n([\s\S]*?)```/g;
   const files: ExtractedCodeFile[] = [];
   let match: RegExpExecArray | null;
   let counter = 1;
 
-  while ((match = codeBlockRegex.exec(markdown)) !== null) {
+  while ((match = codeBlockRegex.exec(normalizedMarkdown)) !== null) {
     const rawLang = (match[1] || '').trim().toLowerCase();
     const commentOrFilename = (match[2] || '').trim();
     const codeContent = match[3] || '';

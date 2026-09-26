@@ -53,6 +53,12 @@ function preprocessMarkdown(raw: string): string {
   // Normalize loose spaces in inline math: $ c $ -> $c$
   processed = processed.replace(/\$\s+([^$\n]+?)\s+\$/g, '$$$1$$');
 
+  // Auto-close unclosed markdown code fence if output ended prematurely
+  const fences = (processed.match(/```/g) || []).length;
+  if (fences % 2 !== 0) {
+    processed += '\n```';
+  }
+
   return processed;
 }
 

@@ -9,7 +9,8 @@ import {
   Sparkles,
   Check,
   Key,
-  Volume2
+  Volume2,
+  Zap
 } from 'lucide-react';
 import { AppSettings } from '../types';
 import { AVAILABLE_MODELS } from '../data/personas';
@@ -33,6 +34,9 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
     ...settings,
     customApiKey: settings.customApiKey || localStorage.getItem('gemni_api_key') || localStorage.getItem('GEMNI_API_KEY') || localStorage.getItem('gemini_api_key') || localStorage.getItem('echo_gemini_api_key') || ''
   }));
+  const [openaiApiKey, setOpenaiApiKey] = useState<string>(() => {
+    return localStorage.getItem('openai_api_key') || localStorage.getItem('echo_openai_api_key') || '';
+  });
   const [savedSuccess, setSavedSuccess] = useState(false);
 
   useEffect(() => {
@@ -41,6 +45,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
         ...settings,
         customApiKey: settings.customApiKey || localStorage.getItem('gemni_api_key') || localStorage.getItem('GEMNI_API_KEY') || localStorage.getItem('gemini_api_key') || localStorage.getItem('echo_gemini_api_key') || ''
       });
+      setOpenaiApiKey(localStorage.getItem('openai_api_key') || localStorage.getItem('echo_openai_api_key') || '');
     }
   }, [isOpen, settings]);
 
@@ -52,6 +57,16 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       localStorage.setItem('gemni_api_key', clean);
       localStorage.setItem('GEMNI_API_KEY', clean);
       localStorage.setItem('gemini_api_key', clean);
+    }
+    if (openaiApiKey !== undefined) {
+      const cleanOpenAI = openaiApiKey.trim();
+      if (cleanOpenAI) {
+        localStorage.setItem('openai_api_key', cleanOpenAI);
+        localStorage.setItem('echo_openai_api_key', cleanOpenAI);
+      } else {
+        localStorage.removeItem('openai_api_key');
+        localStorage.removeItem('echo_openai_api_key');
+      }
     }
     onSaveSettings(formData);
     setSavedSuccess(true);
@@ -209,6 +224,30 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               />
               <p className="text-[10px] text-[#86837c]">
                 Leave blank to use Sapphire's integrated auto-switching high-speed backend.
+              </p>
+            </div>
+          </div>
+
+          {/* Dedicated OpenAI API Key Configuration */}
+          <div className="space-y-3 p-4 rounded-2xl bg-[#191817] border border-[#2a2926]">
+            <div className="flex items-center gap-2 pb-1 border-b border-[#2a2926]">
+              <Zap className="w-4 h-4 text-emerald-400" />
+              <div>
+                <h3 className="text-xs font-bold text-[#ede8e1]">OpenAI API Key</h3>
+                <p className="text-[11px] text-[#86837c]">Optional key for fast OpenAI GPT-4o Mini & GPT-4o</p>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <input
+                type="password"
+                placeholder="sk-proj-... (optional OpenAI key)"
+                value={openaiApiKey}
+                onChange={(e) => setOpenaiApiKey(e.target.value)}
+                className="w-full px-3 py-2 text-xs bg-[#201f1d] border border-[#33312e] rounded-xl focus:outline-none focus:border-[#d97757] font-mono text-[#ede8e1]"
+              />
+              <p className="text-[10px] text-[#86837c]">
+                Enables ultra-fast direct streaming with OpenAI models.
               </p>
             </div>
           </div>

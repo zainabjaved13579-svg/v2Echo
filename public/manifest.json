@@ -46,10 +46,10 @@
       "icons": [{ "src": "https://i.ibb.co/q37Fs0hH/cropped-circle-image-1.png", "sizes": "192x192" }]
     },
     {
-      "name": "Workspace",
-      "short_name": "Workspace",
-      "description": "Access multi-file coding workspace",
-      "url": "/?mode=workspace",
+      "name": "Image Studio",
+      "short_name": "Image Studio",
+      "description": "Create and edit AI images with Sapphire Vision",
+      "url": "/?mode=image",
       "icons": [{ "src": "https://i.ibb.co/q37Fs0hH/cropped-circle-image-1.png", "sizes": "192x192" }]
     }
   ]
