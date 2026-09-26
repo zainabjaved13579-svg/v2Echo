@@ -25,7 +25,8 @@ import {
   Bot,
   User,
   Wand2,
-  Cpu
+  Cpu,
+  Key
 } from 'lucide-react';
 import { WorkspaceFile, AppSettings } from '../types';
 import {
@@ -103,6 +104,40 @@ export const CodexWorkspaceView: React.FC<CodexWorkspaceViewProps> = ({
   const [isGenerating, setIsGenerating] = useState(false);
   const [statusText, setStatusText] = useState('');
   const [selectedEngine, setSelectedEngine] = useState<'ensemble' | 'deepseek' | 'gemini' | 'google-ai-studio' | 'openai'>('ensemble');
+  const [showApiKeysModal, setShowApiKeysModal] = useState(false);
+  const [keysForm, setKeysForm] = useState(() => ({
+    openaiKey: settings.openaiApiKey || localStorage.getItem('openai_api_key') || localStorage.getItem('OPENAI_API_KEY') || '',
+    deepseekKey: settings.deepseekApiKey || localStorage.getItem('deepseek_api_key') || localStorage.getItem('DEEPSEEK_API_KEY') || '',
+    geminiKey: settings.customApiKey || localStorage.getItem('gemini_api_key') || localStorage.getItem('gemni_api_key') || localStorage.getItem('GEMINI_API_KEY') || ''
+  }));
+  const [keysSavedFeedback, setKeysSavedFeedback] = useState(false);
+
+  const handleSaveApiKeys = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (keysForm.openaiKey) localStorage.setItem('openai_api_key', keysForm.openaiKey.trim());
+    else localStorage.removeItem('openai_api_key');
+
+    if (keysForm.deepseekKey) localStorage.setItem('deepseek_api_key', keysForm.deepseekKey.trim());
+    else localStorage.removeItem('deepseek_api_key');
+
+    if (keysForm.geminiKey) localStorage.setItem('gemini_api_key', keysForm.geminiKey.trim());
+    else localStorage.removeItem('gemini_api_key');
+
+    if (onUpdateSettings) {
+      onUpdateSettings({
+        ...settings,
+        openaiApiKey: keysForm.openaiKey.trim() || undefined,
+        deepseekApiKey: keysForm.deepseekKey.trim() || undefined,
+        customApiKey: keysForm.geminiKey.trim() || undefined
+      });
+    }
+
+    setKeysSavedFeedback(true);
+    setTimeout(() => {
+      setKeysSavedFeedback(false);
+      setShowApiKeysModal(false);
+    }, 1500);
+  };
 
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const chatBottomRef = useRef<HTMLDivElement>(null);
@@ -288,91 +323,173 @@ ${textToSend}
 Please engineer the updated or new files now using the full multi-engine ensemble.`;
 
     let accumulatedText = '';
+    const activeOpenAiKey = settings.openaiApiKey || localStorage.getItem('openai_api_key') || localStorage.getItem('OPENAI_API_KEY') || '';
+    const activeDeepSeekKey = settings.deepseekApiKey || localStorage.getItem('deepseek_api_key') || localStorage.getItem('DEEPSEEK_API_KEY') || '';
+    const activeGeminiKey = settings.customApiKey || localStorage.getItem('gemini_api_key') || localStorage.getItem('gemni_api_key') || localStorage.getItem('GEMINI_API_KEY') || '';
+
+    let targetModel = 'gemini-2.5-flash';
+    if (selectedEngine === 'openai') {
+      targetModel = 'openai-gpt-4o-mini';
+    } else if (selectedEngine === 'deepseek') {
+      targetModel = 'deepseek-coder';
+    } else if (selectedEngine === 'google-ai-studio') {
+      targetModel = 'gemini-2.5-pro';
+    } else if (selectedEngine === 'gemini') {
+      targetModel = 'gemini-2.5-flash';
+    } else if (selectedEngine === 'ensemble') {
+      targetModel = activeOpenAiKey ? 'openai-gpt-4o-mini' : 'gemini-2.5-flash';
+    }
+
+    const onGenerationComplete = (finalText: string) => {
+      // Parse generated files
+      const parsed = parseGeneratedProjectFiles(finalText);
+      let updatedFilesList = [...files];
+      const modifiedNames: string[] = [];
+
+      if (parsed.length > 0) {
+        parsed.forEach((pFile) => {
+          const existingIdx = updatedFilesList.findIndex(
+            (f) => f.name.toLowerCase() === pFile.name.toLowerCase()
+          );
+          if (existingIdx !== -1) {
+            updatedFilesList[existingIdx] = {
+              ...updatedFilesList[existingIdx],
+              content: pFile.content,
+              updatedAt: Date.now()
+            };
+          } else {
+            updatedFilesList.push(pFile);
+          }
+          modifiedNames.push(pFile.name);
+        });
+
+        handleUpdateCurrentFiles(updatedFilesList);
+        setStatusText(`Engine complete: updated ${modifiedNames.join(', ')}`);
+      }
+
+      // Finalize chat message
+      const updatedChatHistory = newChatHistory.map((m) =>
+        m.id === aiMessageId
+          ? {
+              ...m,
+              text: finalText,
+              modifiedFiles: modifiedNames
+            }
+          : m
+      );
+
+      setChatMessages(updatedChatHistory);
+
+      const updatedProj: CodexProject = {
+        ...currentProject,
+        files: updatedFilesList,
+        chatHistory: updatedChatHistory,
+        updatedAt: Date.now()
+      };
+      setCurrentProject(updatedProj);
+      updateProject(updatedProj);
+      setProjects(getStoredProjects());
+      setPreviewKey((k) => k + 1);
+    };
 
     try {
-      await streamGeminiChat({
-        messages: [{ id: userMessageId, role: 'user', text: userInstructionPrompt, timestamp: Date.now() }],
-        systemInstruction: systemPrompt,
-        temperature: 0.6,
-        model: 'sapphire-flash-latest',
-        customApiKey: settings.customApiKey,
-        onChunk: (chunkText) => {
-          accumulatedText = chunkText;
-          setChatMessages((prev) =>
-            prev.map((m) => (m.id === aiMessageId ? { ...m, text: chunkText } : m))
-          );
+      // Stream directly through /api/chat/stream which supports OpenAI, DeepSeek, and Gemini
+      const response = await fetch('/api/chat/stream', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-client-mode': 'codex',
+          'x-gemini-api-key': activeGeminiKey,
+          'x-openai-api-key': activeOpenAiKey,
+          'x-deepseek-api-key': activeDeepSeekKey
         },
-        onDone: (finalText) => {
-          // Parse generated files
-          const parsed = parseGeneratedProjectFiles(finalText);
-          let updatedFilesList = [...files];
-          const modifiedNames: string[] = [];
-
-          if (parsed.length > 0) {
-            parsed.forEach((pFile) => {
-              const existingIdx = updatedFilesList.findIndex(
-                (f) => f.name.toLowerCase() === pFile.name.toLowerCase()
-              );
-              if (existingIdx !== -1) {
-                updatedFilesList[existingIdx] = {
-                  ...updatedFilesList[existingIdx],
-                  content: pFile.content,
-                  updatedAt: Date.now()
-                };
-              } else {
-                updatedFilesList.push(pFile);
-              }
-              modifiedNames.push(pFile.name);
-            });
-
-            handleUpdateCurrentFiles(updatedFilesList);
-            setStatusText(`Collective program built: updated ${modifiedNames.join(', ')}`);
-          }
-
-          // Finalize chat message
-          const updatedChatHistory = newChatHistory.map((m) =>
-            m.id === aiMessageId
-              ? {
-                  ...m,
-                  text: finalText,
-                  modifiedFiles: modifiedNames
-                }
-              : m
-          );
-
-          setChatMessages(updatedChatHistory);
-
-          const updatedProj: CodexProject = {
-            ...currentProject,
-            files: updatedFilesList,
-            chatHistory: updatedChatHistory,
-            updatedAt: Date.now()
-          };
-          setCurrentProject(updatedProj);
-          updateProject(updatedProj);
-          setProjects(getStoredProjects());
-          setPreviewKey((k) => k + 1);
-        },
-        onError: (err) => {
-          console.error('Codex stream error:', err);
-          setChatMessages((prev) =>
-            prev.map((m) =>
-              m.id === aiMessageId
-                ? { ...m, text: `Error generating code: ${err || 'Please check your connection and retry.'}` }
-                : m
-            )
-          );
-        }
+        body: JSON.stringify({
+          contents: [{ role: 'user', parts: [{ text: userInstructionPrompt }] }],
+          systemInstruction: systemPrompt,
+          temperature: 0.4,
+          model: targetModel,
+          isCodex: true,
+          engine: selectedEngine,
+          openaiApiKey: activeOpenAiKey,
+          deepseekApiKey: activeDeepSeekKey,
+          customApiKey: activeGeminiKey
+        })
       });
-    } catch (err: any) {
-      console.error('Codex catch error:', err);
-      setChatMessages((prev) =>
-        prev.map((m) =>
-          m.id === aiMessageId
-            ? { ...m, text: `Engine communication error: ${err?.message || 'Failed to complete synthesis.'}` }
-            : m
-        )
-      );
+
+      if (!response.ok || !response.body) {
+        throw new Error(`Engine HTTP status: ${response.status}`);
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed.startsWith('data:')) continue;
+          const dataStr = trimmed.replace(/^data:\s*/, '');
+          if (dataStr === '[DONE]') continue;
+          try {
+            const parsed = JSON.parse(dataStr);
+            if (parsed.text) {
+              accumulatedText += parsed.text;
+              setChatMessages((prev) =>
+                prev.map((m) => (m.id === aiMessageId ? { ...m, text: accumulatedText } : m))
+              );
+            }
+          } catch {}
+        }
+      }
+
+      if (accumulatedText.trim()) {
+        onGenerationComplete(accumulatedText);
+        return;
+      }
+      throw new Error('Empty stream response, falling back to client runner.');
+    } catch (fetchErr) {
+      console.warn('Codex server stream failed, using client runner:', fetchErr);
+      try {
+        await streamGeminiChat({
+          messages: [{ id: userMessageId, role: 'user', text: userInstructionPrompt, timestamp: Date.now() }],
+          systemInstruction: systemPrompt,
+          temperature: 0.5,
+          model: targetModel.includes('pro') ? 'gemini-2.5-pro' : 'gemini-2.5-flash',
+          customApiKey: activeGeminiKey,
+          onChunk: (chunkText) => {
+            accumulatedText = chunkText;
+            setChatMessages((prev) =>
+              prev.map((m) => (m.id === aiMessageId ? { ...m, text: chunkText } : m))
+            );
+          },
+          onDone: (finalText) => {
+            onGenerationComplete(finalText);
+          },
+          onError: (err) => {
+            setChatMessages((prev) =>
+              prev.map((m) =>
+                m.id === aiMessageId
+                  ? { ...m, text: `Synthesis error: ${err || 'Please check your connection and retry.'}` }
+                  : m
+              )
+            );
+          }
+        });
+      } catch (clientErr: any) {
+        setChatMessages((prev) =>
+          prev.map((m) =>
+            m.id === aiMessageId
+              ? { ...m, text: `Engine communication error: ${clientErr?.message || 'Failed to complete synthesis.'}` }
+              : m
+          )
+        );
+      }
     } finally {
       setIsGenerating(false);
     }
@@ -754,23 +871,101 @@ Please engineer the updated or new files now using the full multi-engine ensembl
         {/* RIGHT SIDE: Codex AI Chat Interface (Width ~40%) */}
         {/* ========================================================================= */}
         <div className="w-full lg:w-[40%] flex flex-col bg-[#151515] overflow-hidden">
-          {/* Chat Header: 4 Multi-Engine Badges & Selector */}
-          <div className="p-3 border-b border-[#2b2b2a] bg-[#111111] flex flex-col gap-2 shrink-0">
+          {/* Chat Header: Real AI Engine Badges & Keys Selector */}
+          <div className="p-3 border-b border-[#2b2b2a] bg-[#111111] flex flex-col gap-2.5 shrink-0">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Wand2 className="w-4 h-4 text-[#d97757]" />
-                <span className="text-xs font-bold text-white tracking-wide">Codex AI Engine</span>
+                <span className="text-xs font-bold text-white tracking-wide">Codex AI Engine:</span>
+                <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-[#d97757]/15 text-[#d97757] font-semibold border border-[#d97757]/30">
+                  {selectedEngine === 'openai'
+                    ? '🤖 OpenAI GPT-4o'
+                    : selectedEngine === 'deepseek'
+                    ? '🧠 DeepSeek Coder'
+                    : selectedEngine === 'gemini'
+                    ? '⚡ Google Gemini 2.5'
+                    : selectedEngine === 'google-ai-studio'
+                    ? '🔮 AI Studio Pro'
+                    : '🌌 Hybrid Ensemble'}
+                </span>
               </div>
 
-              {/* Status pill */}
-              <div className="flex items-center gap-1.5 text-[11px] text-[#a19e97]">
-                <span className={`w-2 h-2 rounded-full ${isGenerating ? 'bg-amber-400 animate-ping' : 'bg-emerald-400'}`} />
-                <span>{isGenerating ? 'Synthesizing...' : 'Master Mode Active'}</span>
+              {/* Status pill & Keys button */}
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowApiKeysModal(true)}
+                  className="px-2.5 py-1 rounded-xl bg-[#20201f] hover:bg-[#282724] border border-[#2b2b2a] text-[11px] text-[#ede8e1] flex items-center gap-1.5 transition-colors cursor-pointer"
+                  title="Configure AI API Keys (OpenAI, DeepSeek, Google Gemini)"
+                >
+                  <Key className="w-3.5 h-3.5 text-[#d97757]" />
+                  <span>AI API Keys</span>
+                  {(keysForm.openaiKey || keysForm.deepseekKey || keysForm.geminiKey) && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                  )}
+                </button>
+
+                <div className="flex items-center gap-1.5 text-[11px] text-[#a19e97]">
+                  <span className={`w-2 h-2 rounded-full ${isGenerating ? 'bg-amber-400 animate-ping' : 'bg-emerald-400'}`} />
+                  <span>{isGenerating ? 'Synthesizing...' : 'Ready'}</span>
+                </div>
               </div>
             </div>
 
-            {/* The 5 Engine Architect Modes */}
+            {/* The 5 Engine Architect Modes - Clearly labeled real engines */}
             <div className="flex items-center gap-1.5 flex-wrap">
+              <button
+                onClick={() => setSelectedEngine('openai')}
+                className={`px-3 py-1.5 rounded-2xl text-xs font-medium transition-all cursor-pointer border flex items-center gap-1.5 ${
+                  selectedEngine === 'openai'
+                    ? 'bg-teal-500/20 text-teal-400 border-teal-500/50 font-semibold shadow-xs'
+                    : 'bg-[#20201f] text-[#a19e97] border-[#2b2b2a] hover:text-white'
+                }`}
+                title="OpenAI GPT-4o & GPT-4o Mini Engine for ultra-fast answers and code generation"
+              >
+                <Zap className="w-3.5 h-3.5 text-teal-400" />
+                <span>OpenAI GPT-4o</span>
+              </button>
+
+              <button
+                onClick={() => setSelectedEngine('gemini')}
+                className={`px-3 py-1.5 rounded-2xl text-xs font-medium transition-all cursor-pointer border flex items-center gap-1.5 ${
+                  selectedEngine === 'gemini'
+                    ? 'bg-purple-500/20 text-purple-400 border-purple-500/50 font-semibold shadow-xs'
+                    : 'bg-[#20201f] text-[#a19e97] border-[#2b2b2a] hover:text-white'
+                }`}
+                title="Google Gemini 2.5 Flash for instant low-latency code"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+                <span>Google Gemini</span>
+              </button>
+
+              <button
+                onClick={() => setSelectedEngine('deepseek')}
+                className={`px-3 py-1.5 rounded-2xl text-xs font-medium transition-all cursor-pointer border flex items-center gap-1.5 ${
+                  selectedEngine === 'deepseek'
+                    ? 'bg-blue-500/20 text-blue-400 border-blue-500/50 font-semibold shadow-xs'
+                    : 'bg-[#20201f] text-[#a19e97] border-[#2b2b2a] hover:text-white'
+                }`}
+                title="DeepSeek R1 / V3 Coder for deep algorithmic logic"
+              >
+                <Cpu className="w-3.5 h-3.5 text-blue-400" />
+                <span>DeepSeek Coder</span>
+              </button>
+
+              <button
+                onClick={() => setSelectedEngine('google-ai-studio')}
+                className={`px-3 py-1.5 rounded-2xl text-xs font-medium transition-all cursor-pointer border flex items-center gap-1.5 ${
+                  selectedEngine === 'google-ai-studio'
+                    ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50 font-semibold shadow-xs'
+                    : 'bg-[#20201f] text-[#a19e97] border-[#2b2b2a] hover:text-white'
+                }`}
+                title="Google AI Studio Pro - Extended Thinking & multi-file architect"
+              >
+                <Bot className="w-3.5 h-3.5 text-emerald-400" />
+                <span>AI Studio Pro</span>
+              </button>
+
               <button
                 onClick={() => setSelectedEngine('ensemble')}
                 className={`px-3 py-1.5 rounded-2xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer border ${
@@ -778,58 +973,10 @@ Please engineer the updated or new files now using the full multi-engine ensembl
                     ? 'bg-[#d97757]/20 text-[#d97757] border-[#d97757]/50 shadow-xs'
                     : 'bg-[#20201f] text-[#a19e97] border-[#2b2b2a] hover:text-white'
                 }`}
-                title="Unified Autonomous Architecture"
+                title="Autonomous Multi-AI Collective: Combines OpenAI, Gemini & DeepSeek"
               >
-                <Cpu className="w-3.5 h-3.5 text-[#d97757]" />
-                <span>Autonomous Core</span>
-              </button>
-
-              <button
-                onClick={() => setSelectedEngine('deepseek')}
-                className={`px-3 py-1.5 rounded-2xl text-xs font-medium transition-all cursor-pointer border ${
-                  selectedEngine === 'deepseek'
-                    ? 'bg-blue-500/20 text-blue-400 border-blue-500/40 font-semibold'
-                    : 'bg-[#20201f] text-[#86837c] border-[#2b2b2a] hover:text-white'
-                }`}
-                title="Deep algorithmic logic"
-              >
-                Logic Master
-              </button>
-
-              <button
-                onClick={() => setSelectedEngine('gemini')}
-                className={`px-3 py-1.5 rounded-2xl text-xs font-medium transition-all cursor-pointer border ${
-                  selectedEngine === 'gemini'
-                    ? 'bg-purple-500/20 text-purple-400 border-purple-500/40 font-semibold'
-                    : 'bg-[#20201f] text-[#86837c] border-[#2b2b2a] hover:text-white'
-                }`}
-                title="Instant low-latency generation"
-              >
-                Speed Flash
-              </button>
-
-              <button
-                onClick={() => setSelectedEngine('google-ai-studio')}
-                className={`px-3 py-1.5 rounded-2xl text-xs font-medium transition-all cursor-pointer border ${
-                  selectedEngine === 'google-ai-studio'
-                    ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40 font-semibold'
-                    : 'bg-[#20201f] text-[#86837c] border-[#2b2b2a] hover:text-white'
-                }`}
-                title="Multi-file modular app architect"
-              >
-                Architect Pro
-              </button>
-
-              <button
-                onClick={() => setSelectedEngine('openai')}
-                className={`px-3 py-1.5 rounded-2xl text-xs font-medium transition-all cursor-pointer border ${
-                  selectedEngine === 'openai'
-                    ? 'bg-teal-500/20 text-teal-400 border-teal-500/40 font-semibold'
-                    : 'bg-[#20201f] text-[#86837c] border-[#2b2b2a] hover:text-white'
-                }`}
-                title="Polished UI/UX & Responsive layout"
-              >
-                UI Studio
+                <Layers className="w-3.5 h-3.5 text-[#d97757]" />
+                <span>Hybrid Ensemble</span>
               </button>
             </div>
           </div>
@@ -1167,6 +1314,112 @@ Please engineer the updated or new files now using the full multi-engine ensembl
                 })}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* AI API Keys Configuration Modal */}
+      {/* ========================================================================= */}
+      {showApiKeysModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="w-full max-w-lg rounded-3xl bg-[#18181a] border border-[#2b2b2a] shadow-2xl p-5 sm:p-6 text-white space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-[#2b2b2a]">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-2xl bg-[#d97757]/20 border border-[#d97757]/40 flex items-center justify-center text-[#d97757]">
+                  <Key className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-sm text-white">Codex AI API Keys</h3>
+                  <p className="text-[11px] text-[#a19e97]">
+                    All AI API keys work in Codex for generating full applications
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowApiKeysModal(false)}
+                className="p-1.5 text-[#a19e97] hover:text-white rounded-xl hover:bg-[#20201f] transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveApiKeys} className="space-y-3.5">
+              {/* OpenAI Key */}
+              <div className="space-y-1.5 p-3 rounded-2xl bg-[#20201f] border border-[#2b2b2a]">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-teal-400 flex items-center gap-1.5">
+                    <Zap className="w-3.5 h-3.5" />
+                    <span>OpenAI API Key</span>
+                  </label>
+                  <span className="text-[10px] text-[#86837c]">GPT-4o & GPT-4o Mini</span>
+                </div>
+                <input
+                  type="password"
+                  placeholder="sk-proj-... (optional, server proxy active)"
+                  value={keysForm.openaiKey}
+                  onChange={(e) => setKeysForm((p) => ({ ...p, openaiKey: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-xl bg-[#111111] border border-[#2b2b2a] text-xs text-white placeholder-[#666] focus:outline-none focus:border-teal-500 font-mono"
+                />
+              </div>
+
+              {/* DeepSeek Key */}
+              <div className="space-y-1.5 p-3 rounded-2xl bg-[#20201f] border border-[#2b2b2a]">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-blue-400 flex items-center gap-1.5">
+                    <Cpu className="w-3.5 h-3.5" />
+                    <span>DeepSeek API Key</span>
+                  </label>
+                  <span className="text-[10px] text-[#86837c]">DeepSeek R1 / V3 Coder</span>
+                </div>
+                <input
+                  type="password"
+                  placeholder="sk-... (optional, server proxy active)"
+                  value={keysForm.deepseekKey}
+                  onChange={(e) => setKeysForm((p) => ({ ...p, deepseekKey: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-xl bg-[#111111] border border-[#2b2b2a] text-xs text-white placeholder-[#666] focus:outline-none focus:border-blue-500 font-mono"
+                />
+              </div>
+
+              {/* Google Gemini Key */}
+              <div className="space-y-1.5 p-3 rounded-2xl bg-[#20201f] border border-[#2b2b2a]">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-purple-400 flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>Google Gemini / AI Studio Key</span>
+                  </label>
+                  <span className="text-[10px] text-[#86837c]">Gemini 2.5 Flash & Pro</span>
+                </div>
+                <input
+                  type="password"
+                  placeholder="AIzaSy... (optional, server proxy active)"
+                  value={keysForm.geminiKey}
+                  onChange={(e) => setKeysForm((p) => ({ ...p, geminiKey: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-xl bg-[#111111] border border-[#2b2b2a] text-xs text-white placeholder-[#666] focus:outline-none focus:border-purple-500 font-mono"
+                />
+              </div>
+
+              <div className="pt-2 flex items-center justify-between gap-3">
+                <span className="text-[11px] text-[#86837c]">
+                  Keys are saved safely in your browser storage.
+                </span>
+
+                <button
+                  type="submit"
+                  className="px-4 py-2 rounded-xl bg-[#d97757] hover:bg-[#c86b4c] text-white text-xs font-semibold flex items-center gap-1.5 transition-all shadow-md cursor-pointer shrink-0"
+                >
+                  {keysSavedFeedback ? (
+                    <>
+                      <Check className="w-3.5 h-3.5 text-white" />
+                      <span>Keys Saved!</span>
+                    </>
+                  ) : (
+                    <span>Save API Keys</span>
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

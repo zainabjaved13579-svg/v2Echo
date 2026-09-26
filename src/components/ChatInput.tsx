@@ -20,7 +20,13 @@ const MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024; // 25MB
 interface ChatInputProps {
   input: string;
   setInput: React.Dispatch<React.SetStateAction<string>>;
-  onSend: (text: string, image?: ImageAttachment, file?: UploadedFileAttachment) => void;
+  onSend: (
+    text: string,
+    image?: ImageAttachment,
+    file?: UploadedFileAttachment,
+    files?: UploadedFileAttachment[],
+    images?: ImageAttachment[]
+  ) => void;
   onStop: () => void;
   isLoading: boolean;
   useSearchGrounding: boolean;
@@ -51,8 +57,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   onCancelReply
 }) => {
   const { theme } = useAppTheme();
-  const [attachedImage, setAttachedImage] = useState<ImageAttachment | null>(null);
-  const [attachedFile, setAttachedFile] = useState<UploadedFileAttachment | null>(null);
+  const [attachedImages, setAttachedImages] = useState<ImageAttachment[]>([]);
+  const [attachedFiles, setAttachedFiles] = useState<UploadedFileAttachment[]>([]);
   const [fileErrorMessage, setFileErrorMessage] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
@@ -113,7 +119,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   const processGeneralFile = async (file: File) => {
     setFileErrorMessage(null);
     if (file.size > MAX_FILE_SIZE_BYTES) {
-      setFileErrorMessage(`File "${file.name}" exceeds maximum allowed size.`);
+      setFileErrorMessage(`File "${file.name}" exceeds maximum allowed size (25MB).`);
       return;
     }
 
@@ -122,12 +128,15 @@ export const ChatInput: React.FC<ChatInputProps> = ({
       reader.onload = (e) => {
         const result = e.target?.result as string;
         const base64 = result.includes(',') ? result.split(',')[1] : result;
-        setAttachedImage({
-          dataUrl: result,
-          base64: base64,
-          name: file.name,
-          mimeType: file.type || 'image/png'
-        });
+        setAttachedImages((prev) => [
+          ...prev,
+          {
+            dataUrl: result,
+            base64: base64,
+            name: file.name,
+            mimeType: file.type || 'image/png'
+          }
+        ]);
       };
       reader.readAsDataURL(file);
       return;
@@ -135,13 +144,16 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
     try {
       const text = await file.text();
-      setAttachedFile({
-        name: file.name,
-        type: file.type || 'text/plain',
-        size: file.size,
-        content: text,
-        isCodeOrText: true
-      });
+      setAttachedFiles((prev) => [
+        ...prev,
+        {
+          name: file.name,
+          type: file.type || 'text/plain',
+          size: file.size,
+          content: text,
+          isCodeOrText: true
+        }
+      ]);
     } catch {
       setFileErrorMessage(`Could not read text from "${file.name}".`);
     }
@@ -165,12 +177,18 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   };
 
   const handleSend = () => {
-    if ((!input.trim() && !attachedImage && !attachedFile) || isLoading) return;
+    if ((!input.trim() && attachedImages.length === 0 && attachedFiles.length === 0) || isLoading) return;
 
-    onSend(input.trim(), attachedImage || undefined, attachedFile || undefined);
+    onSend(
+      input.trim(),
+      attachedImages[0] || undefined,
+      attachedFiles[0] || undefined,
+      attachedFiles.length > 0 ? attachedFiles : undefined,
+      attachedImages.length > 0 ? attachedImages : undefined
+    );
     setInput('');
-    setAttachedImage(null);
-    setAttachedFile(null);
+    setAttachedImages([]);
+    setAttachedFiles([]);
     setFileErrorMessage(null);
     setIsPlusMenuOpen(false);
     if (onCancelReply) onCancelReply();
@@ -210,7 +228,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     e.preventDefault();
     setIsDragging(false);
     const files = e.dataTransfer.files;
-    if (files.length > 0) {
+    if (files && files.length > 0) {
       for (let i = 0; i < files.length; i++) {
         processGeneralFile(files[i]);
       }
@@ -283,47 +301,71 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             : 'border-slate-200 focus-within:border-[#d97757]/60'
         }`}
       >
-        {/* Attached File Preview */}
-        {attachedFile && (
-          <div className={`mx-3 mt-2.5 p-2 rounded-2xl flex items-center justify-between gap-3 text-xs border ${
-            theme === 'moon' ? 'bg-[#151515] border-[#2b2b2a] text-white' : 'bg-slate-100 border-slate-200 text-slate-800'
-          }`}>
-            <div className="flex items-center gap-2 min-w-0">
-              <FileCode className="w-4 h-4 text-[#d97757] shrink-0" />
-              <span className="truncate max-w-[200px] sm:max-w-sm">{attachedFile.name}</span>
-            </div>
-            <button
-              type="button"
-              onClick={() => setAttachedFile(null)}
-              className="text-[#a19e97] hover:text-white cursor-pointer p-1"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        )}
-
-        {/* Attached Image Preview */}
-        {attachedImage && (
-          <div className={`mx-3 mt-2.5 p-2 rounded-2xl flex items-center justify-between gap-3 text-xs border ${
-            theme === 'moon' ? 'bg-[#151515] border-[#2b2b2a] text-white' : 'bg-slate-100 border-slate-200 text-slate-800'
-          }`}>
-            <div className="flex items-center gap-2 min-w-0">
-              <img
-                src={attachedImage.dataUrl}
-                alt="Uploaded"
-                className={`w-8 h-8 rounded-xl object-cover border ${
-                  theme === 'moon' ? 'border-[#2b2b2a]' : 'border-slate-200'
+        {/* Attached Files & Images Preview Cards (No Limit) */}
+        {(attachedFiles.length > 0 || attachedImages.length > 0) && (
+          <div className="mx-3 mt-2.5 flex flex-wrap gap-2">
+            {/* Attached Code/Text/Project Files */}
+            {attachedFiles.map((file, idx) => (
+              <div
+                key={`file-${idx}-${file.name}`}
+                className={`p-2 rounded-2xl flex items-center justify-between gap-2.5 text-xs border max-w-full sm:max-w-xs transition-all shadow-2xs ${
+                  theme === 'moon'
+                    ? 'bg-[#151515] border-[#2b2b2a] text-white'
+                    : 'bg-slate-100 border-slate-200 text-slate-800'
                 }`}
-              />
-              <span className="truncate max-w-[200px]">{attachedImage.name || 'Image'}</span>
-            </div>
-            <button
-              type="button"
-              onClick={() => setAttachedImage(null)}
-              className="text-[#a19e97] hover:text-white cursor-pointer p-1"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <FileCode className="w-4 h-4 text-[#d97757] shrink-0" />
+                  <div className="min-w-0">
+                    <span className="truncate block font-medium max-w-[140px] sm:max-w-[180px]">
+                      {file.name}
+                    </span>
+                    <span className="text-[10px] text-[#a19e97] font-mono">
+                      {file.size < 1024 * 1024
+                        ? `${(file.size / 1024).toFixed(1)} KB`
+                        : `${(file.size / (1024 * 1024)).toFixed(2)} MB`}
+                    </span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setAttachedFiles((prev) => prev.filter((_, i) => i !== idx))}
+                  className="text-[#a19e97] hover:text-rose-400 cursor-pointer p-1 rounded-lg transition-colors"
+                  title={`Remove ${file.name}`}
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ))}
+
+            {/* Attached Screenshots / Images */}
+            {attachedImages.map((img, idx) => (
+              <div
+                key={`img-${idx}-${img.name}`}
+                className={`p-1.5 rounded-2xl flex items-center gap-2 text-xs border max-w-full transition-all shadow-2xs ${
+                  theme === 'moon'
+                    ? 'bg-[#151515] border-[#2b2b2a] text-white'
+                    : 'bg-slate-100 border-slate-200 text-slate-800'
+                }`}
+              >
+                <img
+                  src={img.dataUrl}
+                  alt={img.name || 'Uploaded'}
+                  className="w-8 h-8 rounded-xl object-cover border border-[#2b2b2a]"
+                />
+                <span className="truncate max-w-[110px] font-medium text-[11px]">
+                  {img.name || `Image ${idx + 1}`}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setAttachedImages((prev) => prev.filter((_, i) => i !== idx))}
+                  className="text-[#a19e97] hover:text-rose-400 cursor-pointer p-1 rounded-lg transition-colors"
+                  title="Remove image"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ))}
           </div>
         )}
 
@@ -338,10 +380,14 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             onKeyDown={handleKeyDown}
             onPaste={handlePaste}
             placeholder={
-              attachedFile
-                ? `Ask about ${attachedFile.name}...`
-                : attachedImage
+              attachedFiles.length === 1
+                ? `Ask about "${attachedFiles[0].name}"...`
+                : attachedFiles.length > 1
+                ? `Ask about these ${attachedFiles.length} files...`
+                : attachedImages.length === 1
                 ? 'Ask about this image...'
+                : attachedImages.length > 1
+                ? `Ask about these ${attachedImages.length} images...`
                 : 'How can I help you today?'
             }
             className={`w-full bg-transparent text-sm sm:text-base focus:outline-none resize-none max-h-40 leading-relaxed font-normal ${
@@ -460,7 +506,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               <button
                 type="button"
                 id="send-message-btn"
-                disabled={!input.trim() && !attachedImage && !attachedFile}
+                disabled={!input.trim() && attachedImages.length === 0 && attachedFiles.length === 0}
                 onClick={handleSend}
                 className="w-7 h-7 rounded-xl bg-[#d97757] hover:bg-[#c86b4c] disabled:opacity-40 disabled:hover:bg-[#d97757] text-white flex items-center justify-center transition-all cursor-pointer active:scale-95 shadow-md"
                 title="Send message"

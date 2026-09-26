@@ -248,11 +248,13 @@ export default function App() {
     code: string;
     language: string;
     filename?: string;
+    files?: WorkspaceFile[];
   }>({
     isOpen: false,
     code: '',
     language: 'html',
-    filename: 'index.html'
+    filename: 'index.html',
+    files: []
   });
 
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -489,13 +491,43 @@ export default function App() {
     }));
   };
 
-  // Open Live Preview for code block
-  const handlePreviewCode = (code: string, language: string, filename?: string) => {
+  // Open Live Preview for code block (supports single file or full multi-file project)
+  const handlePreviewCode = (code: string, language: string, filename?: string, files?: any[]) => {
+    let resolvedFiles: WorkspaceFile[] = [];
+    if (Array.isArray(files) && files.length > 0) {
+      resolvedFiles = files.map((f, i) => ({
+        id: f.id || `file_${Date.now()}_${i}`,
+        name: f.name || `file_${i}.${f.language || 'txt'}`,
+        path: f.path || `/workspace/${f.name}`,
+        content: f.content || '',
+        language: f.language || 'html',
+        createdAt: f.createdAt || Date.now(),
+        updatedAt: f.updatedAt || Date.now(),
+        autoSaved: true,
+        source: 'ai-generated'
+      }));
+    } else {
+      resolvedFiles = [
+        {
+          id: `file_${Date.now()}`,
+          name: filename || 'index.html',
+          path: `/workspace/${filename || 'index.html'}`,
+          content: code,
+          language: language || 'html',
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+          autoSaved: true,
+          source: 'ai-generated'
+        }
+      ];
+    }
+
     setPreviewModalState({
       isOpen: true,
       code,
       language,
-      filename: filename || 'index.html'
+      filename: filename || 'index.html',
+      files: resolvedFiles
     });
   };
 
@@ -515,25 +547,33 @@ export default function App() {
     });
   };
 
-  // Send message (Supports Text, Screenshot Vision, and File Upload / Rewrite)
+  // Send message (Supports Text, Multiple Images Vision, and Unlimited File Uploads / Rewrites)
   const handleSendMessage = async (
     text: string,
     image?: ImageAttachment,
-    file?: UploadedFileAttachment
+    file?: UploadedFileAttachment,
+    allFiles?: UploadedFileAttachment[],
+    allImages?: ImageAttachment[]
   ) => {
+    const effectiveFiles = (allFiles && allFiles.length > 0) ? allFiles : (file ? [file] : []);
+    const effectiveImages = (allImages && allImages.length > 0) ? allImages : (image ? [image] : []);
+
     if (isLoading) return;
-    if (!text.trim() && !image && !file) return;
+    if (!text.trim() && effectiveImages.length === 0 && effectiveFiles.length === 0) return;
 
     const userMessageId = `msg_user_${Date.now()}`;
     const modelMessageId = `msg_model_${Date.now() + 1}`;
 
-    let promptText =
-      text.trim() ||
-      (file
-        ? `Please analyze and rewrite this file: ${file.name}`
-        : image
-        ? 'Please analyze this screenshot / image.'
-        : '');
+    let promptText = text.trim();
+    if (!promptText) {
+      if (effectiveFiles.length === 1) {
+        promptText = `Please analyze and rewrite this file: ${effectiveFiles[0].name}`;
+      } else if (effectiveFiles.length > 1) {
+        promptText = `Please analyze, review, and process these ${effectiveFiles.length} uploaded files.`;
+      } else if (effectiveImages.length > 0) {
+        promptText = 'Please analyze this screenshot / image.';
+      }
+    }
 
     if (replyTo) {
       promptText = `> Replying to ${replyTo.role === 'model' ? 'Echo AI' : 'User'}: "${replyTo.text.slice(0, 160)}"\n\n${promptText}`;
@@ -544,14 +584,20 @@ export default function App() {
       id: userMessageId,
       role: 'user',
       text: promptText,
-      image: image || undefined,
-      attachedFile: file || undefined,
+      image: effectiveImages[0] || undefined,
+      images: effectiveImages.length > 0 ? effectiveImages : undefined,
+      attachedFile: effectiveFiles[0] || undefined,
+      attachedFiles: effectiveFiles.length > 0 ? effectiveFiles : undefined,
       timestamp: Date.now()
     };
 
     // Auto-generate session title from first prompt
     const sessionTitle =
-      (file ? `Edit: ${file.name}` : promptText.slice(0, 36)) || 'New Conversation';
+      (effectiveFiles.length === 1
+        ? `Edit: ${effectiveFiles[0].name}`
+        : effectiveFiles.length > 1
+        ? `${effectiveFiles.length} Files: ${effectiveFiles[0].name}`
+        : promptText.slice(0, 36)) || 'New Conversation';
 
     // If on Starting Screen ("Into the Unknown"), spawn a clean separate session / tab
     const isFromStarting = isStartingScreen;
@@ -594,33 +640,25 @@ export default function App() {
       modelUsed: targetSession.model
     };
 
-    // Prepare message for Gemini with file context if uploaded (<15MB support)
-    const fileSizeStr = file
-      ? file.size < 1024 * 1024
-        ? `${(file.size / 1024).toFixed(1)} KB`
-        : `${(file.size / (1024 * 1024)).toFixed(2)} MB`
-      : '';
-
+    // Prepare message for Gemini with all uploaded files context (<25MB support)
     let geminiFormattedUserText = promptText;
-    if (file) {
-      if (file.isCodeOrText && file.content) {
-        geminiFormattedUserText = `[User Uploaded File: "${file.name}" (${file.type || 'text/plain'}, ${fileSizeStr})]
-Here is the existing file content:
-\`\`\`${file.name.split('.').pop() || 'text'}
-${file.content}
-\`\`\`
+    if (effectiveFiles.length > 0) {
+      const fileBlocks = effectiveFiles.map((f, idx) => {
+        const sz = f.size < 1024 * 1024
+          ? `${(f.size / 1024).toFixed(1)} KB`
+          : `${(f.size / (1024 * 1024)).toFixed(2)} MB`;
+        if (f.isCodeOrText && f.content) {
+          return `### File ${idx + 1}: "${f.name}" (${f.type || 'text/plain'}, ${sz})\n\`\`\`${f.name.split('.').pop() || 'text'}\n${f.content}\n\`\`\``;
+        } else {
+          return `### File ${idx + 1}: "${f.name}" (${f.type || 'application/octet-stream'}, ${sz})`;
+        }
+      }).join('\n\n');
 
-User Request / Modification & Remake instructions:
-${promptText}
+      geminiFormattedUserText = `[User Uploaded ${effectiveFiles.length} File${effectiveFiles.length > 1 ? 's' : ''}:]
+${fileBlocks}
 
-Please understand, analyze, and remake or update this file cleanly according to the user's instructions. Provide the complete updated file code in a clean markdown code block with the filename.`;
-      } else {
-        geminiFormattedUserText = `[User Uploaded Multimodal File: "${file.name}" (${file.type || 'application/pdf'}, ${fileSizeStr})]
 User Request / Instructions:
-${promptText}
-
-Please carefully examine, understand, and analyze this uploaded document/file and fulfill the user's request thoroughly.`;
-      }
+${promptText || 'Please analyze, remake, or update these files cleanly according to best engineering practices. Provide the complete updated file code in clean markdown code blocks with their filenames.'}`;
     }
 
     const messageForGemini = { ...newUserMessage, text: geminiFormattedUserText };
@@ -1266,7 +1304,12 @@ Please carefully examine, understand, and analyze this uploaded document/file an
         code={previewModalState.code}
         language={previewModalState.language}
         filename={previewModalState.filename}
+        files={previewModalState.files}
         onOpenFileManager={handleOpenFileManager}
+        onOpenCodexWorkspace={() => {
+          setPreviewModalState((p) => ({ ...p, isOpen: false }));
+          setActiveNavTab('codex');
+        }}
       />
 
       {/* Human Voice Language Selector Modal */}

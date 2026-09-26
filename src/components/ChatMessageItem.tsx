@@ -505,24 +505,41 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
               </div>
             </div>
 
-            {/* User Attached Code or Document File */}
-            {message.attachedFile && (
-              <div className="mb-2.5">
-                <div className="inline-flex items-center gap-2.5 px-3 py-2 rounded-xl bg-indigo-50 border border-indigo-200 text-xs text-indigo-950 font-medium shadow-2xs">
-                  <div className="w-6 h-6 rounded-lg bg-indigo-600 text-white flex items-center justify-center shrink-0">
-                    <FileCode className="w-3.5 h-3.5" />
-                  </div>
-                  <div className="min-w-0">
-                    <span className="font-bold text-slate-900 block truncate max-w-[220px] sm:max-w-xs">
-                      {message.attachedFile.name}
-                    </span>
-                    <span className="text-[10px] text-indigo-600 font-mono">
-                      {(message.attachedFile.size / 1024).toFixed(1)} KB • Uploaded File
-                    </span>
-                  </div>
+            {/* User Attached Code or Document Files (Multiple / Unlimited Support) */}
+            {(() => {
+              const allAttached = (message.attachedFiles && message.attachedFiles.length > 0)
+                ? message.attachedFiles
+                : message.attachedFile
+                ? [message.attachedFile]
+                : [];
+              if (allAttached.length === 0) return null;
+
+              return (
+                <div className="mb-2.5 flex flex-wrap gap-2">
+                  {allAttached.map((file, idx) => (
+                    <div
+                      key={`attached-${idx}-${file.name}`}
+                      className="inline-flex items-center gap-2.5 px-3 py-2 rounded-2xl bg-indigo-50/90 border border-indigo-200/90 text-xs text-indigo-950 font-medium shadow-2xs transition-all hover:bg-indigo-100/80"
+                    >
+                      <div className="w-6 h-6 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
+                        <FileCode className="w-3.5 h-3.5" />
+                      </div>
+                      <div className="min-w-0">
+                        <span className="font-bold text-slate-900 block truncate max-w-[200px] sm:max-w-xs">
+                          {file.name}
+                        </span>
+                        <span className="text-[10px] text-indigo-600 font-mono">
+                          {file.size < 1024 * 1024
+                            ? `${(file.size / 1024).toFixed(1)} KB`
+                            : `${(file.size / (1024 * 1024)).toFixed(2)} MB`}{' '}
+                          • Uploaded File {allAttached.length > 1 ? `(${idx + 1}/${allAttached.length})` : ''}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              </div>
-            )}
+              );
+            })()}
 
             {/* AI Rewritten / Modified File Card */}
             {!isUser && message.modifiedFileContent && (
@@ -576,36 +593,50 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
               </div>
             )}
 
-            {/* User Attached Screenshot / Image */}
-            {message.image && (
-              <div className="mb-2">
-                <div className="relative group/img inline-block max-w-sm rounded-xl overflow-hidden border border-slate-200 bg-slate-900/5 shadow-xs">
-                  <img
-                    src={message.image.dataUrl || `data:${message.image.mimeType};base64,${message.image.base64}`}
-                    alt={message.image.name || 'Screenshot'}
-                    referrerPolicy="no-referrer"
-                    className="max-h-60 w-auto object-contain rounded-xl cursor-pointer hover:opacity-95 transition-opacity"
-                    onClick={() => setIsZoomedImageOpen(true)}
-                  />
-                  <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center gap-2 pointer-events-none p-2">
-                    <button
-                      type="button"
-                      onClick={() => setIsZoomedImageOpen(true)}
-                      className="p-1.5 rounded-lg bg-white/90 hover:bg-white text-slate-900 text-xs font-semibold flex items-center gap-1 shadow-md pointer-events-auto transition-colors cursor-pointer"
+            {/* User Attached Screenshots / Images (Multiple Support) */}
+            {(() => {
+              const allImages = (message.images && message.images.length > 0)
+                ? message.images
+                : message.image
+                ? [message.image]
+                : [];
+              if (allImages.length === 0) return null;
+
+              return (
+                <div className="mb-2.5 flex flex-wrap gap-2.5">
+                  {allImages.map((img, idx) => (
+                    <div
+                      key={`img-${idx}-${img.name}`}
+                      className="relative group/img inline-block max-w-sm rounded-2xl overflow-hidden border border-slate-200 bg-slate-900/5 shadow-xs"
                     >
-                      <Maximize2 className="w-3.5 h-3.5" />
-                      <span>View</span>
-                    </button>
-                  </div>
-                  {message.image.name && (
-                    <div className="px-2.5 py-1 bg-slate-900/75 backdrop-blur-xs text-[10px] text-white flex items-center gap-1.5 font-medium">
-                      <ImageIcon className="w-3 h-3 text-amber-400" />
-                      <span className="truncate max-w-[200px]">{message.image.name}</span>
+                      <img
+                        src={img.dataUrl || `data:${img.mimeType};base64,${img.base64}`}
+                        alt={img.name || `Screenshot ${idx + 1}`}
+                        referrerPolicy="no-referrer"
+                        className="max-h-60 w-auto object-contain rounded-2xl cursor-pointer hover:opacity-95 transition-opacity"
+                        onClick={() => setIsZoomedImageOpen(true)}
+                      />
+                      <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center gap-2 pointer-events-none p-2">
+                        <button
+                          type="button"
+                          onClick={() => setIsZoomedImageOpen(true)}
+                          className="p-1.5 rounded-lg bg-white/90 hover:bg-white text-slate-900 text-xs font-semibold flex items-center gap-1 shadow-md pointer-events-auto transition-colors cursor-pointer"
+                        >
+                          <Maximize2 className="w-3.5 h-3.5" />
+                          <span>View</span>
+                        </button>
+                      </div>
+                      {img.name && (
+                        <div className="px-2.5 py-1 bg-slate-900/75 backdrop-blur-xs text-[10px] text-white flex items-center gap-1.5 font-medium">
+                          <ImageIcon className="w-3 h-3 text-amber-400" />
+                          <span className="truncate max-w-[200px]">{img.name}</span>
+                        </div>
+                      )}
                     </div>
-                  )}
+                  ))}
                 </div>
-              </div>
-            )}
+              );
+            })()}
 
             {/* AI Generated Images Showcase */}
             {message.generatedImages && message.generatedImages.length > 0 && (
