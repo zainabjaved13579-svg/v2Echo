@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120">
+  <defs>
+    <linearGradient id="sapphireBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0a192f"/>
+      <stop offset="50%" stop-color="#0f2b5c"/>
+      <stop offset="100%" stop-color="#071224"/>
+    </linearGradient>
+    <linearGradient id="facetTop" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#60a5fa"/>
+      <stop offset="100%" stop-color="#2563eb"/>
+    </linearGradient>
+    <linearGradient id="facetCenter" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#93c5fd"/>
+      <stop offset="50%" stop-color="#3b82f6"/>
+      <stop offset="100%" stop-color="#1d4ed8"/>
+    </linearGradient>
+    <linearGradient id="facetLeft" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="100%" stop-color="#1e40af"/>
+    </linearGradient>
+    <linearGradient id="facetRight" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#22d3ee"/>
+      <stop offset="100%" stop-color="#1e3a8a"/>
+    </linearGradient>
+    <linearGradient id="facetBottom" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#1d4ed8"/>
+      <stop offset="100%" stop-color="#0b1b3d"/>
+    </linearGradient>
+    <linearGradient id="sheen" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="sapphireGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+  </defs>
+
+  <!-- Dark Rounded Container with Soft Edge -->
+  <rect width="120" height="120" rx="28" fill="url(#sapphireBg)"/>
+  <rect width="118" height="118" x="1" y="1" rx="27" fill="none" stroke="#3b82f6" stroke-width="1.5" stroke-opacity="0.4"/>
+
+  <!-- Glowing Aura -->
+  <circle cx="60" cy="58" r="32" fill="#38bdf8" opacity="0.22" filter="url(#sapphireGlow)"/>
+
+  <!-- Brilliant Cut Sapphire Gemstone -->
+  <g transform="translate(0, 1)">
+    <!-- Top Table / Upper facet -->
+    <polygon points="40,32 80,32 94,48 26,48" fill="url(#facetTop)"/>
+    
+    <!-- Left upper facet -->
+    <polygon points="26,48 40,32 30,48" fill="url(#facetLeft)" opacity="0.9"/>
+    
+    <!-- Right upper facet -->
+    <polygon points="80,32 94,48 90,48" fill="url(#facetRight)" opacity="0.9"/>
+
+    <!-- Central brilliant star facets -->
+    <polygon points="40,48 60,48 60,76 40,48" fill="url(#facetCenter)"/>
+    <polygon points="60,48 80,48 60,76 80,48" fill="url(#facetRight)"/>
+    
+    <!-- Outer triangles -->
+    <polygon points="26,48 40,48 60,76" fill="url(#facetLeft)"/>
+    <polygon points="94,48 80,48 60,76" fill="url(#facetTop)"/>
+
+    <!-- Bottom pavilion cone facets -->
+    <polygon points="26,48 60,76 60,94 26,48" fill="url(#facetBottom)"/>
+    <polygon points="94,48 60,76 60,94 94,48" fill="url(#facetBottom)" opacity="0.85"/>
+    <polygon points="40,76 60,94 80,76" fill="url(#facetCenter)" opacity="0.9"/>
+
+    <!-- Brilliant Sparkle Glint / Reflection -->
+    <polygon points="46,36 58,36 50,44 42,44" fill="url(#sheen)"/>
+    <circle cx="48" cy="38" r="2" fill="#ffffff" opacity="0.95"/>
+    
+    <!-- Corner Diamond Sparkles -->
+    <path d="M78 30 L80 24 L82 30 L88 32 L82 34 L80 40 L78 34 L72 32 Z" fill="#ffffff" opacity="0.9"/>
+    <path d="M34 68 L35.5 64 L37 68 L41 69.5 L37 71 L35.5 75 L34 71 L30 69.5 Z" fill="#93c5fd" opacity="0.75"/>
+  </g>
+</svg>

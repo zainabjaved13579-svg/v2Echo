@@ -123,6 +123,18 @@ export const CodePreviewModal: React.FC<CodePreviewModalProps> = ({
     }
   }, [file, initialFiles, code, filename, language]);
 
+  // Escape key listener for fast and foolproof closing
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   const selectedFile = projectFiles.find((f) => f.id === selectedFileId) || projectFiles[0];
 
   // Auto-save files
@@ -198,18 +210,41 @@ export const CodePreviewModal: React.FC<CodePreviewModalProps> = ({
     }
   };
 
+  useEffect(() => {
+    const isWeb = ['html', 'htm', 'js', 'jsx', 'ts', 'tsx', 'css', 'svg'].includes((language || '').toLowerCase()) || (filename || '').endsWith('.html') || (filename || '').endsWith('.jsx') || (filename || '').endsWith('.tsx');
+    if (!isWeb) {
+      setActiveTab('code');
+    }
+  }, [filename, language]);
+
   if (!isOpen) return null;
 
   // Build the live preview HTML from all active project files
   const previewHtml = buildUnifiedLivePreviewBundle(projectFiles);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200 font-['Plus_Jakarta_Sans',sans-serif] select-none sm:select-auto">
+    <div
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200 font-['Plus_Jakarta_Sans',sans-serif] select-none sm:select-auto"
+    >
+      {/* Mobile Floating Close Action Button - ALWAYS visible on mobile */}
+      <button
+        type="button"
+        onClick={onClose}
+        className="sm:hidden fixed top-3 right-3 z-[9999] p-2.5 rounded-full bg-rose-600 text-white shadow-2xl hover:bg-rose-500 active:scale-90 transition-all flex items-center justify-center min-w-[42px] min-h-[42px] cursor-pointer"
+        title="Close Preview"
+        aria-label="Close Preview"
+      >
+        <X className="w-5 h-5 stroke-[2.5]" />
+      </button>
+
       <div
-        className={`bg-[#151515] border border-[#2b2b2a] rounded-3xl shadow-2xl flex flex-col overflow-hidden transition-all duration-300 ${
+        className={`bg-[#151515] border border-[#2b2b2a] sm:rounded-3xl shadow-2xl flex flex-col overflow-hidden transition-all duration-300 ${
           isFullscreen
             ? 'w-full h-full rounded-none'
-            : 'w-[98vw] max-w-[1700px] h-[95vh] max-h-[96vh]'
+            : 'w-full h-full sm:w-[98vw] sm:max-w-[1700px] sm:h-[95vh] sm:max-h-[96vh]'
         }`}
       >
         {/* Top Header Bar */}
@@ -391,10 +426,11 @@ export const CodePreviewModal: React.FC<CodePreviewModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="p-2 rounded-2xl bg-[#20201f] hover:bg-[#282724] border border-[#2b2b2a] text-[#a19e97] hover:text-white transition-colors cursor-pointer"
+              className="p-2 sm:p-2 rounded-2xl bg-rose-500/20 sm:bg-[#20201f] hover:bg-rose-500/30 sm:hover:bg-[#282724] border border-rose-500/40 sm:border-[#2b2b2a] text-rose-300 sm:text-[#a19e97] hover:text-white transition-colors cursor-pointer shrink-0 min-w-[38px] min-h-[38px] flex items-center justify-center shadow-xs"
               title="Close Preview"
+              aria-label="Close Preview"
             >
-              <X className="w-4 h-4" />
+              <X className="w-4 h-4 stroke-[2.5]" />
             </button>
           </div>
         </header>

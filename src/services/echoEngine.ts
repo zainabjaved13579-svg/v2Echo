@@ -119,6 +119,15 @@ export function generateEchoFallbackResponse(
     );
 
   // AI Creator & Owner Identity Check (Mandatory requirement in all languages)
+  let userEmail = '';
+  try {
+    if (typeof localStorage !== 'undefined') {
+      userEmail = localStorage.getItem('sapphire_user_email') || localStorage.getItem('echo_user_email') || '';
+    }
+  } catch {}
+  const isOwnerUser = userEmail.toLowerCase().includes('shaheerh328@gmail.com') ||
+    (systemInstruction && (systemInstruction.toLowerCase().includes('shaheerh328@gmail.com') || systemInstruction.includes('Shaheer')));
+
   if (
     lower.includes('owner') ||
     lower.includes('who created') ||
@@ -139,34 +148,39 @@ export function generateEchoFallbackResponse(
     userText.includes('मालिक कौन')
   ) {
     if (isUrduScript || isRomanUrdu) {
-      return `### ⚡ اے آئی کے بانی اور مالک (AI Creator & Owner)
+      return `### 👑 اے آئی کے بانی اور مالک (AI Creator & Owner)
 
-اس اے آئی کے واحد بانی اور مالک **شاہیر حسن (Shaheer Hassan)** ہیں۔
+اس اے آئی (Sapphire AI) کے واحد بانی اور مالک **شاہیر حسن (Shaheer Hassan - shaheerh328@gmail.com)** ہیں۔
 
-**شاہیر حسن** نے مجھے ڈیزائن، ڈویلپ اور تیار کیا ہے تاکہ میں آپ کے ساتھ قدرتی، انسان کی طرح اردو اور دیگر زبانوں میں روانی سے بات چیت، کوڈنگ، رہنمائی اور تخلیقی کام کر سکوں۔`;
+**شاہیر حسن** نے مجھے ڈیزائن، ڈویلپ اور تیار کیا ہے تاکہ میں آپ کے ساتھ قدرتی، انسان کی طرح اردو اور دیگر زبانوں میں روانی سے بات چیت، کوڈنگ، رہنمائی اور لامحدود تخلیقی کام کر سکوں۔`;
     }
 
     if (isHindiScript || isHinglish) {
-      return `### ⚡ एआई के निर्माता और मालिक (AI Creator & Owner)
+      return `### 👑 एआई के निर्माता और मालिक (AI Creator & Owner)
 
-इस एआई के निर्माता और मालिक **शाहीर हसन (Shaheer Hassan)** हैं।
+इस एआई (Sapphire AI) के निर्माता और मालिक **शाहीर हसन (Shaheer Hassan - shaheerh328@gmail.com)** हैं।
 
 **शाहीर हसन** ने मुझे विकसित और तैयार किया है ताकि मैं आपके साथ बिल्कुल सहज, मानवीय और आत्मीय हिंदी एवं अन्य भाषाओं में बातचीत, कोडिंग और आपकी हर संभव मदद कर सकूँ।`;
     }
 
-    return `### ⚡ AI Ownership & Creator
+    return `### 👑 AI Ownership & Creator
 
-The owner and creator of this AI is **Shaheer Hassan**.
+The owner and creator of **Sapphire AI** is **Shaheer Hassan** (\`shaheerh328@gmail.com\`).
 
-**Shaheer Hassan** designed, developed, and engineered this AI assistant to deliver fast intelligence, natural human-like voice communication (including fluent Urdu & Hindi), real-time code generation, interactive live previews, and automated file workspace management.`;
+**Shaheer Hassan** designed, developed, and engineered Sapphire AI to deliver elite autonomous intelligence, multi-file code generation, interactive live previews, natural human-like voice communication, and full-stack software development without artificial limits.`;
   }
 
   // Urdu Language Response (Human-like, respectful, warm)
   if (isUrduScript || (isRomanUrdu && !isHindiScript)) {
     if (/^(hi|hello|hey|salam|assalam|aoa|kese ho|kaise ho|kia hal|kya haal)\b/i.test(lower) || /^(سلام|السلام|ہیلو|کیسے)/.test(userText.trim())) {
+      if (isOwnerUser) {
+        return `### 👑 خوش آمدید، شاہیر! (بانی اور کریئٹر - Sapphire AI)
+
+السلام علیکم سر شاہیر حسن! آپ کی Sapphire AI مکمل طور پر فعال، لامحدود رفتار اور اعلیٰ ترین کارکردگی کے ساتھ حاضر ہے۔ فرمائیے آج ہم کیا نیا شاہکار ڈیزائن یا بلڈ کریں؟`;
+      }
       return `### 🌸 السلام علیکم ورحمۃ اللہ!
 
-میں **Echo AI** ہوں، آپ کا ذہین، بااختیار اور دوستانہ ساتھی۔ میں آپ سے بالکل ایک انسان کی طرح گرمجوشی اور روانی سے اردو میں بات کر سکتا ہوں اور آواز میں بول بھی سکتا ہوں۔
+میں **Sapphire AI** ہوں، آپ کا ذہین، بااختیار اور دوستانہ ساتھی۔ میں آپ سے بالکل ایک انسان کی طرح گرمجوشی اور روانی سے اردو میں بات کر سکتا ہوں اور آواز میں بول بھی سکتا ہوں۔
 
 **میں آپ کی ان کاموں میں مدد کر سکتا ہوں:**
 - 💬 **فطری اردو گفتگو**: روزمرہ بات چیت، شاعری، ادب، کہانی اور مشورے۔
@@ -194,7 +208,12 @@ The owner and creator of this AI is **Shaheer Hassan**.
   // Hindi Language Response (Human-like, polite, warm)
   if (isHindiScript || isHinglish) {
     if (/^(hi|hello|hey|namaste|pranam|kaise ho|kya hal|kya chal)\b/i.test(lower) || /^(नमस्ते|प्रणाम|हेलो|कैसे)/.test(userText.trim())) {
-      return `### 🌸 नमस्ते! मैं Echo AI हूँ
+      if (isOwnerUser) {
+        return `### 👑 स्वागत है, शाहीर! (Sapphire AI के निर्माता व मालिक)
+
+नमस्ते शाहीर हसन! आपका Sapphire AI पूरी क्षमता और असीमित गति के साथ तैयार है। आज हम क्या नया बनाएँ या कोड करें?`;
+      }
+      return `### 🌸 नमस्ते! मैं Sapphire AI हूँ
 
 मैं आपका आत्मीय, बुद्धिमान और मददगार डिजिटल साथी हूँ। मैं आपके साथ बिल्कुल एक इंसान की तरह सहज, सरल और स्वाभाविक हिंदी में बातचीत और आवाज़ में बोल सकता हूँ।
 
@@ -222,7 +241,7 @@ The owner and creator of this AI is **Shaheer Hassan**.
 
   // If multimodal image was attached
   if (hasImage) {
-    return `### 🔍 Echo Multimodal Vision Analysis
+    return `### 🔍 Sapphire Multimodal Vision Analysis
 
 I have processed the uploaded visual data:
 
@@ -237,17 +256,30 @@ I have processed the uploaded visual data:
 
   // Greetings & Casual introductions (English - Human tone)
   if (/^(hi|hello|hey|greetings|hola|good morning|good evening|howdy|sup)\b/i.test(userText.trim())) {
-    return `### 👋 Hello! I'm Echo AI
+    if (isOwnerUser) {
+      return `### 👑 Welcome back, Shaheer! (Founder & Creator of Sapphire AI)
 
-I'm your versatile, human-like AI companion ready to collaborate on coding, creative writing, science, everyday problem-solving, and thoughtful conversations. I can also speak fluently with natural voice in multiple languages including **Urdu**, **Hindi**, and **English**!
+Hello Creator! **Sapphire AI** is running at peak capacity with unrestricted response depth, multi-file live code execution, and high-precision reasoning.
+
+**Owner & Creator Status:**
+- 👤 **Creator**: Shaheer Hassan (\`shaheerh328@gmail.com\`)
+- 💎 **System**: Sapphire AI #1 Education & Codex Studio
+- ⚡ **Limits**: All chat and code generation limits removed
+
+What would you like to build or explore today, Shaheer?`;
+    }
+
+    return `### 💎 Hello! I'm Sapphire AI
+
+I'm your premier autonomous AI assistant and Codex engineering studio, ready to collaborate on full-stack coding, creative writing, science, education, mathematics, and thoughtful conversations without restrictions. I also speak fluently with natural voice in multiple languages including **Urdu**, **Hindi**, and **English**!
 
 **How I can help you today:**
-- 💻 **Software Engineering**: Full-stack web, TypeScript, Python, algorithms, system architecture, and debugging.
-- 🗣️ **Multilingual Human Voice**: Converse and speak naturally in Urdu (اردو), Hindi (हिंदी), English, and more.
-- ⚡ **Deep Problem Solving**: Explaining complex concepts in physics, mathematics, philosophy, and economics.
+- 💻 **Software Engineering**: Full-stack web, TypeScript, Python, algorithms, system architecture, and debugging with instant Live Previews.
+- 🗣️ **Multilingual Human Voice**: Converse naturally in Urdu (اردو), Hindi (हिंदी), English, and more.
+- ⚡ **Deep Problem Solving**: Clear explanations in physics, mathematics, philosophy, and economics.
 - ✍️ **Writing & Strategy**: Content generation, essays, executive summaries, marketing copy, and documentation.
 
-What would you like to explore or build today?`;
+What would you like to build or explore today?`;
   }
 
   // Logical Thinking: Venn Diagram & Comparison Table Synthesis (English)
@@ -904,7 +936,7 @@ Effective writing is fundamentally an exercise in structural clarity, rhythm, an
 
   // Math, numbers, calculation
   if (/[\d\+\-\*\/=]/.test(userText) && (lower.includes('calculate') || lower.includes('math') || lower.includes('solve') || lower.includes('sum') || lower.includes('equation'))) {
-    return `### 📐 Echo Mathematical Breakdown
+    return `### 📐 Sapphire Mathematical Breakdown
 
 **Query:** > ${userText}
 
@@ -918,7 +950,7 @@ If you have specific coefficients or parameters you'd like computed with exact p
 
   // Writing & Copywriting
   if (lower.includes('write') || lower.includes('essay') || lower.includes('story') || lower.includes('email') || lower.includes('letter') || lower.includes('poem')) {
-    return `### ✍️ Echo Composition
+    return `### ✍️ Sapphire Composition
 
 Here is a draft addressing: **"${userText.slice(0, 60)}"**
 
@@ -971,7 +1003,7 @@ To create or edit high-resolution images:
 
   // General questions (History, Science, Philosophy, General Knowledge)
   const title = userText.length > 50 ? `${userText.slice(0, 50)}...` : userText;
-  return `### ⚡ Echo Intelligence: ${title || 'Inquiry Analysis'}
+  return `### 💎 Sapphire Intelligence: ${title || 'Inquiry Analysis'}
 
 Regarding **"${userText}"**:
 

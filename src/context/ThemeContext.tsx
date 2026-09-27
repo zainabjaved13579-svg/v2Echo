@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
-export type AppTheme = 'moon';
+export type AppTheme = 'moon' | 'light';
 
 interface ThemeContextType {
   theme: AppTheme;
@@ -27,45 +27,72 @@ const THEME_STORAGE_KEY = 'sapphire_app_theme_mode';
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [theme] = useState<AppTheme>('moon');
-
-  const setTheme = () => {
+  const [theme, setThemeState] = useState<AppTheme>(() => {
     try {
-      localStorage.setItem(THEME_STORAGE_KEY, 'moon');
+      const saved = localStorage.getItem(THEME_STORAGE_KEY);
+      if (saved === 'light' || saved === 'white') return 'light';
+      return 'moon';
+    } catch {
+      return 'moon';
+    }
+  });
+
+  const setTheme = (newTheme: AppTheme) => {
+    setThemeState(newTheme);
+    try {
+      localStorage.setItem(THEME_STORAGE_KEY, newTheme);
+      applyThemeClasses(newTheme);
     } catch {}
   };
 
   const toggleTheme = () => {
-    // No-op: Dark moon theme is the permanent aesthetic
+    const next = theme === 'moon' ? 'light' : 'moon';
+    setTheme(next);
+  };
+
+  const applyThemeClasses = (currTheme: AppTheme) => {
+    if (currTheme === 'light') {
+      document.documentElement.classList.add('theme-light', 'theme-sun');
+      document.documentElement.classList.remove('theme-moon', 'dark');
+    } else {
+      document.documentElement.classList.add('theme-moon', 'dark');
+      document.documentElement.classList.remove('theme-light', 'theme-sun');
+    }
   };
 
   useEffect(() => {
-    try {
-      localStorage.setItem(THEME_STORAGE_KEY, 'moon');
-      document.documentElement.classList.add('theme-moon');
-      document.documentElement.classList.remove('theme-sun');
-    } catch {}
-  }, []);
+    applyThemeClasses(theme);
+  }, [theme]);
 
-  // Dark Moon / Obsidian theme:
-  // - Full chat area: #151515
-  // - Sidebar: #111111, border: #222222
-  // - Bottom message bar: #20201f, with border of #2b2b2a
-  // - Answers and questions: crisp white (#ffffff)
-  const colors = {
-    chatAreaBg: '#151515',
-    sidebarBg: '#111111',
-    sidebarBorder: '#222222',
-    bottomBarBg: '#20201f',
-    bottomBarBorder: '#2b2b2a',
-    cardBg: '#20201f',
-    cardBorder: '#2b2b2a',
-    userBubbleBg: '#20201f',
-    userBubbleBorder: '#2b2b2a',
-    textPrimary: '#ffffff',
-    textSecondary: '#a3a3a3',
-    accent: '#d97757'
-  };
+  const colors = theme === 'light'
+    ? {
+        chatAreaBg: '#f8fafc',
+        sidebarBg: '#ffffff',
+        sidebarBorder: '#e2e8f0',
+        bottomBarBg: '#ffffff',
+        bottomBarBorder: '#e2e8f0',
+        cardBg: '#ffffff',
+        cardBorder: '#e2e8f0',
+        userBubbleBg: '#f1f5f9',
+        userBubbleBorder: '#e2e8f0',
+        textPrimary: '#0f172a',
+        textSecondary: '#64748b',
+        accent: '#2563eb'
+      }
+    : {
+        chatAreaBg: '#151515',
+        sidebarBg: '#111111',
+        sidebarBorder: '#222222',
+        bottomBarBg: '#20201f',
+        bottomBarBorder: '#2b2b2a',
+        cardBg: '#20201f',
+        cardBorder: '#2b2b2a',
+        userBubbleBg: '#20201f',
+        userBubbleBorder: '#2b2b2a',
+        textPrimary: '#ffffff',
+        textSecondary: '#a3a3a3',
+        accent: '#d97757'
+      };
 
   return (
     <ThemeContext.Provider value={{ theme, setTheme, toggleTheme, colors }}>
@@ -81,3 +108,5 @@ export const useAppTheme = (): ThemeContextType => {
   }
   return ctx;
 };
+
+export default ThemeContext;

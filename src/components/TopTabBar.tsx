@@ -89,7 +89,7 @@ export const TopTabBar: React.FC<TopTabBarProps> = ({
         >
           <img
             src={SAPPHIRE_LOGO_URL}
-            alt="Sapphire"
+            alt="Sapphire AI — #1 Education AI and Codex Studio (Education Sapphire, AI Sapphire)"
             className="w-5 h-5 rounded-lg object-cover ring-1 ring-blue-500/30 shadow-xs group-hover:scale-105 transition-transform"
           />
           <span className="font-semibold text-xs text-[#f3f4f6] tracking-tight hidden sm:inline">
@@ -163,10 +163,24 @@ export const TopTabBar: React.FC<TopTabBarProps> = ({
         <button
           type="button"
           onClick={onOpenProfile}
-          className="p-1 text-[#9ca3af] hover:text-[#edeef2] rounded-lg transition-colors cursor-pointer"
+          className="p-1 text-[#9ca3af] hover:text-[#edeef2] rounded-lg transition-colors cursor-pointer flex items-center gap-1.5"
           title="Profile & Settings"
         >
-          <Ghost className="w-4 h-4" />
+          {userProfile?.avatar ? (
+            <div className="w-5 h-5 rounded-lg overflow-hidden border border-blue-500/40 relative">
+              <img
+                src={userProfile.avatar}
+                alt={userProfile.name || 'User'}
+                className="w-full h-full object-cover"
+              />
+              {((userProfile.email && userProfile.email.toLowerCase().includes('shaheerh328@gmail.com')) ||
+                (userProfile.name && userProfile.name.toLowerCase().includes('shaheer'))) && (
+                <span className="absolute -top-1 -right-1 text-[8px]">👑</span>
+              )}
+            </div>
+          ) : (
+            <Ghost className="w-4 h-4" />
+          )}
         </button>
 
         {/* Desktop window controls */}

@@ -123,6 +123,8 @@ export interface AppSettings {
   ttsVoice?: string;
   ttsSpeed: number;
   ttsPitch: number;
+  customAiReactionCommand?: string;
+  themePreference?: 'moon' | 'light';
 }
 
 export interface AiEditHistoryItem {

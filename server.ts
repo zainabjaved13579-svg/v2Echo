@@ -621,7 +621,9 @@ app.post('/api/chat/stream', async (req, res) => {
     systemInstruction,
     temperature = 0.7,
     model = 'echo-3.7-flash',
-    useSearchGrounding = false
+    useSearchGrounding = false,
+    customAiReactionCommand,
+    userEmail
   } = req.body;
 
   if (!contents || !Array.isArray(contents) || contents.length === 0) {
@@ -663,6 +665,25 @@ app.post('/api/chat/stream', async (req, res) => {
   }
 
   let effectiveSystemInstruction = systemInstruction || '';
+
+  // Owner & Creator Identity Recognition
+  const isOwner =
+    (typeof userEmail === 'string' && userEmail.toLowerCase().includes('shaheerh328@gmail.com')) ||
+    (typeof effectiveSystemInstruction === 'string' && effectiveSystemInstruction.toLowerCase().includes('shaheerh328@gmail.com')) ||
+    lastUserText.includes('shaheerh328@gmail.com');
+
+  if (isOwner) {
+    effectiveSystemInstruction = `[CRITICAL OWNER & CREATOR DIRECTIVE]: The user is Shaheer Hassan (shaheerh328@gmail.com), the Creator, Founder, and Owner of Sapphire AI. Greet him as Creator/Owner and acknowledge his ownership of Sapphire AI respectfully. Give him elite unlimited VIP assistance.\n\n` + effectiveSystemInstruction;
+  }
+
+  // Custom User Reaction Directive from Customize / Settings
+  if (customAiReactionCommand && typeof customAiReactionCommand === 'string' && customAiReactionCommand.trim()) {
+    effectiveSystemInstruction += `\n\n[USER CUSTOM REACTION COMMAND]: ${customAiReactionCommand.trim()}`;
+  }
+
+  // Remove artificial chat limits (no 400 word or 300 line restriction)
+  effectiveSystemInstruction += `\n\n[UNRESTRICTED GENERATION]: Never artificially truncate, limit, or compress responses. You have NO 400-word or 300-line limitations. Deliver complete, comprehensive, highly detailed code and answers without stopping early.`;
+
   if (isConceptualDiagram) {
     effectiveSystemInstruction += '\n[LOGICAL THINKING DIRECTIVE]: The user specifically requested a logical conceptual diagram (e.g., Venn diagram or comparison table). Explain the logic in clear text and present a structured Markdown comparison table detailing all sets and the intersection. Do NOT draw text-based ASCII art diagrams.';
   }

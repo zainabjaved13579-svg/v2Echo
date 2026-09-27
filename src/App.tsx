@@ -948,7 +948,7 @@ ${promptText || 'Please analyze, remake, or update these files cleanly according
           <div className="w-16 h-16 rounded-2xl bg-[#20201f] border border-[#2e2d2a] p-2 shadow-2xl flex items-center justify-center">
             <img
               src={SAPPHIRE_LOGO_URL}
-              alt="Sapphire"
+              alt="Sapphire AI — #1 Education AI and Codex Studio (Education Sapphire, AI Sapphire, No 1 AI Sapphire)"
               className="w-full h-full object-contain rounded-xl animate-pulse"
             />
           </div>
@@ -981,7 +981,7 @@ ${promptText || 'Please analyze, remake, or update these files cleanly according
 
   return (
     <div className={`flex h-full w-full ${
-      theme === 'moon' ? 'bg-[#151515] text-white' : 'bg-[#191817] text-[#edeef2]'
+      theme === 'moon' ? 'bg-[#151515] text-white' : 'bg-slate-50 text-slate-900'
     } overflow-hidden select-none sm:select-auto font-['Plus_Jakarta_Sans',sans-serif]`}>
       {/* Sidebar: Shown in chat view or toggled open */}
       <AnimatePresence>
@@ -1019,7 +1019,7 @@ ${promptText || 'Please analyze, remake, or update these files cleanly according
 
       {/* Main Content View */}
       <main className={`flex-1 flex flex-col h-full min-w-0 relative ${
-        theme === 'moon' ? 'bg-[#151515]' : 'bg-[#191817]'
+        theme === 'moon' ? 'bg-[#151515]' : 'bg-white'
       } overflow-hidden`}>
         {/* Sleek Floating Menu Button when sidebar is collapsed */}
         {!isSidebarOpen && (
@@ -1030,7 +1030,7 @@ ${promptText || 'Please analyze, remake, or update these files cleanly according
             className={`absolute top-3.5 left-3.5 z-30 p-2.5 rounded-xl border shadow-lg transition-all active:scale-95 cursor-pointer ${
               theme === 'moon'
                 ? 'bg-[#20201f] hover:bg-[#282724] border-[#2b2b2a] text-white'
-                : 'bg-[#201f1d] hover:bg-[#282724] border-[#33312e] text-[#a19e97] hover:text-[#ede8e1]'
+                : 'bg-white hover:bg-slate-100 border-slate-200 text-slate-700 shadow-md'
             }`}
             title="Open Sidebar"
             aria-label="Open Sidebar"
@@ -1068,7 +1068,7 @@ ${promptText || 'Please analyze, remake, or update these files cleanly according
               exit={{ opacity: 0 }}
               transition={{ duration: 0.25, ease: 'easeInOut' }}
               className={`flex-1 h-full w-full overflow-y-auto ${
-                theme === 'moon' ? 'bg-[#151515]' : 'bg-[#0e0f12]'
+                theme === 'moon' ? 'bg-[#151515]' : 'bg-slate-50'
               }`}
             >
               <EmptyState
@@ -1171,7 +1171,7 @@ ${promptText || 'Please analyze, remake, or update these files cleanly according
                     }`}>
                       <img
                         src={SAPPHIRE_LOGO_URL}
-                        alt="Sapphire"
+                        alt="Sapphire AI — #1 Education AI, Education Sapphire, AI Sapphire"
                         className="w-full h-full rounded-xl object-cover ring-1 ring-[#d97757]/30"
                       />
                     </div>

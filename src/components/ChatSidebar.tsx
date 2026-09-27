@@ -389,41 +389,64 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
       </div>
 
       {/* User Profile Pill */}
-      <div className={`p-3.5 border-t flex items-center justify-between gap-2 shrink-0 ${
-        isMoon ? 'border-[#222222]' : 'border-[#e2e8f0]'
-      }`}>
-        <button
-          type="button"
-          onClick={() => {
-            if (onOpenProfile) onOpenProfile();
-            if (window.innerWidth < 1024) onClose();
-          }}
-          className="flex items-center gap-2.5 min-w-0 text-left hover:opacity-85 transition-opacity cursor-pointer flex-1"
-        >
-          <div className={`w-7 h-7 rounded-2xl flex items-center justify-center text-xs font-bold shrink-0 ${
-            isMoon ? 'bg-[#1a1a1a] border border-[#2a2a2a] text-[#ede8e1]' : 'bg-white border border-slate-200 text-slate-800'
-          }`}>
-            {initial.toUpperCase()}
-          </div>
-          <div className="min-w-0 flex items-center gap-1.5 text-xs truncate">
-            <span className={`truncate font-medium ${isMoon ? 'text-[#ede8e1]' : 'text-slate-800'}`}>{userName}</span>
-            <ChevronDown className="w-3.5 h-3.5 text-[#86837c] shrink-0" />
-          </div>
-        </button>
+      {(() => {
+        const isOwnerUser =
+          (userProfile?.email && userProfile.email.toLowerCase().includes('shaheerh328@gmail.com')) ||
+          (userProfile?.name && userProfile.name.toLowerCase().includes('shaheer'));
 
-        {onOpenGetApp && (
-          <button
-            type="button"
-            onClick={onOpenGetApp}
-            className={`p-2 rounded-2xl transition-colors cursor-pointer shrink-0 ${
-              isMoon ? 'text-[#86837c] hover:text-white hover:bg-[#1a1a1a]' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-200'
-            }`}
-            title="Install PWA"
-          >
-            <Smartphone className="w-4 h-4 text-[#d97757]" />
-          </button>
-        )}
-      </div>
+        return (
+          <div className={`p-3.5 border-t flex items-center justify-between gap-2 shrink-0 ${
+            isMoon ? 'border-[#222222]' : 'border-[#e2e8f0]'
+          }`}>
+            <button
+              type="button"
+              onClick={() => {
+                if (onOpenProfile) onOpenProfile();
+                if (window.innerWidth < 1024) onClose();
+              }}
+              className="flex items-center gap-2.5 min-w-0 text-left hover:opacity-85 transition-opacity cursor-pointer flex-1"
+            >
+              <div className={`w-8 h-8 rounded-2xl flex items-center justify-center text-xs font-bold shrink-0 overflow-hidden border ${
+                isMoon ? 'bg-[#1a1a1a] border-[#2a2a2a] text-[#ede8e1]' : 'bg-white border-slate-200 text-slate-800'
+              }`}>
+                {userProfile?.avatar ? (
+                  <img
+                    src={userProfile.avatar}
+                    alt={userName}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  initial.toUpperCase()
+                )}
+              </div>
+              <div className="min-w-0 flex items-center gap-1.5 text-xs truncate">
+                <span className={`truncate font-semibold ${isMoon ? 'text-[#ede8e1]' : 'text-slate-800'}`}>
+                  {userName}
+                </span>
+                {isOwnerUser && (
+                  <span className="text-amber-400 text-xs shrink-0" title="Creator & Founder (Shaheer Hassan)">
+                    👑
+                  </span>
+                )}
+                <ChevronDown className="w-3.5 h-3.5 text-[#86837c] shrink-0" />
+              </div>
+            </button>
+
+            {onOpenGetApp && (
+              <button
+                type="button"
+                onClick={onOpenGetApp}
+                className={`p-2 rounded-2xl transition-colors cursor-pointer shrink-0 ${
+                  isMoon ? 'text-[#86837c] hover:text-white hover:bg-[#1a1a1a]' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-200'
+                }`}
+                title="Install PWA"
+              >
+                <Smartphone className="w-4 h-4 text-[#d97757]" />
+              </button>
+            )}
+          </div>
+        );
+      })()}
     </div>
   );
 

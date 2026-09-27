@@ -471,7 +471,7 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
               <div className="relative shrink-0">
                 <img
                   src={SAPPHIRE_LOGO_URL}
-                  alt="Sapphire AI"
+                  alt="Sapphire AI — #1 Education AI and Codex Studio (Education Sapphire, AI Sapphire)"
                   className={`w-7 h-7 sm:w-8 sm:h-8 rounded-2xl object-cover ring-1 ring-[#d97757]/40 shadow-xs ${
                     theme === 'moon' ? 'bg-[#201f1d]' : 'bg-white'
                   }`}
@@ -760,9 +760,17 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
             {/* Text Content */}
             <div className={`break-words ${theme === 'moon' ? 'text-white' : 'text-slate-900'}`}>
               {isUser ? (
-                <div className={`whitespace-pre-wrap text-sm leading-relaxed ${theme === 'moon' ? 'text-white' : 'text-slate-900'} font-normal`}>
-                  {message.text}
-                </div>
+                message.text.includes('```') ? (
+                  <MarkdownRenderer
+                    content={message.text}
+                    onPreviewCode={(c, l, fn) => onPreviewCode && onPreviewCode(c, l, fn, extractedFiles.length > 0 ? extractedFiles : undefined)}
+                    onOpenFileWorkspace={openWorkspaceHandler}
+                  />
+                ) : (
+                  <div className={`whitespace-pre-wrap text-sm leading-relaxed ${theme === 'moon' ? 'text-white' : 'text-slate-900'} font-normal`}>
+                    {message.text}
+                  </div>
+                )
               ) : (
                 <div>
                   {message.text ? (

@@ -1,4 +1,4 @@
-export const SAPPHIRE_LOGO_URL = 'https://img.magnific.com/free-vector/money-rainbow-logo-design_474888-2243.jpg';
+export const SAPPHIRE_LOGO_URL = '/sapphire-logo.svg';
 export const SAPPHIRE_APP_NAME = 'Sapphire';
 export const SAPPHIRE_POWERED_BY = 'Powered by Sapphire';
 

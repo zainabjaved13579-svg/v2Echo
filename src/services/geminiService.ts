@@ -365,6 +365,13 @@ export async function streamEchoChat({
     localStorage.getItem('openai_api_key') ||
     localStorage.getItem('echo_openai_api_key') ||
     '';
+  const userEmail =
+    localStorage.getItem('sapphire_user_email') ||
+    localStorage.getItem('echo_user_email') ||
+    '';
+  const customAiReactionCommand =
+    localStorage.getItem('sapphire_custom_ai_reaction') ||
+    '';
 
   const payload = {
     contents,
@@ -375,7 +382,9 @@ export async function streamEchoChat({
     apiKey: activeApiKey || undefined,
     customApiKey: activeApiKey || undefined,
     deepseekApiKey: deepseekApiKey || undefined,
-    openaiApiKey: openaiApiKey || undefined
+    openaiApiKey: openaiApiKey || undefined,
+    customAiReactionCommand: customAiReactionCommand || undefined,
+    userEmail: userEmail || undefined
   };	
 
   const headers: Record<string, string> = {
@@ -580,7 +589,7 @@ export async function streamEchoChat({
       onChunk(fallbackText);
       onDone(fallbackText, { durationMs: 200, charsCount: fallbackText.length, charsPerSec: 150 });
     } catch {
-      onError(error?.message || 'Echo encountered an issue formulating response. Please try again.');
+      onError(error?.message || 'Sapphire encountered an issue formulating response. Please try again.');
     }
   }
 }

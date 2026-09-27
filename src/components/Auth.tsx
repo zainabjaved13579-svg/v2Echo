@@ -159,7 +159,7 @@ export const Auth: React.FC<AuthProps> = ({ onLoginSuccess, onContinueAsGuest })
           <div className="w-16 h-16 rounded-2xl bg-[#282724] p-1.5 border border-[#383633] shadow-xl flex items-center justify-center">
             <img
               src={SAPPHIRE_LOGO_URL}
-              alt="Sapphire Logo"
+              alt="Sapphire AI — #1 Education AI and Codex Studio (Education Sapphire, AI Sapphire)"
               className="w-full h-full rounded-xl object-cover ring-1 ring-[#d97757]/40 shadow-md"
             />
           </div>

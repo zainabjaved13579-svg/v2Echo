@@ -159,6 +159,49 @@ ${htmlContent}
 </html>`;
     }
 
+    // Check if files are non-web (Python, SQL, JSON, Shell, C++, etc.)
+    if (jsFiles.length === 0 && files.length > 0) {
+      const primary = files[0];
+      const safeEscaped = (primary.content || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+      return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${primary.name} - Code Preview</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+</head>
+<body class="bg-[#0e0f12] text-slate-100 p-4 sm:p-6 font-sans min-h-screen flex flex-col justify-center items-center selection:bg-blue-600/30 selection:text-white">
+  <div class="w-full max-w-4xl bg-[#16171d] border border-[#272a33] rounded-3xl p-5 sm:p-6 shadow-2xl space-y-4">
+    <div class="flex items-center justify-between border-b border-[#272a33] pb-3">
+      <div class="flex items-center gap-2.5">
+        <span class="w-3 h-3 rounded-full bg-blue-500 shadow-xs"></span>
+        <span class="font-bold text-sm text-white">${primary.name}</span>
+        <span class="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 font-mono font-bold uppercase border border-blue-500/30">
+          ${primary.language || primary.name.split('.').pop() || 'Code'}
+        </span>
+      </div>
+      <span class="text-xs text-slate-400 font-mono">${(primary.content || '').split('\n').length} lines</span>
+    </div>
+    <div class="bg-[#0b0c10] p-4 rounded-2xl font-mono text-xs text-slate-200 overflow-x-auto leading-relaxed border border-[#20232c] max-h-[65vh] overflow-y-auto">
+      <pre><code class="language-${primary.language || 'plaintext'}">${safeEscaped}</code></pre>
+    </div>
+    <div class="flex items-center justify-between text-xs text-slate-400 pt-1">
+      <span class="flex items-center gap-1.5 text-blue-400">
+        <span>⚡ Switch to the <strong>Code</strong> or <strong>Split</strong> tab above to edit and copy code.</span>
+      </span>
+    </div>
+  </div>
+  <script>hljs.highlightAll();</script>
+</body>
+</html>`;
+    }
+
     // Auto-generate clean universal HTML host for React / JS / CSS projects
     htmlContent = `<!DOCTYPE html>
 <html lang="en">

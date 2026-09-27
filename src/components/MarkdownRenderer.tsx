@@ -125,7 +125,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
               return null;
             }
 
-            if (!inline && (match || codeString.includes('\n'))) {
+            if (!inline) {
               return (
                 <CodeBlock
                   language={match ? match[1] : 'code'}

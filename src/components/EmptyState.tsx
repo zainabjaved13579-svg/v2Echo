@@ -205,15 +205,15 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
               <div className="absolute inset-0 rounded-2xl bg-[#d97757]/25 blur-lg opacity-60 group-hover:opacity-100 transition-opacity" />
               <img
                 src={SAPPHIRE_LOGO_URL}
-                alt="Sapphire Logo"
+                alt="Sapphire AI — #1 Education AI & Codex Studio (Education Sapphire, AI Sapphire, No 1 AI Sapphire)"
                 className={`relative w-11 h-11 sm:w-14 sm:h-14 rounded-2xl object-cover ring-2 ring-[#d97757]/40 shadow-xl shadow-black/40 transition-transform duration-300 group-hover:scale-105 ${
-                  theme === 'moon' ? 'bg-[#111111]' : 'bg-[#201f1d]'
+                  theme === 'moon' ? 'bg-[#111111]' : 'bg-white'
                 }`}
               />
             </div>
 
             <h1 className={`text-[22px] leading-tight sm:text-3xl md:text-4xl tracking-tight font-semibold ${
-              theme === 'moon' ? 'text-white' : 'text-[#f5f2eb]'
+              theme === 'moon' ? 'text-white' : 'text-slate-900'
             }`}>
               {greetingTime},{' '}
               <span className="bg-gradient-to-r from-[#d97757] to-[#e89a7a] bg-clip-text text-transparent">
@@ -222,9 +222,9 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
             </h1>
 
             <p className={`hidden xs:block text-[11px] sm:text-xs font-normal ${
-              theme === 'moon' ? 'text-[#737373]' : 'text-[#86837c]'
+              theme === 'moon' ? 'text-[#737373]' : 'text-slate-500'
             }`}>
-              Your AI companion is ready to build, create & reason
+              #1 Education AI & Autonomous Codex Studio — ready to build, learn & create
             </p>
           </motion.div>
 
