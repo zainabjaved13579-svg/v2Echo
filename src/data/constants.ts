@@ -1,4 +1,4 @@
-export const SAPPHIRE_LOGO_URL = '/sapphire-logo.svg';
+export const SAPPHIRE_LOGO_URL = '/sapphire-logo.png';
 export const SAPPHIRE_APP_NAME = 'Sapphire';
 export const SAPPHIRE_POWERED_BY = 'Powered by Sapphire';
 

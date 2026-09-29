@@ -4,8 +4,169 @@ import JSZip from 'jszip';
 const STORAGE_KEY_FILES = 'echo_workspace_files_v2';
 const STORAGE_KEY_AUTO_SAVE_SETTING = 'echo_auto_save_enabled_v1';
 
-// Clean starting workspace with no clutter/examples - files are dynamically created by user and AI
-const DEFAULT_FILES: WorkspaceFile[] = [];
+// Preloaded workspace files for coding language standards and reference
+const DEFAULT_FILES: WorkspaceFile[] = [
+  {
+    id: 'file-coding-languages-csv',
+    name: 'coding_languages_and_extensions.csv',
+    path: '/coding_languages_and_extensions.csv',
+    language: 'csv',
+    createdAt: 1727500000000,
+    updatedAt: 1727500000000,
+    autoSaved: true,
+    content: `Category,Programming Language,Standard Extension,Standard Filename,Core Use Case
+Frontend Web,HTML (HyperText Markup Language),.html,index.html,Webpage structure and markup
+Frontend Web,CSS (Cascading Style Sheets),.css,style.css,Webpage styling and layouts
+Frontend Web,JavaScript (ES6+ Engine),.js,main.js,Interactive client-side and server logic
+Frontend Web,TypeScript (Strict JS),.ts,app.ts,Type-safe scalable JavaScript
+Frontend Web,React JSX,.jsx,Navbar.jsx,React components with JSX syntax
+Frontend Web,React TSX,.tsx,App.tsx,React components with TypeScript
+Frontend Web,SCSS (Sassy CSS),.scss,global.scss,Advanced nested CSS architectures
+Frontend Web,SASS,.sass,main.sass,Indented Sass syntax
+Frontend Web,LESS,.less,styles.less,Dynamic stylesheet preprocessor
+Frontend Web,WebAssembly,.wasm,module.wasm,High-speed compiled binary for browsers
+Backend Web,Python (FastAPI / Django / Flask),.py,main.py,AI / ML / Data Science & Web APIs
+Backend Web,Node.js ES Modules,.mjs,server.mjs,Modern ECMAScript module runner
+Backend Web,Node.js CommonJS,.cjs,index.cjs,CommonJS module scripts
+Backend Web,PHP (Hypertext Preprocessor),.php,index.php,Server-side web applications
+Backend Web,Ruby (Ruby on Rails),.rb,main.rb,Web application frameworks
+Backend Web,Go (Golang Engine),.go,main.go,High-concurrency microservices and cloud APIs
+Backend Web,Java Enterprise,.java,Main.java,Enterprise systems and Android apps
+Core Systems,C Native Programming,.c,main.c,Operating systems and low-level software
+Core Systems,C++ High Performance,.cpp,main.cpp,Game engines and high-performance apps
+Core Systems,C# (C-Sharp / .NET),.cs,Program.cs,Enterprise .NET and Unity game development
+Core Systems,Rust,.rs,main.rs,Memory-safe high-speed systems computing
+Core Systems,Zig,.zig,main.zig,Modern C replacement with safe memory
+Core Systems,Nim,.nim,main.nim,Compiled expressive systems language
+Core Systems,D Language,.d,main.d,Fast OOP compiled systems programming
+Core Systems,Assembly Hardware,.asm,boot.asm,Direct CPU / hardware architecture instructions
+Mobile Apps,Swift,.swift,AppDelegate.swift,Native Apple iOS and macOS apps
+Mobile Apps,Kotlin,.kt,MainActivity.kt,Modern native Google Android apps
+Mobile Apps,Dart (Flutter Engine),.dart,main.dart,Cross-platform Android / iOS / Web apps
+Mobile Apps,Objective-C,.m,main.m,Legacy Apple iOS and macOS systems
+Data & Maths,R Statistics,.r,analysis.R,Statistical modeling and data analysis
+Data & Maths,Julia,.jl,model.jl,High-performance scientific computing
+Data & Maths,MATLAB,.m,matrix.m,Matrix computation and engineering simulation
+Data & Maths,Fortran,.f90,main.f90,High-precision numeric simulations
+Functional,Haskell,.hs,Main.hs,Pure mathematical functional programming
+Functional,Scala,.scala,Main.scala,Functional and OOP on the JVM
+Functional,Elixir,.ex,main.ex,Distributed fault-tolerant systems on Erlang VM
+Functional,Erlang,.erl,module.erl,Telecom and high-concurrency systems
+Functional,Clojure,.clj,core.clj,Lisp dialect running on Java JVM
+Functional,F#,.fs,Program.fs,Functional-first language for .NET
+Database Tier,SQL Standard,.sql,schema.sql,Relational database management and queries
+Database Tier,PL/SQL Oracle,.pls,procedure.pls,Stored procedures and database triggers
+Database Tier,GraphQL Schema,.graphql,schema.graphql,Client-defined API query schemas
+Database Tier,Cypher Neo4j,.cypher,graph.cypher,Graph database traversal and querying
+Config & Docs,JSON Objects,.json,config.json,Standard key-value data exchange
+Config & Docs,YAML Deployment,.yaml,docker-compose.yml,Cloud infrastructure and CI/CD configs
+Config & Docs,XML Markup,.xml,manifest.xml,Structured data and Android layouts
+Config & Docs,TOML Minimal,.toml,Cargo.toml,Modern configuration files
+Config & Docs,Markdown,.md,README.md,Rich documentation and project readmes
+Config & Docs,LaTeX Document,.tex,paper.tex,Academic research typesetting
+Automation,Bash / Shell,.sh,deploy.sh,Linux / macOS terminal automated scripts
+Automation,PowerShell,.ps1,backup.ps1,Windows PowerShell system scripting
+Automation,Batch Script,.bat,run.bat,Windows CMD automated scripts
+DevOps & Cloud,Dockerfile,Dockerfile,Dockerfile,Container build instructions (No dot extension)
+DevOps & Cloud,Makefile,Makefile,Makefile,Build and compilation instructions (No dot extension)
+DevOps & Cloud,Terraform HCL,.tf,main.tf,Infrastructure-as-Code for cloud platforms
+Game Engines,Lua Scripting,.lua,main.lua,Embedded lightweight game scripts
+Game Engines,GDScript (Godot),.gd,player.gd,Godot engine native scripting
+Legacy Tech,COBOL,.cbl,program.cbl,Mainframe banking systems
+Legacy Tech,Pascal,.pas,program.pas,Structured programming language
+Legacy Tech,Visual Basic,.vb,Module1.vb,Windows automation and office macros`,
+    source: 'imported'
+  },
+  {
+    id: 'file-coding-languages-md',
+    name: 'coding_languages_and_extensions.md',
+    path: '/coding_languages_and_extensions.md',
+    language: 'markdown',
+    createdAt: 1727500000000,
+    updatedAt: 1727500000000,
+    autoSaved: true,
+    content: `# 🌐 Complete Global Standard Coding Languages & File Extensions Guide
+
+Globally, file extensions follow the standard rule \`filename.extension\` where the dot (\`.\`) signals to the operating system, compilers, and code editors (like VS Code) which syntax highlighter, parser, or compiler to use.
+
+---
+
+## 1. Web Development (Frontend & Backend)
+| Category | Language / Stack | Standard Extension | Standard Filename | Core Use Case |
+|---|---|---|---|---|
+| Frontend | **HTML** | \`.html\` | \`index.html\` | Webpage structure & entry point |
+| Frontend | **CSS** | \`.css\` | \`style.css\` | Web styling & layout |
+| Frontend | **JavaScript** | \`.js\` | \`script.js\` / \`main.js\` | Interactive web logic & dynamic DOM |
+| Frontend | **TypeScript** | \`.ts\` | \`app.ts\` / \`index.ts\` | Typed scalable JavaScript |
+| Frontend | **React JSX** | \`.jsx\` | \`Navbar.jsx\` | React component markup |
+| Frontend | **React TSX** | \`.tsx\` | \`App.tsx\` | Type-safe React components |
+| Frontend | **SCSS** | \`.scss\` | \`global.scss\` | Sassy nested stylesheets |
+| Frontend | **WebAssembly** | \`.wasm\` | \`module.wasm\` | High-speed browser binary bytecode |
+| Backend | **Python** | \`.py\` | \`app.py\` / \`main.py\` | AI, ML, Data Science & APIs (FastAPI/Django) |
+| Backend | **Node.js (ESM)** | \`.mjs\` | \`server.mjs\` | Native ECMAScript modules |
+| Backend | **PHP** | \`.php\` | \`index.php\` | Dynamic server-side web scripting |
+| Backend | **Ruby** | \`.rb\` | \`main.rb\` | Ruby on Rails web backends |
+| Backend | **Go (Golang)** | \`.go\` | \`main.go\` | Microservices, networking & cloud APIs |
+| Backend | **Java** | \`.java\` | \`Main.java\` | Enterprise systems & Android JVM |
+
+---
+
+## 2. Core Systems & High Performance
+| Language | Standard Extension | Standard Filename | Core Use Case |
+|---|---|---|---|
+| **C Native** | \`.c\` / \`.h\` | \`main.c\` | Operating systems, drivers, kernels |
+| **C++ Engine** | \`.cpp\` / \`.hpp\` | \`main.cpp\` | Game engines, high-speed trading, rendering |
+| **C# (.NET)** | \`.cs\` | \`Program.cs\` | Microsoft .NET & Unity game development |
+| **Rust** | \`.rs\` | \`main.rs\` | Ultra-fast memory-safe system programming |
+| **Zig** | \`.zig\` | \`main.zig\` | Modern safe C alternative |
+| **Assembly** | \`.asm\` / \`.s\` | \`boot.asm\` | Direct processor & machine CPU instructions |
+
+---
+
+## 3. Mobile App Development
+| Platform / Engine | Standard Extension | Standard Filename | Core Use Case |
+|---|---|---|---|
+| **Swift** | \`.swift\` | \`AppDelegate.swift\` | Native iOS, iPadOS, macOS |
+| **Kotlin** | \`.kt\` | \`MainActivity.kt\` | Modern Google Android apps |
+| **Dart (Flutter)** | \`.dart\` | \`main.dart\` | Cross-platform iOS/Android apps |
+| **Objective-C** | \`.m\` | \`main.m\` | Legacy Apple ecosystem |
+
+---
+
+## 4. Databases, Data Science & Config
+| Format / Tool | Standard Extension | Standard Filename | Core Use Case |
+|---|---|---|---|
+| **SQL** | \`.sql\` | \`schema.sql\` / \`query.sql\` | Relational queries (Postgres/MySQL) |
+| **GraphQL** | \`.graphql\` / \`.gql\` | \`schema.graphql\` | API graph queries |
+| **JSON** | \`.json\` | \`config.json\` / \`package.json\` | Universal key-value data interchange |
+| **YAML** | \`.yaml\` / \`.yml\` | \`docker-compose.yml\` | Cloud, Kubernetes & CI/CD configs |
+| **Markdown** | \`.md\` | \`README.md\` | Formatted documentation |
+| **R Language** | \`.r\` | \`analysis.R\` | Statistical computation |
+| **Julia** | \`.jl\` | \`model.jl\` | High-performance scientific computing |
+
+---
+
+## 5. DevOps, Shell & Automation
+| Tool | Standard Extension | Standard Filename | Core Use Case |
+|---|---|---|---|
+| **Bash** | \`.sh\` | \`deploy.sh\` | Linux/Mac terminal automation |
+| **PowerShell** | \`.ps1\` | \`script.ps1\` | Windows server scripting |
+| **Batch** | \`.bat\` / \`.cmd\` | \`run.bat\` | Windows CMD command scripts |
+| **Docker** | *(No extension)* | \`Dockerfile\` | Container image build manifest |
+| **Make** | *(No extension)* | \`Makefile\` | Compilation & task automation |
+| **Terraform** | \`.tf\` | \`main.tf\` | Infrastructure-as-Code |
+
+---
+
+## 💡 Global Standards & Naming Conventions
+1. **Always Use Lowercase Extensions**: Use \`.html\`, \`.js\`, \`.py\` (never \`.HTML\` or \`.JS\`).
+2. **No Whitespace in Filenames**: Use kebab-case (\`my-script.js\`) or snake_case (\`my_script.py\`).
+3. **Entrypoint Convention**: Web apps use \`index.html\` or \`index.js\` as their root file.
+4. **Special Tools Without Extension**: \`Dockerfile\`, \`Makefile\`, and \`Vagrantfile\` never use an extension.
+`,
+    source: 'imported'
+  }
+];
 
 // Helper: Get language extension
 export function getExtensionFromLanguage(lang: string): string {

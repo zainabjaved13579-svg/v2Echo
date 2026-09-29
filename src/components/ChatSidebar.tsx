@@ -115,8 +115,40 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
         : 'bg-[#f8fafc] text-slate-800 border-r border-[#e2e8f0]'
     } select-none font-['Plus_Jakarta_Sans',sans-serif]`}>
 
+      {/* Brand Header with New Sapphire Logo */}
+      <div className="px-4 pt-4 pb-2 flex items-center justify-between border-b border-inherit">
+        <div className="flex items-center gap-2.5">
+          <img
+            src={SAPPHIRE_LOGO_URL}
+            alt="Sapphire AI"
+            className={`w-8 h-8 rounded-xl object-contain p-1 border ring-1 ring-[#d97757]/30 shadow-sm ${
+              isMoon ? 'bg-[#1a1a1a] border-[#2a2a2a]' : 'bg-white border-slate-200'
+            }`}
+          />
+          <div>
+            <div className="flex items-center gap-1.5">
+              <span className={`font-bold text-sm tracking-tight ${isMoon ? 'text-[#f5f2eb]' : 'text-slate-900'}`}>
+                Sapphire
+              </span>
+              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-[#d97757]/20 text-[#d97757] font-semibold">
+                AI
+              </span>
+            </div>
+            <p className="text-[10px] text-[#86837c] -mt-0.5">Education &amp; Codex Studio</p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="lg:hidden p-1.5 rounded-xl text-[#86837c] hover:text-white hover:bg-[#20201f] transition-colors cursor-pointer"
+          title="Close sidebar"
+        >
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+
       {/* Top Navigation Action Section */}
-      <div className="p-3.5 space-y-2 pt-4">
+      <div className="p-3.5 space-y-2 pt-3">
         {/* 1. New */}
         <button
           id="sidebar-new-btn"

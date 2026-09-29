@@ -2,26 +2,38 @@
   "id": "/",
   "name": "Sapphire AI Studio",
   "short_name": "Sapphire",
-  "description": "Sapphire AI: Elite Multi-file AI Architecture, Codex App Builder & Live Preview Engine",
+  "description": "Sapphire AI: Elite Autonomous AI Architecture, Coding & Education Engine",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
+  "orientation": "any",
   "background_color": "#0e0f12",
   "theme_color": "#0e0f12",
-  "orientation": "any",
-  "categories": ["productivity", "developer", "utilities"],
+  "categories": ["education", "developer", "productivity", "utilities"],
   "icons": [
     {
-      "src": "/sapphire-logo.svg",
-      "sizes": "192x192 512x512",
-      "type": "image/svg+xml",
+      "src": "/pwa-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/sapphire-logo.svg",
-      "sizes": "192x192 512x512",
-      "type": "image/svg+xml",
+      "src": "/pwa-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-maskable-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
       "purpose": "maskable"
+    },
+    {
+      "src": "/sapphire-logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
     }
   ],
   "shortcuts": [
@@ -30,21 +42,21 @@
       "short_name": "Chat",
       "description": "Start a new conversation with Sapphire AI",
       "url": "/?mode=chat",
-      "icons": [{ "src": "/sapphire-logo.svg", "sizes": "192x192" }]
+      "icons": [{ "src": "/pwa-192x192.png", "sizes": "192x192", "type": "image/png" }]
     },
     {
       "name": "Codex App Builder",
       "short_name": "Codex",
       "description": "Build full-stack applications with Live Preview",
       "url": "/?mode=codex",
-      "icons": [{ "src": "/sapphire-logo.svg", "sizes": "192x192" }]
+      "icons": [{ "src": "/pwa-192x192.png", "sizes": "192x192", "type": "image/png" }]
     },
     {
       "name": "Image Studio",
       "short_name": "Image Studio",
       "description": "Create and edit AI images with Sapphire Vision",
       "url": "/?mode=image",
-      "icons": [{ "src": "/sapphire-logo.svg", "sizes": "192x192" }]
+      "icons": [{ "src": "/pwa-192x192.png", "sizes": "192x192", "type": "image/png" }]
     }
   ]
 }

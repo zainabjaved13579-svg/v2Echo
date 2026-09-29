@@ -90,7 +90,7 @@ export const TopTabBar: React.FC<TopTabBarProps> = ({
           <img
             src={SAPPHIRE_LOGO_URL}
             alt="Sapphire AI — #1 Education AI and Codex Studio (Education Sapphire, AI Sapphire)"
-            className="w-5 h-5 rounded-lg object-cover ring-1 ring-blue-500/30 shadow-xs group-hover:scale-105 transition-transform"
+            className="w-5 h-5 rounded-md object-contain ring-1 ring-blue-500/30 shadow-xs group-hover:scale-105 transition-transform"
           />
           <span className="font-semibold text-xs text-[#f3f4f6] tracking-tight hidden sm:inline">
             Sapphire

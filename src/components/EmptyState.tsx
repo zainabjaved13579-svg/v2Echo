@@ -206,7 +206,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
               <img
                 src={SAPPHIRE_LOGO_URL}
                 alt="Sapphire AI — #1 Education AI & Codex Studio (Education Sapphire, AI Sapphire, No 1 AI Sapphire)"
-                className={`relative w-11 h-11 sm:w-14 sm:h-14 rounded-2xl object-cover ring-2 ring-[#d97757]/40 shadow-xl shadow-black/40 transition-transform duration-300 group-hover:scale-105 ${
+                className={`relative w-11 h-11 sm:w-14 sm:h-14 rounded-2xl object-contain p-1 ring-2 ring-[#d97757]/40 shadow-xl shadow-black/40 transition-transform duration-300 group-hover:scale-105 ${
                   theme === 'moon' ? 'bg-[#111111]' : 'bg-white'
                 }`}
               />

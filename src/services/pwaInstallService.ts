@@ -6,6 +6,15 @@
 let deferredInstallPrompt: any = null;
 const listeners = new Set<(canInstall: boolean) => void>();
 
+function getActivePrompt(): any {
+  if (deferredInstallPrompt) return deferredInstallPrompt;
+  if (typeof window !== 'undefined' && (window as any).__sapphirePwaPrompt) {
+    deferredInstallPrompt = (window as any).__sapphirePwaPrompt;
+    return deferredInstallPrompt;
+  }
+  return null;
+}
+
 // Check if running in standalone PWA mode
 export function isPwaInstalled(): boolean {
   if (typeof window === 'undefined') return false;
@@ -19,17 +28,39 @@ export function isPwaInstalled(): boolean {
 export function initPwaInstallListener(): void {
   if (typeof window === 'undefined') return;
 
+  // Check if early event was already captured on window
+  if ((window as any).__sapphirePwaPrompt) {
+    deferredInstallPrompt = (window as any).__sapphirePwaPrompt;
+    notifyListeners(true);
+  }
+
   window.addEventListener('beforeinstallprompt', (e: Event) => {
-    // Prevent default mini-infobar on mobile Chrome
+    // Prevent default mini-infobar so our DownloadModal trigger controls the prompt
     e.preventDefault();
     deferredInstallPrompt = e;
+    (window as any).__sapphirePwaPrompt = e;
     notifyListeners(true);
   });
 
   window.addEventListener('appinstalled', () => {
     deferredInstallPrompt = null;
+    if (typeof window !== 'undefined') {
+      (window as any).__sapphirePwaPrompt = null;
+    }
     notifyListeners(false);
   });
+
+  // Ensure Service Worker is registered
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker
+      .register('/sw.js', { updateViaCache: 'none' })
+      .then((reg) => {
+        reg.update();
+      })
+      .catch((err) => {
+        console.warn('SW registration warning:', err);
+      });
+  }
 }
 
 function notifyListeners(canInstall: boolean): void {
@@ -42,41 +73,38 @@ function notifyListeners(canInstall: boolean): void {
 
 export function subscribePwaInstallState(callback: (canInstall: boolean) => void): () => void {
   listeners.add(callback);
-  callback(Boolean(deferredInstallPrompt));
+  callback(Boolean(getActivePrompt()));
   return () => {
     listeners.delete(callback);
   };
 }
 
 export function canPromptPwaInstall(): boolean {
-  return Boolean(deferredInstallPrompt);
+  return Boolean(getActivePrompt());
 }
 
 /**
  * Triggers native PWA install prompt.
- * If unsupported or already installed, returns false or opens fallback guidance.
+ * Directly launches the browser's native PWA installation prompt on both desktop and mobile devices.
  */
 export async function promptPwaInstall(): Promise<{ outcome: 'accepted' | 'dismissed' | 'unsupported' | 'already-installed' }> {
   if (isPwaInstalled()) {
     return { outcome: 'already-installed' };
   }
 
-  if (!deferredInstallPrompt) {
-    // Check if on iOS Safari
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
-    if (isIOS) {
-      alert('To install Sapphire on iOS:\n1. Tap the Share button in Safari (box with arrow up).\n2. Scroll down and tap "Add to Home Screen".');
-      return { outcome: 'unsupported' };
-    }
+  const prompt = getActivePrompt();
 
-    // Chrome/Edge/Firefox desktop without active deferred prompt: show notification or download HTML
+  if (!prompt) {
     return { outcome: 'unsupported' };
   }
 
   try {
-    deferredInstallPrompt.prompt();
-    const choiceResult = await deferredInstallPrompt.userChoice;
+    await prompt.prompt();
+    const choiceResult = await prompt.userChoice;
     deferredInstallPrompt = null;
+    if (typeof window !== 'undefined') {
+      (window as any).__sapphirePwaPrompt = null;
+    }
     notifyListeners(false);
     return { outcome: choiceResult.outcome };
   } catch (err) {
@@ -105,7 +133,7 @@ export function downloadOfflinePwaPackage(): void {
 </head>
 <body>
   <div class="card">
-    <img src="https://i.ibb.co/q37Fs0hH/cropped-circle-image-1.png" width="64" height="64" style="border-radius: 1rem; margin-bottom: 1rem;" />
+    <img src="https://i.ibb.co/pjrYmt1t/sapphire-Photoroom.png" width="64" height="64" style="border-radius: 1rem; margin-bottom: 1rem; object-fit: contain;" />
     <h1>Sapphire Studio</h1>
     <p>Sapphire Progressive Web Application standalone launcher.</p>
     <a href="${window.location.origin}" class="btn" target="_blank">Launch Sapphire Online</a>

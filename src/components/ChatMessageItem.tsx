@@ -26,7 +26,8 @@ import {
   Languages,
   Eye,
   ThumbsUp,
-  ThumbsDown
+  ThumbsDown,
+  FileDown
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { ChatMessage, SupportedLanguage, UserProfile, WorkspaceFile } from '../types';
@@ -354,6 +355,91 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
     setTimeout(() => setFileSavedFeedback(false), 3000);
   };
 
+  const [fileSavedToast, setFileSavedToast] = useState(false);
+
+  const handleSaveMessageAsFile = () => {
+    if (!message.text) return;
+    const text = message.text;
+
+    let filename = 'sapphire_reference.md';
+    let content = text;
+    let language = 'markdown';
+
+    // If text contains a markdown table, format cleanly or export as CSV
+    if (text.includes('|') && text.includes('---')) {
+      const isLangList = /language|extension|frontend|backend/i.test(text);
+      filename = isLangList ? 'coding_languages_list.csv' : 'data_table.csv';
+      language = 'csv';
+
+      const lines = text
+        .split('\n')
+        .map((l) => l.trim())
+        .filter((l) => l.startsWith('|') && l.endsWith('|'));
+
+      if (lines.length > 2) {
+        const header = lines[0]
+          .replace(/^\||\|$/g, '')
+          .split('|')
+          .map((c) => `"${c.trim().replace(/"/g, '""')}"`)
+          .join(',');
+        const rows = lines
+          .slice(2)
+          .map((r) =>
+            r
+              .replace(/^\||\|$/g, '')
+              .split('|')
+              .map((c) => `"${c.trim().replace(/"/g, '""')}"`)
+              .join(',')
+          );
+        content = [header, ...rows].join('\n');
+      }
+    } else if (text.includes('```')) {
+      const match = text.match(/```([a-zA-Z0-9_-]+)/);
+      if (match && match[1]) {
+        language = match[1];
+        const ext =
+          match[1] === 'javascript'
+            ? 'js'
+            : match[1] === 'typescript'
+            ? 'ts'
+            : match[1] === 'python'
+            ? 'py'
+            : match[1];
+        filename = `code_export.${ext}`;
+      }
+    }
+
+    // Save to workspace
+    const saved = autoSaveFile({
+      name: filename,
+      path: `/${filename}`,
+      content,
+      language,
+      source: 'ai-generated'
+    });
+
+    if (openWorkspaceHandler) {
+      openWorkspaceHandler(saved.id);
+    }
+
+    // Direct browser file download
+    try {
+      const mime = language === 'csv' ? 'text/csv;charset=utf-8' : 'text/plain;charset=utf-8';
+      const blob = new Blob([content], { type: mime });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {}
+
+    setFileSavedToast(true);
+    setTimeout(() => setFileSavedToast(false), 3000);
+  };
+
   const detectedIsUrdu = useMemo(() => {
     return detectScriptLanguage(message.text) === 'ur';
   }, [message.text]);
@@ -472,7 +558,7 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
                 <img
                   src={SAPPHIRE_LOGO_URL}
                   alt="Sapphire AI — #1 Education AI and Codex Studio (Education Sapphire, AI Sapphire)"
-                  className={`w-7 h-7 sm:w-8 sm:h-8 rounded-2xl object-cover ring-1 ring-[#d97757]/40 shadow-xs ${
+                  className={`w-7 h-7 sm:w-8 sm:h-8 rounded-xl object-contain p-0.5 ring-1 ring-[#d97757]/40 shadow-xs ${
                     theme === 'moon' ? 'bg-[#201f1d]' : 'bg-white'
                   }`}
                 />
@@ -849,6 +935,19 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
                   aria-label="Copy"
                 >
                   {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                </button>
+
+                <button
+                  type="button"
+                  id={`file-msg-${message.id}`}
+                  onClick={handleSaveMessageAsFile}
+                  className={`p-1.5 transition-colors cursor-pointer rounded-xl hover:bg-[#20201f] ${
+                    fileSavedToast ? 'text-emerald-400' : 'text-[#86837c] hover:text-white'
+                  }`}
+                  title={fileSavedToast ? 'Saved to Workspace & Downloaded!' : 'Make file from this response & save to workspace'}
+                  aria-label="Make File"
+                >
+                  {fileSavedToast ? <Check className="w-4 h-4 text-emerald-400" /> : <FileDown className="w-4 h-4" />}
                 </button>
 
                 <button

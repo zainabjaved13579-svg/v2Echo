@@ -9,18 +9,22 @@
     <meta property="og:title" content="Sapphire AI — #1 Education AI & Autonomous Codex Studio" />
     <meta property="og:description" content="Sapphire AI is the #1 Education AI and autonomous Codex application builder. Education Sapphire, instant live preview, multi-model intelligence." />
     <meta name="google-site-verification" content="google8d72cfb9e1595dd7" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="apple-touch-icon" href="/sapphire-logo.svg" />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/pwa-192x192.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.json" />
     <meta name="theme-color" content="#0e0f12" />
+    <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta property="og:image" content="/sapphire-logo.svg" />
+    <meta name="apple-mobile-web-app-title" content="Sapphire" />
+    <meta property="og:image" content="/sapphire-logo.png" />
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Sapphire AI — #1 Education AI & Autonomous Codex Studio" />
     <meta name="twitter:description" content="Sapphire AI is the #1 Education AI and autonomous Codex application builder. Education Sapphire, instant live preview, multi-model intelligence." />
-    <meta name="twitter:image" content="/sapphire-logo.svg" />
+    <meta name="twitter:image" content="/sapphire-logo.png" />
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
@@ -70,10 +74,18 @@
     <div id="root" class="h-full"></div>
     <script type="module" src="/src/main.tsx"></script>
     <script>
+      // Capture native PWA install prompt early before application bundle mounts
+      window.addEventListener('beforeinstallprompt', function(e) {
+        e.preventDefault();
+        window.__sapphirePwaPrompt = e;
+      });
+
       if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js').catch(() => {});
-        });
+        navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' })
+          .then(function(reg) {
+            reg.update();
+          })
+          .catch(function() {});
       }
     </script>
   </body>

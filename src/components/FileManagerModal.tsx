@@ -35,6 +35,7 @@ import {
   exportAllFilesAsZip,
   importZipArchive
 } from '../services/fileStorageService';
+import { buildUnifiedLivePreviewBundle } from '../services/appEngineService';
 import { streamEchoChat } from '../services/geminiService';
 
 interface FileManagerModalProps {
@@ -62,6 +63,7 @@ export const FileManagerModal: React.FC<FileManagerModalProps> = ({
   const [copied, setCopied] = useState(false);
   const [previewDevice, setPreviewDevice] = useState<'desktop' | 'mobile'>('desktop');
   const [previewKey, setPreviewKey] = useState(0);
+  const [previewScope, setPreviewScope] = useState<'selected' | 'app' | 'all'>('selected');
 
   // AI Prompt States for Creating & Changing Code
   const [aiCreatePrompt, setAiCreatePrompt] = useState('');
@@ -442,7 +444,7 @@ export const FileManagerModal: React.FC<FileManagerModalProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
-  const previewHtml = selectedFile ? buildLivePreviewBundle(selectedFile, files) : '';
+  const previewHtml = buildUnifiedLivePreviewBundle(files, selectedFileId, previewScope);
 
   const samplePresets = [
     { title: 'Interactive Calculator', prompt: 'A sleek, modern scientific calculator with history and dark mode' },
@@ -857,15 +859,58 @@ export const FileManagerModal: React.FC<FileManagerModalProps> = ({
             {activeTab === 'preview' && (
               <div className="flex-1 flex flex-col min-h-0 bg-slate-100">
                 {/* Preview Bar */}
-                <div className="px-4 py-2 bg-white border-b border-slate-200 flex items-center justify-between gap-2 shrink-0">
+                <div className="px-4 py-2 bg-white border-b border-slate-200 flex flex-wrap items-center justify-between gap-2 shrink-0">
                   <div className="flex items-center gap-2">
                     <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
                     <span className="text-xs font-semibold text-slate-800">
-                      Live Preview: {selectedFile?.name || 'Sandbox'}
+                      Live Preview: {previewScope === 'all' ? 'All Files Dashboard' : previewScope === 'app' ? 'Compiled Web App' : (selectedFile?.name || 'Sandbox')}
                     </span>
                   </div>
 
                   <div className="flex items-center gap-2">
+                    {/* Scope Switcher: Selected | App | All Files */}
+                    <div className="flex items-center rounded-lg bg-slate-100 p-0.5 border border-slate-200 text-xs">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPreviewScope('selected');
+                          setPreviewKey((k) => k + 1);
+                        }}
+                        className={`px-2 py-1 rounded-md transition-all font-medium ${
+                          previewScope === 'selected' ? 'bg-white shadow-xs text-indigo-700 font-bold' : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                        title="Preview selected active file"
+                      >
+                        Selected File
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPreviewScope('app');
+                          setPreviewKey((k) => k + 1);
+                        }}
+                        className={`px-2 py-1 rounded-md transition-all font-medium ${
+                          previewScope === 'app' ? 'bg-white shadow-xs text-indigo-700 font-bold' : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                        title="Preview full bundled application"
+                      >
+                        Web App
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPreviewScope('all');
+                          setPreviewKey((k) => k + 1);
+                        }}
+                        className={`px-2 py-1 rounded-md transition-all font-medium ${
+                          previewScope === 'all' ? 'bg-white shadow-xs text-indigo-700 font-bold' : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                        title="Live interactive dashboard of all project files"
+                      >
+                        All Files ({files.length})
+                      </button>
+                    </div>
+
                     {/* Device switch */}
                     <div className="flex items-center rounded-lg bg-slate-100 p-0.5 border border-slate-200 text-xs">
                       <button

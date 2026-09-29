@@ -135,7 +135,7 @@ export const AndroidShortcutModal: React.FC<AndroidShortcutModalProps> = ({
               How to enable in your Android phone
             </h4>
             <ol className="text-xs text-slate-300 space-y-1.5 list-decimal pl-4">
-              <li>Install the updated <strong>Sapphire APK</strong> (v2.0.1) on your phone.</li>
+              <li>Install <strong>Sapphire PWA</strong> on your phone.</li>
               <li>Open phone <strong>Settings</strong> &gt; <strong>Accessibility</strong> &gt; <strong>Installed Apps</strong>.</li>
               <li>Turn on <strong>Sapphire AI Shortcut</strong>.</li>
               <li>Select <em>"Accessibility button on navigation bar"</em>.</li>
@@ -144,15 +144,18 @@ export const AndroidShortcutModal: React.FC<AndroidShortcutModalProps> = ({
 
           {/* Action Footer */}
           <div className="pt-2 flex flex-col sm:flex-row items-center gap-2.5">
-            <a
-              href={ANDROID_APK_DIRECT_DOWNLOAD}
-              target="_blank"
-              rel="noopener noreferrer"
+            <button
+              type="button"
+              onClick={async () => {
+                const { promptPwaInstall } = await import('../services/pwaInstallService');
+                promptPwaInstall();
+                onClose();
+              }}
               className="w-full sm:flex-1 py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all shadow-lg shadow-emerald-600/25 active:scale-97 cursor-pointer"
             >
               <Smartphone className="w-4 h-4" />
-              <span>Download Sapphire APK (Direct)</span>
-            </a>
+              <span>Install Sapphire Mobile PWA</span>
+            </button>
 
             <button
               type="button"

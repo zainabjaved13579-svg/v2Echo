@@ -6,7 +6,8 @@ import {
   ChatMessage,
   AppSettings,
   ImageAttachment,
-  UploadedFileAttachment
+  UploadedFileAttachment,
+  WorkspaceFile
 } from './types';
 import { PERSONAS } from './data/personas';
 import { streamGeminiChat, getStoredApiKey } from './services/geminiService';
@@ -157,6 +158,15 @@ export default function App() {
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [isAndroidShortcutModalOpen, setIsAndroidShortcutModalOpen] = useState(false);
   const [isStartingScreen, setIsStartingScreen] = useState<boolean>(true);
+  const [showSidebarPulse, setShowSidebarPulse] = useState<boolean>(true);
+
+  // Subtle ping pulse on initial application load to guide user's attention to sidebar toggle
+  useEffect(() => {
+    const pulseTimer = setTimeout(() => {
+      setShowSidebarPulse(false);
+    }, 7000);
+    return () => clearTimeout(pulseTimer);
+  }, []);
 
   const { theme } = useAppTheme();
 
@@ -1021,22 +1031,38 @@ ${promptText || 'Please analyze, remake, or update these files cleanly according
       <main className={`flex-1 flex flex-col h-full min-w-0 relative ${
         theme === 'moon' ? 'bg-[#151515]' : 'bg-white'
       } overflow-hidden`}>
-        {/* Sleek Floating Menu Button when sidebar is collapsed */}
+        {/* Sleek Floating Menu Button when sidebar is collapsed with increased hit area & first-load glow ping */}
         {!isSidebarOpen && (
-          <button
-            type="button"
-            id="floating-sidebar-toggle-btn"
-            onClick={() => setIsSidebarOpen(true)}
-            className={`absolute top-3.5 left-3.5 z-30 p-2.5 rounded-xl border shadow-lg transition-all active:scale-95 cursor-pointer ${
-              theme === 'moon'
-                ? 'bg-[#20201f] hover:bg-[#282724] border-[#2b2b2a] text-white'
-                : 'bg-white hover:bg-slate-100 border-slate-200 text-slate-700 shadow-md'
-            }`}
-            title="Open Sidebar"
-            aria-label="Open Sidebar"
-          >
-            <Menu className="w-4 h-4" />
-          </button>
+          <div className="absolute top-2.5 left-2.5 sm:top-3.5 sm:left-3.5 z-30">
+            <button
+              type="button"
+              id="floating-sidebar-toggle-btn"
+              onClick={() => {
+                setIsSidebarOpen(true);
+                setShowSidebarPulse(false);
+              }}
+              className={`relative min-w-[46px] min-h-[46px] sm:min-w-[42px] sm:min-h-[42px] p-3 sm:p-2.5 rounded-2xl border shadow-xl transition-all active:scale-95 cursor-pointer flex items-center justify-center touch-manipulation group select-none ${
+                theme === 'moon'
+                  ? 'bg-[#20201f] hover:bg-[#282724] border-[#2b2b2a] text-white shadow-black/50'
+                  : 'bg-white hover:bg-slate-100 border-slate-200 text-slate-700 shadow-slate-200/80'
+              }`}
+              title="Open Sidebar"
+              aria-label="Open Sidebar"
+            >
+              {/* Expanded invisible touch hit target for small mobile touch screens */}
+              <span className="absolute -inset-3 sm:-inset-1.5 rounded-2xl pointer-events-auto" aria-hidden="true" />
+
+              {/* Subtle ping animation & glow pulse on initial application load */}
+              {showSidebarPulse && (
+                <>
+                  <span className="absolute -inset-1 rounded-2xl bg-[#d97757]/40 animate-ping pointer-events-none" />
+                  <span className="absolute -inset-0.5 rounded-2xl bg-gradient-to-tr from-[#d97757]/30 to-[#e69176]/30 animate-pulse pointer-events-none" />
+                </>
+              )}
+
+              <Menu className="w-5 h-5 sm:w-4 sm:h-4 text-[#d97757] sm:text-inherit group-hover:scale-110 transition-transform" />
+            </button>
+          </div>
         )}
 
         <AnimatePresence mode="wait" initial={false}>
@@ -1172,7 +1198,7 @@ ${promptText || 'Please analyze, remake, or update these files cleanly according
                       <img
                         src={SAPPHIRE_LOGO_URL}
                         alt="Sapphire AI — #1 Education AI, Education Sapphire, AI Sapphire"
-                        className="w-full h-full rounded-xl object-cover ring-1 ring-[#d97757]/30"
+                        className="w-full h-full rounded-xl object-contain ring-1 ring-[#d97757]/30"
                       />
                     </div>
                     <h3 className={`font-semibold text-xl mb-1 ${theme === 'moon' ? 'text-white' : 'text-slate-900'}`}>

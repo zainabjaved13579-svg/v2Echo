@@ -2,7 +2,7 @@ import express from 'express';
 import path from 'path';
 import fs from 'fs';
 import dotenv from 'dotenv';
-import { GoogleGenAI } from '@google/genai';
+import { GoogleGenAI, ThinkingLevel } from '@google/genai';
 import { generateEchoFallbackResponse } from './src/services/echoEngine';
 
 dotenv.config();
@@ -780,17 +780,18 @@ Be fast, clear, and articulate. Do NOT include unnecessary internal monologue or
       const config: Record<string, any> = {
         temperature: Number(temperature) || 0.7,
         maxOutputTokens: 65536, // CRITICAL: 65,536 tokens prevents code from ending prematurely!
-        systemInstruction: combinedInstruction
+        systemInstruction: combinedInstruction,
+        thinkingConfig: {
+          thinkingLevel: ThinkingLevel.LOW
+        }
       };
 
       if (useSearchGrounding) {
         config.tools = [{ googleSearch: {} }];
       }
 
-      // Fastest high-capacity models first: gemini-3.1-flash-lite, gemini-flash-latest, gemini-3.1-pro-preview
-      const candidateModels = isCodingRequest
-        ? ['gemini-3.1-flash-lite', 'gemini-flash-latest', 'gemini-3.1-pro-preview', 'gemini-3.8-flash']
-        : ['gemini-3.1-flash-lite', 'gemini-flash-latest', 'gemini-3.1-pro-preview', 'gemini-3.8-flash'];
+      // High-speed, low-latency models for instant response (resilient to model quotas)
+      const candidateModels = ['gemini-flash-latest', 'gemini-2.5-flash', 'gemini-3.8-flash'];
 
       let streamedAny = false;
 
@@ -964,17 +965,18 @@ app.post('/api/chat', async (req, res) => {
 
       const config: Record<string, any> = {
         temperature: Number(temperature) || 0.7,
-        systemInstruction: combinedInstruction
+        systemInstruction: combinedInstruction,
+        thinkingConfig: {
+          thinkingLevel: ThinkingLevel.LOW
+        }
       };
 
       if (useSearchGrounding) {
         config.tools = [{ googleSearch: {} }];
       }
 
-      // Resilient fallback candidate list with active official models
-      const candidateModels = targetModel === 'gemini-3.1-pro-preview'
-        ? ['gemini-3.1-pro-preview', 'gemini-flash-latest', 'gemini-3.1-flash-lite']
-        : ['gemini-flash-latest', 'gemini-3.1-flash-lite', 'gemini-3.8-flash'].filter((m, i, arr) => arr.indexOf(m) === i);
+      // Fast, resilient models
+      const candidateModels = ['gemini-flash-latest', 'gemini-2.5-flash', 'gemini-3.8-flash'];
 
       for (const currModel of candidateModels) {
         try {
