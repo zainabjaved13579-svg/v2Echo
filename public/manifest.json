@@ -1,62 +1,222 @@
 {
-  "id": "/",
-  "name": "Sapphire AI Studio",
+  "name": "Sapphire AI — #1 Education AI & Autonomous Codex Studio",
   "short_name": "Sapphire",
-  "description": "Sapphire AI: Elite Autonomous AI Architecture, Coding & Education Engine",
+  "description": "Sapphire AI: The #1 Education AI, autonomous multi-file architecture, Codex app builder & global intelligent assistant.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "orientation": "any",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "orientation": "portrait",
   "background_color": "#0e0f12",
   "theme_color": "#0e0f12",
-  "categories": ["education", "developer", "productivity", "utilities"],
+  "lang": "en",
+  "dir": "ltr",
+  "categories": ["education", "productivity", "developer", "utilities"],
+  "prefer_related_applications": false,
   "icons": [
     {
-      "src": "/pwa-192x192.png",
+      "src": "https://i.ibb.co/sd0GqTcS/sapphire-Photoroom.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "https://i.ibb.co/sd0GqTcS/sapphire-Photoroom.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "https://i.ibb.co/sd0GqTcS/sapphire-Photoroom.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "https://i.ibb.co/sd0GqTcS/sapphire-Photoroom.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "https://i.ibb.co/sd0GqTcS/sapphire-Photoroom.png",
+      "sizes": "152x152",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "https://i.ibb.co/sd0GqTcS/sapphire-Photoroom.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/pwa-512x512.png",
+      "src": "https://i.ibb.co/sd0GqTcS/sapphire-Photoroom.png",
+      "sizes": "256x256",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "https://i.ibb.co/sd0GqTcS/sapphire-Photoroom.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "https://i.ibb.co/sd0GqTcS/sapphire-Photoroom.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/pwa-maskable-512x512.png",
+      "src": "https://i.ibb.co/sd0GqTcS/sapphire-Photoroom.png",
+      "sizes": "any",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "https://i.ibb.co/sd0GqTcS/sapphire-Photoroom.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "https://i.ibb.co/sd0GqTcS/sapphire-Photoroom.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "https://i.ibb.co/sd0GqTcS/sapphire-Photoroom.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "https://i.ibb.co/sd0GqTcS/sapphire-Photoroom.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "https://i.ibb.co/sd0GqTcS/sapphire-Photoroom.png",
+      "sizes": "152x152",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "https://i.ibb.co/sd0GqTcS/sapphire-Photoroom.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "https://i.ibb.co/sd0GqTcS/sapphire-Photoroom.png",
+      "sizes": "256x256",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "https://i.ibb.co/sd0GqTcS/sapphire-Photoroom.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "https://i.ibb.co/sd0GqTcS/sapphire-Photoroom.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "/sapphire-logo.png",
+      "src": "https://i.ibb.co/sd0GqTcS/sapphire-Photoroom.png",
+      "sizes": "any",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "https://i.ibb.co/sd0GqTcS/sapphire-Photoroom.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "monochrome"
+    },
+    {
+      "src": "https://i.ibb.co/sd0GqTcS/sapphire-Photoroom.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any"
+      "purpose": "monochrome"
     }
   ],
   "shortcuts": [
     {
       "name": "New Chat",
-      "short_name": "Chat",
+      "short_name": "New Chat",
       "description": "Start a new conversation with Sapphire AI",
-      "url": "/?mode=chat",
-      "icons": [{ "src": "/pwa-192x192.png", "sizes": "192x192", "type": "image/png" }]
+      "url": "/?action=new-chat",
+      "icons": [
+        {
+          "src": "https://i.ibb.co/sd0GqTcS/sapphire-Photoroom.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
     },
     {
-      "name": "Codex App Builder",
+      "name": "Codex Studio",
       "short_name": "Codex",
-      "description": "Build full-stack applications with Live Preview",
-      "url": "/?mode=codex",
-      "icons": [{ "src": "/pwa-192x192.png", "sizes": "192x192", "type": "image/png" }]
+      "description": "Open the autonomous Codex Studio",
+      "url": "/?action=codex",
+      "icons": [
+        {
+          "src": "https://i.ibb.co/sd0GqTcS/sapphire-Photoroom.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
     },
     {
-      "name": "Image Studio",
-      "short_name": "Image Studio",
-      "description": "Create and edit AI images with Sapphire Vision",
-      "url": "/?mode=image",
-      "icons": [{ "src": "/pwa-192x192.png", "sizes": "192x192", "type": "image/png" }]
+      "name": "Workspace",
+      "short_name": "Files",
+      "description": "Open File & Workspace",
+      "url": "/?action=workspace",
+      "icons": [
+        {
+          "src": "https://i.ibb.co/sd0GqTcS/sapphire-Photoroom.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Settings",
+      "short_name": "Settings",
+      "description": "Open Sapphire AI Settings",
+      "url": "/?action=settings",
+      "icons": [
+        {
+          "src": "https://i.ibb.co/sd0GqTcS/sapphire-Photoroom.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
     }
-  ]
+  ],
+  "screenshots": [
+    {
+      "src": "https://i.ibb.co/sd0GqTcS/sapphire-Photoroom.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Sapphire AI on Desktop"
+    },
+    {
+      "src": "https://i.ibb.co/sd0GqTcS/sapphire-Photoroom.png",
+      "sizes": "720x1280",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Sapphire AI on Mobile"
+    }
+  ],
+  "related_applications": [],
+  "iarc_rating_id": ""
 }
