@@ -60,6 +60,8 @@ const GeneratedVisualCard: React.FC<{
   imgUrl: string;
   prompt?: string;
 }> = ({ imgUrl, prompt }) => {
+  const { theme } = useAppTheme();
+  const isMoon = theme === 'moon';
   const [src, setSrc] = useState(imgUrl);
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
@@ -115,24 +117,30 @@ const GeneratedVisualCard: React.FC<{
     }
   };
 
+  const bgCard = isMoon ? 'bg-[#1a1a1a]' : 'bg-white';
+  const bgSubtle = isMoon ? 'bg-[#20201f]' : 'bg-[#f5f1ea]';
+  const border = isMoon ? 'border-[#2b2b2a]' : 'border-[#e8e2d8]';
+  const textPrimary = isMoon ? 'text-white' : 'text-[#2a2620]';
+  const textMuted = isMoon ? 'text-[#a19e97]' : 'text-[#6b6459]';
+
   return (
     <>
-      <div className="group/genimg relative rounded-2xl overflow-hidden border border-slate-200 bg-slate-50 shadow-md transition-all hover:shadow-lg hover:border-indigo-300">
+      <div className={`group/genimg relative rounded-2xl overflow-hidden border ${border} ${bgCard} shadow-md transition-all hover:shadow-lg`}>
         {isLoading && (
-          <div className="w-full h-64 sm:h-72 bg-gradient-to-r from-slate-100 via-slate-200 to-slate-100 animate-pulse flex flex-col items-center justify-center gap-2.5 text-slate-500 p-4">
-            <div className="p-3 rounded-2xl bg-indigo-100 text-indigo-500 border border-indigo-200 animate-spin">
+          <div className={`w-full h-64 sm:h-72 ${bgSubtle} animate-pulse flex flex-col items-center justify-center gap-2.5 ${textMuted} p-4`}>
+            <div className="p-3 rounded-2xl bg-[#d97757]/15 text-[#d97757] border border-[#d97757]/30 animate-spin">
               <Sparkles className="w-6 h-6" />
             </div>
-            <p className="text-xs font-medium text-slate-700">Synthesizing high-res visual...</p>
-            <p className="text-[11px] text-indigo-500 font-mono">Neural Generative Diffusion</p>
+            <p className={`text-xs font-medium ${textPrimary}`}>Synthesizing high-res visual...</p>
+            <p className="text-[11px] text-[#d97757] font-mono">Neural Generative Diffusion</p>
           </div>
         )}
 
         {hasError ? (
-          <div className="w-full h-60 bg-slate-100 flex flex-col items-center justify-center p-4 text-center">
+          <div className={`w-full h-60 ${bgSubtle} flex flex-col items-center justify-center p-4 text-center`}>
             <AlertTriangle className="w-6 h-6 text-amber-500 mb-2" />
-            <p className="text-xs font-semibold text-slate-700">Unable to display visual</p>
-            <p className="text-[11px] text-slate-500 mt-1 max-w-xs truncate">{prompt}</p>
+            <p className={`text-xs font-semibold ${textPrimary}`}>Unable to display visual</p>
+            <p className={`text-[11px] ${textMuted} mt-1 max-w-xs truncate`}>{prompt}</p>
             <button
               onClick={() => {
                 setHasError(false);
@@ -140,7 +148,7 @@ const GeneratedVisualCard: React.FC<{
                 setRetryCount(0);
                 setSrc(`https://image.pollinations.ai/prompt/${encodeURIComponent((prompt || 'visual') + ' masterpiece 8k')}?seed=${Date.now()}&width=1024&height=1024&nologo=true`);
               }}
-              className="mt-3 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium transition-colors"
+              className="mt-3 px-3 py-1.5 rounded-lg bg-[#d97757] hover:bg-[#c86b4c] text-white text-xs font-medium transition-colors"
             >
               Retry Visual
             </button>
@@ -170,12 +178,12 @@ const GeneratedVisualCard: React.FC<{
                 <span className="text-[11px] font-medium">Download</span>
               </button>
             </div>
-            <div className="p-2.5 bg-slate-900/95 backdrop-blur-md text-white flex items-center justify-between text-[11px] border-t border-white/5">
-              <span className="flex items-center gap-1.5 text-indigo-300 font-semibold truncate max-w-[220px]">
-                <Sparkles className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+            <div className={`p-2.5 ${isMoon ? 'bg-[#111111]' : 'bg-[#2a2620]'} text-white flex items-center justify-between text-[11px] border-t ${border}`}>
+              <span className="flex items-center gap-1.5 text-[#d97757] font-semibold truncate max-w-[220px]">
+                <Sparkles className="w-3.5 h-3.5 shrink-0" />
                 <span className="truncate">{prompt || 'Echo Generative Visual'}</span>
               </span>
-              <span className="px-2 py-0.5 rounded-md bg-indigo-500/20 text-indigo-300 text-[10px] font-mono border border-indigo-500/30">
+              <span className="px-2 py-0.5 rounded-md bg-[#d97757]/20 text-[#d97757] text-[10px] font-mono border border-[#d97757]/30">
                 1024×1024
               </span>
             </div>
@@ -197,7 +205,7 @@ const GeneratedVisualCard: React.FC<{
             <div className="mt-3 flex items-center gap-3">
               <button
                 onClick={handleDownload}
-                className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold flex items-center gap-2 shadow-lg cursor-pointer"
+                className="px-4 py-2 rounded-xl bg-[#d97757] hover:bg-[#c86b4c] text-white text-xs font-semibold flex items-center gap-2 shadow-lg cursor-pointer"
               >
                 <Download className="w-4 h-4" />
                 <span>Download High-Res</span>
@@ -229,6 +237,7 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
   onContinueCode
 }) => {
   const { theme } = useAppTheme();
+  const isMoon = theme === 'moon';
   const activeProfile = userProfile || loadUserProfile();
   const userName = activeProfile?.name && activeProfile.name.trim() ? activeProfile.name.trim() : 'You';
   const userAvatar = activeProfile?.avatar || activeProfile?.avatarUrl;
@@ -269,15 +278,12 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
     return extractCodeFilesFromMarkdown(message.text);
   }, [isUser, message.text]);
 
-  // Detect if code generation was cut off or ended before completing
   const isIncompleteCode = useMemo(() => {
     if (isUser || !message.text || message.isStreaming) return false;
     const raw = message.text.trim();
-    // 1. Odd count of code fences means an unclosed code block
     const fenceCount = (raw.match(/```/g) || []).length;
     if (fenceCount % 2 !== 0) return true;
 
-    // 2. Contains opening html/body without closing tag
     if (raw.includes('```html') || raw.includes('<!DOCTYPE') || raw.includes('<html')) {
       if (!raw.includes('</html>') || !raw.includes('</body>')) {
         return true;
@@ -365,7 +371,6 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
     let content = text;
     let language = 'markdown';
 
-    // If text contains a markdown table, format cleanly or export as CSV
     if (text.includes('|') && text.includes('---')) {
       const isLangList = /language|extension|frontend|backend/i.test(text);
       filename = isLangList ? 'coding_languages_list.csv' : 'data_table.csv';
@@ -409,7 +414,6 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
       }
     }
 
-    // Save to workspace
     const saved = autoSaveFile({
       name: filename,
       path: `/${filename}`,
@@ -422,7 +426,6 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
       openWorkspaceHandler(saved.id);
     }
 
-    // Direct browser file download
     try {
       const mime = language === 'csv' ? 'text/csv;charset=utf-8' : 'text/plain;charset=utf-8';
       const blob = new Blob([content], { type: mime });
@@ -525,6 +528,16 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
     }
   };
 
+  // Theme helper classes
+  const textPrimary = isMoon ? 'text-white' : 'text-[#2a2620]';
+  const textBright = isMoon ? 'text-white' : 'text-[#1a1712]';
+  const textSub = isMoon ? 'text-[#a3a3a3]' : 'text-[#6b6459]';
+  const textMuted = isMoon ? 'text-[#86837c]' : 'text-[#9a9186]';
+  const border = isMoon ? 'border-[#2b2b2a]' : 'border-[#e8e2d8]';
+  const bgCard = isMoon ? 'bg-[#20201f]' : 'bg-[#f5f1ea]';
+  const bgSubtle = isMoon ? 'bg-[#1a1a1a]' : 'bg-white';
+  const hoverBg = isMoon ? 'hover:bg-[#20201f]' : 'hover:bg-[#f5f1ea]';
+
   return (
     <>
       <motion.div
@@ -542,13 +555,13 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
                 <img
                   src={userAvatar}
                   alt={userName}
-                  className={`w-7 h-7 sm:w-8 sm:h-8 rounded-2xl object-cover border ${
-                    theme === 'moon' ? 'bg-[#201f1d] border-[#33312e]' : 'bg-slate-100 border-slate-200'
+                  className={`w-7 h-7 sm:w-8 sm:h-8 rounded-2xl object-cover border ${border} ${
+                    isMoon ? 'bg-[#201f1d]' : 'bg-[#f5f1ea]'
                   }`}
                 />
               ) : (
-                <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-2xl border flex items-center justify-center text-xs font-bold ${
-                  theme === 'moon' ? 'bg-[#201f1d] border-[#33312e] text-white' : 'bg-slate-100 border-slate-200 text-slate-800'
+                <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-2xl border ${border} flex items-center justify-center text-xs font-bold ${
+                  isMoon ? 'bg-[#201f1d] text-white' : 'bg-[#f5f1ea] text-[#2a2620]'
                 }`}>
                   {userName.charAt(0).toUpperCase()}
                 </div>
@@ -557,7 +570,7 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
               <div className="relative shrink-0">
                 <img
                   src={SAPPHIRE_LOGO_URL}
-                  alt="Sapphire AI — #1 Education AI and Codex Studio (Education Sapphire, AI Sapphire)"
+                  alt="Sapphire AI"
                   className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl object-contain p-0.5 ring-1 ring-[#d97757]/40 shadow-xs bg-white"
                 />
                 {message.isStreaming && (
@@ -571,25 +584,23 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
           <div
             className={`flex-1 min-w-0 ${
               isUser
-                ? `${theme === 'moon' ? 'bg-[#20201f] border-[#2b2b2a] text-white' : 'bg-slate-100 border-slate-200 text-slate-900'} px-4 py-3 rounded-2xl border max-w-2xl`
-                : `space-y-3 py-0.5 ${theme === 'moon' ? 'text-white' : 'text-slate-900'}`
+                ? `${bgCard} ${textPrimary} px-4 py-3 rounded-2xl border ${border} max-w-2xl`
+                : `space-y-3 py-0.5 ${textPrimary}`
             }`}
           >
             {/* Header row */}
             <div className="flex items-center justify-between gap-2 mb-1">
               <div className="flex items-center gap-2">
-                <span className={`font-semibold text-xs sm:text-sm ${
-                  theme === 'moon' ? 'text-white' : 'text-slate-900'
-                }`}>
+                <span className={`font-semibold text-xs sm:text-sm ${textBright}`}>
                   {isUser ? userName : 'Sapphire'}
                 </span>
-                <span className={`text-[11px] ${theme === 'moon' ? 'text-[#a3a3a3]' : 'text-slate-400'}`}>
+                <span className={`text-[11px] ${textMuted}`}>
                   {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </span>
               </div>
             </div>
 
-            {/* User Attached Code or Document Files (Multiple / Unlimited Support) */}
+            {/* User Attached Code or Document Files */}
             {(() => {
               const allAttached = (message.attachedFiles && message.attachedFiles.length > 0)
                 ? message.attachedFiles
@@ -603,16 +614,20 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
                   {allAttached.map((file, idx) => (
                     <div
                       key={`attached-${idx}-${file.name}`}
-                      className="inline-flex items-center gap-2.5 px-3 py-2 rounded-2xl bg-indigo-50/90 border border-indigo-200/90 text-xs text-indigo-950 font-medium shadow-2xs transition-all hover:bg-indigo-100/80"
+                      className={`inline-flex items-center gap-2.5 px-3 py-2 rounded-2xl text-xs font-medium shadow-2xs transition-all border ${
+                        isMoon
+                          ? 'bg-[#d97757]/10 border-[#d97757]/30 text-[#ede8e1]'
+                          : 'bg-[#d97757]/8 border-[#d97757]/25 text-[#2a2620]'
+                      }`}
                     >
-                      <div className="w-6 h-6 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
+                      <div className="w-6 h-6 rounded-xl bg-[#d97757] text-white flex items-center justify-center shrink-0 shadow-2xs">
                         <FileCode className="w-3.5 h-3.5" />
                       </div>
                       <div className="min-w-0">
-                        <span className="font-bold text-slate-900 block truncate max-w-[200px] sm:max-w-xs">
+                        <span className={`font-bold ${textBright} block truncate max-w-[200px] sm:max-w-xs`}>
                           {file.name}
                         </span>
-                        <span className="text-[10px] text-indigo-600 font-mono">
+                        <span className="text-[10px] text-[#d97757] font-mono">
                           {file.size < 1024 * 1024
                             ? `${(file.size / 1024).toFixed(1)} KB`
                             : `${(file.size / (1024 * 1024)).toFixed(2)} MB`}{' '}
@@ -627,18 +642,22 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
 
             {/* AI Rewritten / Modified File Card */}
             {!isUser && message.modifiedFileContent && (
-              <div className="mb-3 p-3 sm:p-3.5 rounded-xl bg-emerald-50/80 border border-emerald-200 shadow-2xs space-y-2">
+              <div className={`mb-3 p-3 sm:p-3.5 rounded-xl shadow-2xs space-y-2 border ${
+                isMoon
+                  ? 'bg-emerald-950/30 border-emerald-800/50'
+                  : 'bg-emerald-50 border-emerald-200'
+              }`}>
                 <div className="flex items-center justify-between gap-2 flex-wrap">
                   <div className="flex items-center gap-2 min-w-0">
                     <div className="w-7 h-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
                       <FileCode className="w-4 h-4" />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-xs font-bold text-slate-900 truncate">
+                      <p className={`text-xs font-bold truncate ${textBright}`}>
                         {message.modifiedFileName || 'Updated File'}
                       </p>
-                      <p className="text-[10px] text-emerald-700 font-medium">
-                        Rewritten & Changed by Echo AI
+                      <p className="text-[10px] text-emerald-500 font-medium">
+                        Rewritten & Changed by Sapphire AI
                       </p>
                     </div>
                   </div>
@@ -666,9 +685,9 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
                       <button
                         type="button"
                         onClick={() => openWorkspaceHandler()}
-                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 text-xs font-semibold transition-all shadow-2xs cursor-pointer"
+                        className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-all shadow-2xs cursor-pointer border ${border} ${bgSubtle} ${textPrimary} ${hoverBg}`}
                       >
-                        <FolderCode className="w-3.5 h-3.5 text-indigo-600" />
+                        <FolderCode className="w-3.5 h-3.5 text-[#d97757]" />
                         <span className="hidden sm:inline">File & Workspace</span>
                       </button>
                     )}
@@ -677,7 +696,7 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
               </div>
             )}
 
-            {/* User Attached Screenshots / Images (Multiple Support) */}
+            {/* User Attached Screenshots / Images */}
             {(() => {
               const allImages = (message.images && message.images.length > 0)
                 ? message.images
@@ -691,7 +710,7 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
                   {allImages.map((img, idx) => (
                     <div
                       key={`img-${idx}-${img.name}`}
-                      className="relative group/img inline-block max-w-sm rounded-2xl overflow-hidden border border-slate-200 bg-slate-900/5 shadow-xs"
+                      className={`relative group/img inline-block max-w-sm rounded-2xl overflow-hidden border ${border} shadow-xs`}
                     >
                       <img
                         src={img.dataUrl || `data:${img.mimeType};base64,${img.base64}`}
@@ -739,14 +758,18 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
 
             {/* Multiple Files Project Folder Download Banner */}
             {!isUser && extractedFiles.length > 1 && (
-              <div className="mb-3 p-3.5 rounded-2xl bg-gradient-to-br from-indigo-50 via-slate-50 to-white border border-indigo-200 text-slate-900 shadow-md">
+              <div className={`mb-3 p-3.5 rounded-2xl border ${border} shadow-md ${
+                isMoon
+                  ? 'bg-gradient-to-br from-[#1a1a1a] via-[#151515] to-[#111111]'
+                  : 'bg-gradient-to-br from-[#f5f1ea] via-white to-[#faf7f2]'
+              }`}>
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div className="space-y-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <div className="p-1.5 rounded-lg bg-indigo-100 text-indigo-600 border border-indigo-200">
+                      <div className={`p-1.5 rounded-lg border ${border} ${isMoon ? 'bg-[#d97757]/15 text-[#d97757]' : 'bg-[#d97757]/10 text-[#d97757]'}`}>
                         <Archive className="w-4 h-4" />
                       </div>
-                      <span className="font-bold text-sm text-slate-900">
+                      <span className={`font-bold text-sm ${textBright}`}>
                         Generated Project Folder ({extractedFiles.length} files)
                       </span>
                     </div>
@@ -754,9 +777,9 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
                       {extractedFiles.map((f, i) => (
                         <span
                           key={i}
-                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[11px] font-mono border border-slate-200"
+                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-mono border ${border} ${bgCard} ${textPrimary}`}
                         >
-                          <FileCode className="w-3 h-3 text-indigo-500" />
+                          <FileCode className="w-3 h-3 text-[#d97757]" />
                           <span>{f.name}</span>
                         </span>
                       ))}
@@ -782,7 +805,6 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
                         }
                       }}
                       className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#d97757] hover:bg-[#c66b4d] text-white text-xs font-semibold shadow-xs active:scale-95 transition-all cursor-pointer whitespace-nowrap"
-                      title="Open full interactive preview and code editor for all project files"
                     >
                       <Eye className="w-3.5 h-3.5" />
                       <span>Preview All Files</span>
@@ -815,7 +837,7 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
                       <button
                         type="button"
                         onClick={handleSaveAllToWorkspace}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-medium transition-all active:scale-95 cursor-pointer whitespace-nowrap"
+                        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all active:scale-95 cursor-pointer whitespace-nowrap border ${border} ${bgSubtle} ${textPrimary} ${hoverBg}`}
                       >
                         <Folder className="w-3.5 h-3.5 text-[#d97757]" />
                         <span>Open in Workspace</span>
@@ -828,13 +850,13 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
 
             {/* Quoted Reply Preview */}
             {message.replyTo && (
-              <div className="mb-2.5 p-2.5 rounded-xl bg-[#20201f] text-xs text-white/80 flex items-start gap-2 shadow-2xs">
+              <div className={`mb-2.5 p-2.5 rounded-xl text-xs flex items-start gap-2 shadow-2xs border ${border} ${bgCard}`}>
                 <Reply className="w-3.5 h-3.5 text-[#d97757] shrink-0 mt-0.5" />
                 <div className="min-w-0 flex-1">
-                  <span className="font-bold text-white block text-[11px]">
+                  <span className={`font-bold block text-[11px] ${textBright}`}>
                     {message.replyTo.role === 'model' ? 'Sapphire AI' : 'You'}
                   </span>
-                  <p className="truncate text-white/60 text-[11px] italic">
+                  <p className={`truncate text-[11px] italic ${textSub}`}>
                     "{message.replyTo.text}"
                   </p>
                 </div>
@@ -842,7 +864,7 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
             )}
 
             {/* Text Content */}
-            <div className={`break-words ${theme === 'moon' ? 'text-white' : 'text-slate-900'}`}>
+            <div className={`break-words ${textPrimary}`}>
               {isUser ? (
                 message.text.includes('```') ? (
                   <MarkdownRenderer
@@ -851,7 +873,7 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
                     onOpenFileWorkspace={openWorkspaceHandler}
                   />
                 ) : (
-                  <div className={`whitespace-pre-wrap text-sm leading-relaxed ${theme === 'moon' ? 'text-white' : 'text-slate-900'} font-normal`}>
+                  <div className={`whitespace-pre-wrap text-sm leading-relaxed ${textPrimary} font-normal`}>
                     {message.text}
                   </div>
                 )
@@ -864,14 +886,12 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
                       onOpenFileWorkspace={openWorkspaceHandler}
                     />
                   ) : message.isStreaming ? (
-                    <div className="flex items-center gap-1.5 py-2 text-[#a3a3a3]">
+                    <div className={`flex items-center gap-1.5 py-2 ${textSub}`}>
                       <motion.span animate={{ y: [0, -4, 0] }} transition={{ repeat: Infinity, duration: 0.6, delay: 0 }} className="w-2 h-2 rounded-full bg-[#d97757]" />
                       <motion.span animate={{ y: [0, -4, 0] }} transition={{ repeat: Infinity, duration: 0.6, delay: 0.2 }} className="w-2 h-2 rounded-full bg-[#d97757]" />
                       <motion.span animate={{ y: [0, -4, 0] }} transition={{ repeat: Infinity, duration: 0.6, delay: 0.4 }} className="w-2 h-2 rounded-full bg-[#d97757]" />
                     </div>
                   ) : null}
-
-                  {/* Stream completed or in progress cleanly without cursor bar */}
                 </div>
               )}
             </div>
@@ -879,12 +899,12 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
             {/* Incomplete / Truncated Code Continue Banner */}
             {isIncompleteCode && (
               <div className={`mt-3 p-3.5 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border shadow-sm ${
-                theme === 'moon'
+                isMoon
                   ? 'bg-amber-950/30 border-amber-800/50 text-amber-200'
                   : 'bg-amber-50 border-amber-200 text-amber-900'
               }`}>
                 <div className="flex items-center gap-2">
-                  <div className="p-1 rounded-lg bg-amber-500/20 text-amber-400">
+                  <div className="p-1 rounded-lg bg-amber-500/20 text-amber-500">
                     <Sparkles className="w-3.5 h-3.5" />
                   </div>
                   <span className="text-xs font-medium">Code ended before completing. Continue generation to finish all files in full.</span>
@@ -902,11 +922,15 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
 
             {/* Error Banner */}
             {message.error && (
-              <div className="mt-3 p-3.5 rounded-2xl bg-rose-950/40 border border-rose-800/60 text-rose-200 text-sm flex items-start gap-3">
-                <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+              <div className={`mt-3 p-3.5 rounded-2xl text-sm flex items-start gap-3 border ${
+                isMoon
+                  ? 'bg-rose-950/40 border-rose-800/60 text-rose-200'
+                  : 'bg-rose-50 border-rose-200 text-rose-800'
+              }`}>
+                <AlertTriangle className={`w-4 h-4 shrink-0 mt-0.5 ${isMoon ? 'text-rose-400' : 'text-rose-500'}`} />
                 <div className="flex-1">
-                  <p className="font-medium text-rose-200">Sapphire Notice</p>
-                  <p className="text-xs text-rose-300 mt-0.5">{message.error}</p>
+                  <p className="font-medium">Sapphire Notice</p>
+                  <p className={`text-xs mt-0.5 ${isMoon ? 'text-rose-300' : 'text-rose-700'}`}>{message.error}</p>
                   {onRegenerate && (
                     <button
                       id={`retry-btn-${message.id}`}
@@ -921,39 +945,39 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
               </div>
             )}
 
-            {/* Minimalist 5-Icon Action Bar */}
+            {/* Action Bar */}
             {!message.isStreaming && !message.error && message.text && !isUser && (
-              <div className="flex items-center gap-1.5 pt-2 text-[#86837c] select-none">
+              <div className={`flex items-center gap-1.5 pt-2 select-none ${textMuted}`}>
                 <button
                   type="button"
                   id={`copy-msg-${message.id}`}
                   onClick={handleCopy}
-                  className="p-1.5 text-[#86837c] hover:text-white transition-colors cursor-pointer rounded-xl hover:bg-[#20201f]"
+                  className={`p-1.5 transition-colors cursor-pointer rounded-xl ${textMuted} hover:${textBright} ${hoverBg}`}
                   title={copied ? 'Copied' : 'Copy'}
                   aria-label="Copy"
                 >
-                  {copied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                  {copied ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
                 </button>
 
                 <button
                   type="button"
                   id={`file-msg-${message.id}`}
                   onClick={handleSaveMessageAsFile}
-                  className={`p-1.5 transition-colors cursor-pointer rounded-xl hover:bg-[#20201f] ${
-                    fileSavedToast ? 'text-emerald-400' : 'text-[#86837c] hover:text-white'
+                  className={`p-1.5 transition-colors cursor-pointer rounded-xl ${hoverBg} ${
+                    fileSavedToast ? 'text-emerald-500' : `${textMuted} hover:${textBright}`
                   }`}
-                  title={fileSavedToast ? 'Saved to Workspace & Downloaded!' : 'Make file from this response & save to workspace'}
+                  title={fileSavedToast ? 'Saved!' : 'Make file from this response'}
                   aria-label="Make File"
                 >
-                  {fileSavedToast ? <Check className="w-4 h-4 text-emerald-400" /> : <FileDown className="w-4 h-4" />}
+                  {fileSavedToast ? <Check className="w-4 h-4 text-emerald-500" /> : <FileDown className="w-4 h-4" />}
                 </button>
 
                 <button
                   type="button"
                   id={`speak-msg-${message.id}`}
                   onClick={handleToggleSpeech}
-                  className={`p-1.5 transition-colors cursor-pointer rounded-xl hover:bg-[#20201f] ${
-                    isSpeakingThis ? 'text-[#d97757]' : 'text-[#86837c] hover:text-white'
+                  className={`p-1.5 transition-colors cursor-pointer rounded-xl ${hoverBg} ${
+                    isSpeakingThis ? 'text-[#d97757]' : `${textMuted} hover:${textBright}`
                   }`}
                   title={isSpeakingThis ? 'Stop voice' : 'Listen with voice'}
                   aria-label="Listen"
@@ -964,8 +988,8 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
                 <button
                   type="button"
                   onClick={() => setFeedback(feedback === 'up' ? null : 'up')}
-                  className={`p-1.5 transition-colors cursor-pointer rounded-xl hover:bg-[#20201f] ${
-                    feedback === 'up' ? 'text-[#d97757]' : 'text-[#86837c] hover:text-white'
+                  className={`p-1.5 transition-colors cursor-pointer rounded-xl ${hoverBg} ${
+                    feedback === 'up' ? 'text-[#d97757]' : `${textMuted} hover:${textBright}`
                   }`}
                   title="Good response"
                   aria-label="Thumbs up"
@@ -976,8 +1000,8 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
                 <button
                   type="button"
                   onClick={() => setFeedback(feedback === 'down' ? null : 'down')}
-                  className={`p-1.5 transition-colors cursor-pointer rounded-xl hover:bg-[#20201f] ${
-                    feedback === 'down' ? 'text-rose-400' : 'text-[#86837c] hover:text-white'
+                  className={`p-1.5 transition-colors cursor-pointer rounded-xl ${hoverBg} ${
+                    feedback === 'down' ? 'text-rose-500' : `${textMuted} hover:${textBright}`
                   }`}
                   title="Bad response"
                   aria-label="Thumbs down"
@@ -990,7 +1014,7 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
                     type="button"
                     id={`regenerate-msg-${message.id}`}
                     onClick={onRegenerate}
-                    className="p-1.5 text-[#86837c] hover:text-white transition-colors cursor-pointer rounded-xl hover:bg-[#20201f]"
+                    className={`p-1.5 transition-colors cursor-pointer rounded-xl ${textMuted} hover:${textBright} ${hoverBg}`}
                     title="Regenerate response"
                     aria-label="Regenerate"
                   >
@@ -999,7 +1023,7 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
                 )}
 
                 {isSpeakingThis && (
-                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#20201f] border border-[#2b2b2a] text-white text-[11px] font-medium animate-fadeIn ml-2">
+                  <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border ${border} ${bgCard} ${textPrimary} text-[11px] font-medium ml-2`}>
                     <span className="flex items-center gap-0.5">
                       <span className="w-1 h-2 bg-[#d97757] rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
                       <span className="w-1 h-3.5 bg-[#d97757] rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
@@ -1017,20 +1041,20 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
       {/* Zoomed Screenshot Modal */}
       {isZoomedImageOpen && message.image && (
         <div
-          className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn"
+          className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4"
           onClick={() => setIsZoomedImageOpen(false)}
         >
           <div
-            className="relative max-w-4xl max-h-[90vh] bg-slate-900 rounded-2xl overflow-hidden shadow-2xl border border-slate-700 flex flex-col"
+            className={`relative max-w-4xl max-h-[90vh] rounded-2xl overflow-hidden shadow-2xl border flex flex-col ${border} ${bgCard}`}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="px-4 py-3 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between">
-              <span className="text-xs font-semibold text-slate-200 truncate">
+            <div className={`px-4 py-3 border-b ${border} ${bgSubtle} flex items-center justify-between`}>
+              <span className={`text-xs font-semibold truncate ${textPrimary}`}>
                 {message.image.name || 'Screenshot Preview'}
               </span>
               <button
                 onClick={() => setIsZoomedImageOpen(false)}
-                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                className={`p-1 rounded-lg transition-colors ${textSub} hover:${textBright} ${hoverBg}`}
               >
                 <X className="w-4 h-4" />
               </button>

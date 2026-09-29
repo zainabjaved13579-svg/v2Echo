@@ -71,8 +71,16 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
   const isMoon = theme === 'moon';
   const processedContent = useMemo(() => preprocessMarkdown(content), [content]);
 
+  // Theme-aware helper classes
+  const textPrimary = isMoon ? 'text-[#ede8e1]' : 'text-[#2a2620]';
+  const textBright = isMoon ? 'text-[#f5f2eb]' : 'text-[#1a1712]';
+  const textSecondary = isMoon ? 'text-[#a19e97]' : 'text-[#6b6459]';
+  const border = isMoon ? 'border-[#2b2b2a]' : 'border-[#e8e2d8]';
+  const bgCard = isMoon ? 'bg-[#20201f]' : 'bg-[#f5f1ea]';
+  const bgSubtle = isMoon ? 'bg-[#1a1a1a]' : 'bg-white';
+
   return (
-    <div className={`prose max-w-none ${isMoon ? 'text-white' : 'text-slate-900'} leading-relaxed text-sm selection:bg-[#d97757]/30`}>
+    <div className={`prose max-w-none ${textPrimary} leading-relaxed text-sm selection:bg-[#d97757]/30`}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkMath]}
         rehypePlugins={[rehypeRaw, rehypeKatex]}
@@ -88,25 +96,29 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
               ['exam', 'paper', 'pattern', 'text', 'txt', 'markdown', 'md'].includes(rawLang) &&
               /(###\s*section|section\s+[a-c]:|paper\s*pattern|question\s*paper|marks\s*:|total\s*marks|attempt\s*any|time\s*allowed)/i.test(codeString);
 
-            // If it is an exam or paper pattern, render as a clean card with white text
+            // If it is an exam or paper pattern, render as a clean card
             if (isExamOrPaperPattern) {
               return (
-                <div className="my-4 p-4 sm:p-6 rounded-2xl bg-[#20201f] border border-[#2b2b2a] shadow-md space-y-3">
-                  <div className="flex items-center gap-2 pb-2.5 border-b border-[#2b2b2a] text-white font-bold text-xs uppercase tracking-wider">
+                <div className={`my-4 p-4 sm:p-6 rounded-2xl ${bgCard} border ${border} shadow-md space-y-3`}>
+                  <div className={`flex items-center gap-2 pb-2.5 border-b ${border} ${textBright} font-bold text-xs uppercase tracking-wider`}>
                     <GraduationCap className="w-4 h-4 text-[#d97757]" />
                     <span>Examination Paper & Answers Document</span>
                   </div>
-                  <div className="prose max-w-none text-white text-sm">
+                  <div className={`prose max-w-none ${textPrimary} text-sm`}>
                     <ReactMarkdown
                       remarkPlugins={[remarkGfm, remarkMath]}
                       rehypePlugins={[rehypeRaw, rehypeKatex]}
                       components={{
                         p({ children }: any) {
-                          return <div className="my-2 last:mb-0 leading-relaxed text-white">{children}</div>;
+                          return <div className={`my-2 last:mb-0 leading-relaxed ${textPrimary}`}>{children}</div>;
                         },
                         mark({ children }) {
                           return (
-                            <mark className="bg-[#d97757]/20 text-[#d97757] font-semibold px-1.5 py-0.5 rounded-lg border-b border-[#d97757]/40 shadow-xs inline-block my-0.5">
+                            <mark className={`font-semibold px-1.5 py-0.5 rounded-lg border-b shadow-xs inline-block my-0.5 ${
+                              isMoon
+                                ? 'bg-[#d97757]/25 text-[#f5d0bd] border-[#d97757]/50'
+                                : 'bg-[#d97757]/15 text-[#8a3f22] border-[#d97757]/40'
+                            }`}>
                               {children}
                             </mark>
                           );
@@ -139,7 +151,11 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
 
             return (
               <code
-                className="px-1.5 py-0.5 mx-0.5 rounded-lg bg-[#20201f] text-[#d97757] font-mono text-[12.5px] border border-[#2b2b2a] font-medium"
+                className={`px-1.5 py-0.5 mx-0.5 rounded-lg font-mono text-[12.5px] border font-medium ${
+                  isMoon
+                    ? 'bg-[#282724] text-[#f0b090] border-[#383633]'
+                    : 'bg-[#f5f1ea] text-[#8a3f22] border-[#e8e2d8]'
+                }`}
                 {...props}
               >
                 {children}
@@ -148,15 +164,19 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
           },
           mark({ children }) {
             return (
-              <mark className="bg-[#d97757]/20 text-[#d97757] font-semibold px-1.5 py-0.5 rounded-lg border-b border-[#d97757]/40 shadow-xs inline-block my-0.5">
+              <mark className={`font-semibold px-1.5 py-0.5 rounded-lg border-b shadow-xs inline-block my-0.5 ${
+                isMoon
+                  ? 'bg-[#d97757]/25 text-[#f5d0bd] border-[#d97757]/50'
+                  : 'bg-[#d97757]/15 text-[#8a3f22] border-[#d97757]/40'
+              }`}>
                 {children}
               </mark>
             );
           },
           table({ children }) {
             return (
-              <div className="my-4 overflow-x-auto rounded-2xl border border-[#2b2b2a] bg-[#20201f] shadow-md">
-                <table className="w-full text-left text-sm text-white divide-y divide-[#2b2b2a]">
+              <div className={`my-4 overflow-x-auto rounded-2xl border ${border} ${bgSubtle} shadow-md`}>
+                <table className={`w-full text-left text-sm ${textPrimary} divide-y ${border}`}>
                   {children}
                 </table>
               </div>
@@ -164,34 +184,36 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
           },
           th({ children }) {
             return (
-              <th className="bg-[#151515] px-4 py-2.5 font-bold text-white text-xs uppercase tracking-wider">
+              <th className={`px-4 py-2.5 font-bold text-xs uppercase tracking-wider ${bgCard} ${textBright}`}>
                 {children}
               </th>
             );
           },
           td({ children }) {
-            return <td className="px-4 py-2.5 border-t border-[#2b2b2a] text-white">{children}</td>;
+            return <td className={`px-4 py-2.5 border-t ${border} ${textPrimary}`}>{children}</td>;
           },
           blockquote({ children }) {
             return (
-              <blockquote className="my-3 bg-[#20201f] px-4 py-2.5 rounded-2xl text-white/90 italic">
+              <blockquote className={`my-3 px-4 py-2.5 rounded-2xl italic border-l-4 border-[#d97757] ${
+                isMoon ? 'bg-[#d97757]/10 text-[#ede8e1]' : 'bg-[#d97757]/8 text-[#3a352e]'
+              }`}>
                 {children}
               </blockquote>
             );
           },
           ul({ children }) {
-            return <ul className="my-2.5 list-disc list-outside pl-5 space-y-1.5 text-white">{children}</ul>;
+            return <ul className={`my-2.5 list-disc list-outside pl-5 space-y-1.5 ${textPrimary}`}>{children}</ul>;
           },
           ol({ children }) {
-            return <ol className="my-2.5 list-decimal list-outside pl-5 space-y-1.5 text-white">{children}</ol>;
+            return <ol className={`my-2.5 list-decimal list-outside pl-5 space-y-1.5 ${textPrimary}`}>{children}</ol>;
           },
           li({ children }) {
-            return <li className="text-white">{children}</li>;
+            return <li className={textPrimary}>{children}</li>;
           },
           h1({ children }) {
             return (
-              <div className="mt-5 mb-2.5">
-                <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+              <div className={`mt-5 mb-2.5 pb-2 border-b ${border}`}>
+                <h1 className={`text-xl sm:text-2xl font-black ${textBright} tracking-tight`}>
                   {children}
                 </h1>
               </div>
@@ -199,33 +221,33 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
           },
           h2({ children }) {
             return (
-              <h2 className="text-lg sm:text-xl font-extrabold text-white mt-4 mb-2 tracking-tight">
+              <h2 className={`text-lg sm:text-xl font-extrabold ${textBright} mt-4 mb-2 tracking-tight`}>
                 {children}
               </h2>
             );
           },
           h3({ children }) {
             return (
-              <h3 className="text-base sm:text-lg font-bold text-white mt-3.5 mb-1.5">
+              <h3 className={`text-base sm:text-lg font-bold ${textBright} mt-3.5 mb-1.5`}>
                 {children}
               </h3>
             );
           },
           h4({ children }) {
             return (
-              <h4 className="text-sm sm:text-base font-bold text-white mt-3 mb-1">
+              <h4 className={`text-sm sm:text-base font-bold ${textBright} mt-3 mb-1`}>
                 {children}
               </h4>
             );
           },
           p({ children }: any) {
-            return <div className="my-2.5 last:mb-0 leading-relaxed text-white">{children}</div>;
+            return <div className={`my-2.5 last:mb-0 leading-relaxed ${textPrimary}`}>{children}</div>;
           },
           img({ src, alt }: any) {
             return <DiagramImageCard src={src} alt={alt} />;
           },
           strong({ children }) {
-            return <strong className="font-bold text-white">{children}</strong>;
+            return <strong className={`font-bold ${textBright}`}>{children}</strong>;
           },
           a({ href, children }) {
             return (
@@ -233,7 +255,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
                 href={href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-[#d97757] hover:underline underline-offset-4 decoration-[#d97757]/60 transition-colors font-semibold"
+                className="text-[#d97757] hover:text-[#c86b4c] hover:underline underline-offset-4 decoration-[#d97757]/60 transition-colors font-semibold"
               >
                 {children}
               </a>
@@ -259,7 +281,6 @@ function isRawAsciiDiagram(code: string): boolean {
   for (const line of lines) {
     const trimmed = line.trim();
     if (!trimmed) continue;
-    // Lines that look like schematic drawings: e.g. \  |  /, / \ , |  |, +---+
     if (
       /^[\\/\s|_.+\-=#*~^<>():;@]+$/.test(trimmed) ||
       /[\\/|]{2,}/.test(trimmed) ||
@@ -270,7 +291,6 @@ function isRawAsciiDiagram(code: string): boolean {
     }
   }
 
-  // Ensure actual programming code (JS, TS, HTML, CSS, Python, C++, etc.) is not flagged
   const isActualProgram = /\b(const|let|var|function|import|export|class|def|return|interface|type|public|private|void|if\s*\(|for\s*\(|<[a-zA-Z0-9]+>)\b/.test(code);
   return !isActualProgram && (graphicLineCount >= 4 || (graphicLineCount >= 3 && lines.length <= 8));
 }
@@ -279,6 +299,8 @@ function isRawAsciiDiagram(code: string): boolean {
  * Diagram and Educational Image Card with Zoom, Download & High-Res View
  */
 const DiagramImageCard: React.FC<{ src?: string; alt?: string }> = ({ src, alt }) => {
+  const { theme } = useAppTheme();
+  const isMoon = theme === 'moon';
   const [currentSrc, setCurrentSrc] = useState(src || '');
   const [isZoomed, setIsZoomed] = useState(false);
   const [hasError, setHasError] = useState(false);
@@ -314,7 +336,6 @@ const DiagramImageCard: React.FC<{ src?: string; alt?: string }> = ({ src, alt }
   };
 
   const handleImageError = () => {
-    // If direct image URL failed (e.g. CORS/referrer limit), try our backend proxy
     if (currentSrc && !currentSrc.startsWith('/api/diagram/proxy') && currentSrc.startsWith('http')) {
       setCurrentSrc(`/api/diagram/proxy?url=${encodeURIComponent(currentSrc)}`);
     } else {
@@ -322,16 +343,22 @@ const DiagramImageCard: React.FC<{ src?: string; alt?: string }> = ({ src, alt }
     }
   };
 
+  const bgCard = isMoon ? 'bg-[#20201f]' : 'bg-white';
+  const bgSubtle = isMoon ? 'bg-[#151515]' : 'bg-[#faf7f2]';
+  const border = isMoon ? 'border-[#2b2b2a]' : 'border-[#e8e2d8]';
+  const textBright = isMoon ? 'text-white' : 'text-[#2a2620]';
+  const textSecondary = isMoon ? 'text-[#a19e97]' : 'text-[#6b6459]';
+
   return (
-    <div className="my-4 rounded-2xl overflow-hidden border border-slate-200 bg-white shadow-xs transition-all hover:shadow-md">
+    <div className={`my-4 rounded-2xl overflow-hidden border ${border} ${bgCard} shadow-xs transition-all hover:shadow-md`}>
       {/* Diagram Top Bar */}
-      <div className="px-3.5 py-2 bg-slate-50/90 border-b border-slate-100 flex items-center justify-between gap-2">
+      <div className={`px-3.5 py-2 ${bgSubtle} border-b ${border} flex items-center justify-between gap-2`}>
         <div className="flex items-center gap-2 min-w-0">
-          <span className="w-2 h-2 rounded-full bg-indigo-600 shrink-0" />
-          <span className="text-xs font-bold text-slate-800 truncate">
+          <span className="w-2 h-2 rounded-full bg-[#d97757] shrink-0" />
+          <span className={`text-xs font-bold ${textBright} truncate`}>
             {alt || 'Educational Working Diagram'}
           </span>
-          <span className="px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 text-[10px] font-semibold border border-indigo-200 shrink-0">
+          <span className={`px-1.5 py-0.5 rounded ${isMoon ? 'bg-[#d97757]/20 text-[#d97757]' : 'bg-[#d97757]/15 text-[#8a3f22]'} text-[10px] font-semibold border ${border} shrink-0`}>
             Google Web Visual
           </span>
         </div>
@@ -339,15 +366,15 @@ const DiagramImageCard: React.FC<{ src?: string; alt?: string }> = ({ src, alt }
           <button
             type="button"
             onClick={handleCopyLink}
-            className="p-1.5 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-slate-100 transition-colors"
+            className={`p-1.5 rounded-lg transition-colors ${isMoon ? 'text-[#a19e97] hover:text-white hover:bg-[#282724]' : 'text-[#6b6459] hover:text-[#2a2620] hover:bg-[#f5f1ea]'}`}
             title="Copy visual link"
           >
-            {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+            {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
           </button>
           <button
             type="button"
             onClick={handleDownload}
-            className="p-1.5 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-slate-100 transition-colors"
+            className={`p-1.5 rounded-lg transition-colors ${isMoon ? 'text-[#a19e97] hover:text-white hover:bg-[#282724]' : 'text-[#6b6459] hover:text-[#2a2620] hover:bg-[#f5f1ea]'}`}
             title="Download diagram image"
           >
             <Download className="w-3.5 h-3.5" />
@@ -355,7 +382,7 @@ const DiagramImageCard: React.FC<{ src?: string; alt?: string }> = ({ src, alt }
           <button
             type="button"
             onClick={() => setIsZoomed(true)}
-            className="p-1.5 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-slate-100 transition-colors"
+            className={`p-1.5 rounded-lg transition-colors ${isMoon ? 'text-[#a19e97] hover:text-white hover:bg-[#282724]' : 'text-[#6b6459] hover:text-[#2a2620] hover:bg-[#f5f1ea]'}`}
             title="Zoom Full Screen"
           >
             <Eye className="w-3.5 h-3.5" />
@@ -365,7 +392,7 @@ const DiagramImageCard: React.FC<{ src?: string; alt?: string }> = ({ src, alt }
 
       {/* Diagram Picture Canvas */}
       <div
-        className="relative bg-slate-950/95 flex items-center justify-center p-2 sm:p-4 cursor-pointer group"
+        className={`relative flex items-center justify-center p-2 sm:p-4 cursor-pointer group ${isMoon ? 'bg-[#0d0d0f]' : 'bg-[#f5f1ea]'}`}
         onClick={() => setIsZoomed(true)}
       >
         <img
@@ -383,9 +410,9 @@ const DiagramImageCard: React.FC<{ src?: string; alt?: string }> = ({ src, alt }
       </div>
 
       {/* Caption description */}
-      <div className="px-3.5 py-2 bg-slate-50/70 border-t border-slate-100 text-[11px] text-slate-500 flex items-center justify-between gap-2">
+      <div className={`px-3.5 py-2 ${bgSubtle} border-t ${border} text-[11px] ${textSecondary} flex items-center justify-between gap-2`}>
         <span className="truncate">{alt || 'Working architecture and mechanism diagram'}</span>
-        <span className="text-emerald-700 font-semibold shrink-0 flex items-center gap-1">
+        <span className="text-emerald-500 font-semibold shrink-0 flex items-center gap-1">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
           Verified Educational Diagram
         </span>
@@ -417,7 +444,7 @@ const DiagramImageCard: React.FC<{ src?: string; alt?: string }> = ({ src, alt }
             <div className="mt-3 flex items-center gap-3">
               <button
                 onClick={handleDownload}
-                className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold flex items-center gap-1.5 shadow-lg cursor-pointer"
+                className="px-4 py-2 rounded-xl bg-[#d97757] hover:bg-[#c86b4c] text-white text-xs font-semibold flex items-center gap-1.5 shadow-lg cursor-pointer"
               >
                 <Download className="w-3.5 h-3.5" />
                 <span>Download High-Resolution</span>
@@ -462,10 +489,8 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ language, meta, value, onPreview,
   const rawLang = (language || 'text').toLowerCase();
   const ext = getExtensionFromLanguage(rawLang);
 
-  // Detect standard official filename (e.g. index.html, style.css, script.js, main.py, package.json)
   const filename = resolveOfficialCodeFileName(rawLang, currentCode, meta);
 
-  // Ensure clean filename
   const cleanName = filename.replace(/[^a-zA-Z0-9_\-\.]/g, '') || `file.${ext}`;
   const fileExtension = cleanName.split('.').pop() || ext;
   const folder = ['html', 'css', 'javascript', 'typescript', 'tsx', 'jsx'].includes(rawLang)
@@ -475,7 +500,6 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ language, meta, value, onPreview,
     : '/workspace';
   const fullPath = `${folder}/${cleanName}`;
 
-  // Only real web code should show a live preview button, and NEVER exam/paper patterns!
   const isExamContent =
     /(###\s*section|section\s+[a-c]:|paper\s*pattern|question\s*paper|marks\s*:|total\s*marks|attempt\s*any|time\s*allowed)/i.test(currentCode);
   const isPreviewable =
@@ -589,9 +613,8 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ language, meta, value, onPreview,
           )}
         </div>
 
-        {/* Action Controls: Strictly 3 options: Copy, Download, and Preview */}
+        {/* Action Controls */}
         <div className="flex items-center gap-1.5 flex-wrap">
-          {/* 1. Copy Button */}
           <button
             type="button"
             onClick={handleCopy}
@@ -611,7 +634,6 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ language, meta, value, onPreview,
             )}
           </button>
 
-          {/* 2. Download Button */}
           <button
             type="button"
             onClick={() => {
@@ -624,7 +646,6 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ language, meta, value, onPreview,
             <span>Download</span>
           </button>
 
-          {/* 3. Preview Button */}
           <button
             type="button"
             onClick={handlePreview}
@@ -640,76 +661,6 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ language, meta, value, onPreview,
           </button>
         </div>
       </div>
-
-      {/* Interactive AI Code Remake Drawer */}
-      {showRemakeDrawer && (
-        <div className="p-3 bg-slate-900/90 border-b border-purple-500/30 space-y-2 text-xs font-sans animate-fadeIn">
-          <div className="flex items-center justify-between">
-            <span className="font-bold text-purple-300 flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-purple-400" />
-              <span>AI Code Remake Engine</span>
-            </span>
-            <span className="text-[10px] font-mono text-slate-400">
-              Refactor • Modernize • Mobile/PC Responsive
-            </span>
-          </div>
-
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={remakeInstruction}
-              onChange={(e) => setRemakeInstruction(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  handleRemakeCode();
-                }
-              }}
-              placeholder="What to remake or improve in this code..."
-              className="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-200 placeholder-slate-500 text-xs focus:outline-none focus:border-purple-500"
-            />
-            <button
-              type="button"
-              onClick={() => handleRemakeCode()}
-              disabled={isRemaking || !remakeInstruction.trim()}
-              className="px-3.5 py-1.5 bg-purple-600 hover:bg-purple-500 disabled:opacity-40 text-white rounded-lg font-semibold flex items-center gap-1.5 transition-all cursor-pointer shrink-0"
-            >
-              {isRemaking ? (
-                <>
-                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                  <span>Remaking...</span>
-                </>
-              ) : (
-                <>
-                  <Wand2 className="w-3.5 h-3.5" />
-                  <span>Remake Code</span>
-                </>
-              )}
-            </button>
-          </div>
-
-          {/* Quick preset chips */}
-          <div className="flex flex-wrap gap-1.5 pt-0.5">
-            {[
-              'Make fully responsive for mobile & PC',
-              'Modernize code, clean layout & fix bugs',
-              'Add dark mode & smooth CSS transitions',
-              'Add keyboard events & touch handlers'
-            ].map((preset, idx) => (
-              <button
-                key={idx}
-                type="button"
-                onClick={() => {
-                  setRemakeInstruction(preset);
-                  handleRemakeCode(preset);
-                }}
-                className="text-[11px] px-2 py-0.5 rounded bg-slate-800 hover:bg-purple-900/60 text-slate-300 hover:text-purple-200 border border-slate-700/60 transition-all font-sans cursor-pointer"
-              >
-                + {preset}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Code Content */}
       {(() => {
