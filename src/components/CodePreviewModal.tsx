@@ -264,7 +264,7 @@ export const CodePreviewModal: React.FC<CodePreviewModalProps> = ({
             <img
               src={SAPPHIRE_LOGO_URL}
               alt="Sapphire Studio"
-              className="w-8 h-8 rounded-xl object-contain p-0.5 border border-[#2b2b2a] bg-[#1a1a1a] shadow-md shadow-[#d97757]/20 shrink-0"
+              className="w-8 h-8 rounded-xl object-contain p-0.5 border border-white/20 bg-white shadow-md shadow-[#d97757]/20 shrink-0"
             />
 
             <div className="min-w-0">

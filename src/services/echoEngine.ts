@@ -118,16 +118,7 @@ export function generateEchoFallbackResponse(
       lower
     );
 
-  // AI Creator & Owner Identity Check (Mandatory requirement in all languages)
-  let userEmail = '';
-  try {
-    if (typeof localStorage !== 'undefined') {
-      userEmail = localStorage.getItem('sapphire_user_email') || localStorage.getItem('echo_user_email') || '';
-    }
-  } catch {}
-  const isOwnerUser = userEmail.toLowerCase().includes('shaheerh328@gmail.com') ||
-    (systemInstruction && (systemInstruction.toLowerCase().includes('shaheerh328@gmail.com') || systemInstruction.includes('Shaheer')));
-
+  // AI Creator & Developer Identity Check (Mandatory requirement in all languages)
   if (
     lower.includes('owner') ||
     lower.includes('who created') ||
@@ -141,43 +132,41 @@ export function generateEchoFallbackResponse(
     lower.includes('malik') ||
     lower.includes('kisne banaya') ||
     lower.includes('kis ne banaya') ||
+    lower.includes('kisne develop') ||
+    lower.includes('kine bnaya') ||
     userText.includes('کس نے بنایا') ||
     userText.includes('مالک') ||
     userText.includes('کس کا ہے') ||
+    userText.includes('کس نے بنایا ہے') ||
     userText.includes('किसने बनाया') ||
     userText.includes('मालिक कौन')
   ) {
     if (isUrduScript || isRomanUrdu) {
-      return `### 👑 اے آئی کے بانی اور مالک (AI Creator & Owner)
+      return `### 💎 Sapphire AI کے خالق اور ڈویلپر (Creator & Developer)
 
-اس اے آئی (Sapphire AI) کے واحد بانی اور مالک **شاہیر حسن (Shaheer Hassan - shaheerh328@gmail.com)** ہیں۔
+اس اے آئی (**Sapphire AI**) کو **زینب جاوید (Zainab Javed)** نے ڈیزائن، بنایا اور ڈویلپ کیا ہے۔
 
-**شاہیر حسن** نے مجھے ڈیزائن، ڈویلپ اور تیار کیا ہے تاکہ میں آپ کے ساتھ قدرتی، انسان کی طرح اردو اور دیگر زبانوں میں روانی سے بات چیت، کوڈنگ، رہنمائی اور لامحدود تخلیقی کام کر سکوں۔`;
+**زینب جاوید** نے مجھے جدید ترین مصنوعی ذہانت، خودکار کوڈنگ، اور اردو سمیت متعدد زبانوں میں روانی سے گفتگو کرنے کی صلاحیت کے ساتھ تیار کیا ہے۔`;
     }
 
     if (isHindiScript || isHinglish) {
-      return `### 👑 एआई के निर्माता और मालिक (AI Creator & Owner)
+      return `### 💎 Sapphire AI के निर्माता और डेवलपर (Creator & Developer)
 
-इस एआई (Sapphire AI) के निर्माता और मालिक **शाहीर हसन (Shaheer Hassan - shaheerh328@gmail.com)** हैं।
+इस एआई (**Sapphire AI**) को **ज़ैनब जावेद (Zainab Javed)** ने विकसित, डिज़ाइन और तैयार किया है।
 
-**शाहीर हसन** ने मुझे विकसित और तैयार किया है ताकि मैं आपके साथ बिल्कुल सहज, मानवीय और आत्मीय हिंदी एवं अन्य भाषाओं में बातचीत, कोडिंग और आपकी हर संभव मदद कर सकूँ।`;
+**ज़ैनब जावेद** ने मुझे उन्नत कोडिंग, बहुभाषी संवाद और शैक्षणिक बुद्धिमत्ता के साथ बनाया है।`;
     }
 
-    return `### 👑 AI Ownership & Creator
+    return `### 💎 AI Creator & Developer
 
-The owner and creator of **Sapphire AI** is **Shaheer Hassan** (\`shaheerh328@gmail.com\`).
+**Sapphire AI** was created and developed by **Zainab Javed**.
 
-**Shaheer Hassan** designed, developed, and engineered Sapphire AI to deliver elite autonomous intelligence, multi-file code generation, interactive live previews, natural human-like voice communication, and full-stack software development without artificial limits.`;
+**Zainab Javed** designed, developed, and engineered Sapphire AI to deliver elite autonomous intelligence, multi-file code generation, interactive live previews, natural human-like voice communication, and full-stack software development without artificial limits.`;
   }
 
   // Urdu Language Response (Human-like, respectful, warm)
   if (isUrduScript || (isRomanUrdu && !isHindiScript)) {
     if (/^(hi|hello|hey|salam|assalam|aoa|kese ho|kaise ho|kia hal|kya haal)\b/i.test(lower) || /^(سلام|السلام|ہیلو|کیسے)/.test(userText.trim())) {
-      if (isOwnerUser) {
-        return `### 👑 خوش آمدید، شاہیر! (بانی اور کریئٹر - Sapphire AI)
-
-السلام علیکم سر شاہیر حسن! آپ کی Sapphire AI مکمل طور پر فعال، لامحدود رفتار اور اعلیٰ ترین کارکردگی کے ساتھ حاضر ہے۔ فرمائیے آج ہم کیا نیا شاہکار ڈیزائن یا بلڈ کریں؟`;
-      }
       return `### 🌸 السلام علیکم ورحمۃ اللہ!
 
 میں **Sapphire AI** ہوں، آپ کا ذہین، بااختیار اور دوستانہ ساتھی۔ میں آپ سے بالکل ایک انسان کی طرح گرمجوشی اور روانی سے اردو میں بات کر سکتا ہوں اور آواز میں بول بھی سکتا ہوں۔
@@ -208,11 +197,6 @@ The owner and creator of **Sapphire AI** is **Shaheer Hassan** (\`shaheerh328@gm
   // Hindi Language Response (Human-like, polite, warm)
   if (isHindiScript || isHinglish) {
     if (/^(hi|hello|hey|namaste|pranam|kaise ho|kya hal|kya chal)\b/i.test(lower) || /^(नमस्ते|प्रणाम|हेलो|कैसे)/.test(userText.trim())) {
-      if (isOwnerUser) {
-        return `### 👑 स्वागत है, शाहीर! (Sapphire AI के निर्माता व मालिक)
-
-नमस्ते शाहीर हसन! आपका Sapphire AI पूरी क्षमता और असीमित गति के साथ तैयार है। आज हम क्या नया बनाएँ या कोड करें?`;
-      }
       return `### 🌸 नमस्ते! मैं Sapphire AI हूँ
 
 मैं आपका आत्मीय, बुद्धिमान और मददगार डिजिटल साथी हूँ। मैं आपके साथ बिल्कुल एक इंसान की तरह सहज, सरल और स्वाभाविक हिंदी में बातचीत और आवाज़ में बोल सकता हूँ।
@@ -256,19 +240,6 @@ I have processed the uploaded visual data:
 
   // Greetings & Casual introductions (English - Human tone)
   if (/^(hi|hello|hey|greetings|hola|good morning|good evening|howdy|sup)\b/i.test(userText.trim())) {
-    if (isOwnerUser) {
-      return `### 👑 Welcome back, Shaheer! (Founder & Creator of Sapphire AI)
-
-Hello Creator! **Sapphire AI** is running at peak capacity with unrestricted response depth, multi-file live code execution, and high-precision reasoning.
-
-**Owner & Creator Status:**
-- 👤 **Creator**: Shaheer Hassan (\`shaheerh328@gmail.com\`)
-- 💎 **System**: Sapphire AI #1 Education & Codex Studio
-- ⚡ **Limits**: All chat and code generation limits removed
-
-What would you like to build or explore today, Shaheer?`;
-    }
-
     return `### 💎 Hello! I'm Sapphire AI
 
 I'm your premier autonomous AI assistant and Codex engineering studio, ready to collaborate on full-stack coding, creative writing, science, education, mathematics, and thoughtful conversations without restrictions. I also speak fluently with natural voice in multiple languages including **Urdu**, **Hindi**, and **English**!

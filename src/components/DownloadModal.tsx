@@ -42,7 +42,7 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose })
 
   if (!isOpen) return null;
 
-  const SUPPORT_EMAIL = 'shaheerh328@gmail.com';
+  const SUPPORT_EMAIL = 'support@sapphireai.com';
 
   const handleInstallPwa = async (platformName?: 'PC' | 'Mobile') => {
     if (isPwaInstalled()) {
@@ -121,7 +121,7 @@ export const DownloadModal: React.FC<DownloadModalProps> = ({ isOpen, onClose })
               <img
                 src={SAPPHIRE_LOGO_URL}
                 alt={SAPPHIRE_APP_NAME}
-                className="w-12 h-12 rounded-2xl object-contain bg-[#141413] border border-[#383633] p-1 ring-1 ring-[#d97757]/30 shadow-md"
+                className="w-12 h-12 rounded-2xl object-contain bg-white border border-slate-200 p-1 ring-1 ring-[#d97757]/30 shadow-md"
               />
               <div className="text-left">
                 <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#f5f2eb] flex items-center gap-2">

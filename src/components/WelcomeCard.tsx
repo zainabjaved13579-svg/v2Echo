@@ -24,7 +24,7 @@ export const WelcomeCard: React.FC<WelcomeCardProps> = ({
 
       <div className="flex items-start justify-between relative z-10">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-2xl bg-black border border-slate-800 p-2 shadow-md flex items-center justify-center">
+          <div className="w-12 h-12 rounded-2xl bg-white border border-slate-200 p-2 shadow-md flex items-center justify-center">
             <img
               src={SAPPHIRE_LOGO_URL}
               alt={SAPPHIRE_APP_NAME}

@@ -103,7 +103,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
   };
 
   const { theme } = useAppTheme();
-  const userName = userProfile?.name || 'Shaheer';
+  const userName = userProfile?.name || 'Guest';
   const initial = userName.charAt(0).toLowerCase();
 
   const isMoon = theme === 'moon';
@@ -121,9 +121,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
           <img
             src={SAPPHIRE_LOGO_URL}
             alt="Sapphire AI"
-            className={`w-8 h-8 rounded-xl object-contain p-1 border ring-1 ring-[#d97757]/30 shadow-sm ${
-              isMoon ? 'bg-[#1a1a1a] border-[#2a2a2a]' : 'bg-white border-slate-200'
-            }`}
+            className="w-8 h-8 rounded-xl object-contain p-1 border border-white/20 bg-white ring-1 ring-[#d97757]/30 shadow-sm"
           />
           <div>
             <div className="flex items-center gap-1.5">
@@ -169,36 +167,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
           <span>New</span>
         </button>
 
-        {/* 2. Image Studio */}
-        {onOpenImageGen && (
-          <button
-            id="sidebar-image-btn"
-            onClick={() => {
-              onOpenImageGen();
-              if (window.innerWidth < 1024) onClose();
-            }}
-            className={`w-full py-2.5 px-3.5 rounded-2xl text-xs font-medium flex items-center justify-between transition-all cursor-pointer ${
-              activeNavTab === 'image'
-                ? isMoon
-                  ? 'bg-[#222222] text-[#ede8e1] font-semibold shadow-xs'
-                  : 'bg-slate-200 text-slate-900 font-semibold shadow-xs'
-                : isMoon
-                ? 'text-[#a19e97] hover:bg-[#1a1a1a] hover:text-[#ede8e1]'
-                : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-            }`}
-            title="Create and edit AI images"
-          >
-            <div className="flex items-center gap-2.5">
-              <ImageIcon className="w-4 h-4 text-[#d97757]" />
-              <span>Image Studio</span>
-            </div>
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#d97757]/15 text-[#d97757] font-semibold">
-              AI
-            </span>
-          </button>
-        )}
-
-        {/* 3. CodeX */}
+        {/* 2. CodeX */}
         <button
           id="sidebar-codex-btn"
           onClick={() => {
@@ -421,48 +390,37 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
       </div>
 
       {/* User Profile Pill */}
-      {(() => {
-        const isOwnerUser =
-          (userProfile?.email && userProfile.email.toLowerCase().includes('shaheerh328@gmail.com')) ||
-          (userProfile?.name && userProfile.name.toLowerCase().includes('shaheer'));
-
-        return (
-          <div className={`p-3.5 border-t flex items-center justify-between gap-2 shrink-0 ${
-            isMoon ? 'border-[#222222]' : 'border-[#e2e8f0]'
+      <div className={`p-3.5 border-t flex items-center justify-between gap-2 shrink-0 ${
+        isMoon ? 'border-[#222222]' : 'border-[#e2e8f0]'
+      }`}>
+        <button
+          type="button"
+          onClick={() => {
+            if (onOpenProfile) onOpenProfile();
+            if (window.innerWidth < 1024) onClose();
+          }}
+          className="flex items-center gap-2.5 min-w-0 text-left hover:opacity-85 transition-opacity cursor-pointer flex-1"
+        >
+          <div className={`w-8 h-8 rounded-2xl flex items-center justify-center text-xs font-bold shrink-0 overflow-hidden border ${
+            isMoon ? 'bg-[#1a1a1a] border-[#2a2a2a] text-[#ede8e1]' : 'bg-white border-slate-200 text-slate-800'
           }`}>
-            <button
-              type="button"
-              onClick={() => {
-                if (onOpenProfile) onOpenProfile();
-                if (window.innerWidth < 1024) onClose();
-              }}
-              className="flex items-center gap-2.5 min-w-0 text-left hover:opacity-85 transition-opacity cursor-pointer flex-1"
-            >
-              <div className={`w-8 h-8 rounded-2xl flex items-center justify-center text-xs font-bold shrink-0 overflow-hidden border ${
-                isMoon ? 'bg-[#1a1a1a] border-[#2a2a2a] text-[#ede8e1]' : 'bg-white border-slate-200 text-slate-800'
-              }`}>
-                {userProfile?.avatar ? (
-                  <img
-                    src={userProfile.avatar}
-                    alt={userName}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  initial.toUpperCase()
-                )}
-              </div>
-              <div className="min-w-0 flex items-center gap-1.5 text-xs truncate">
-                <span className={`truncate font-semibold ${isMoon ? 'text-[#ede8e1]' : 'text-slate-800'}`}>
-                  {userName}
-                </span>
-                {isOwnerUser && (
-                  <span className="text-amber-400 text-xs shrink-0" title="Creator & Founder (Shaheer Hassan)">
-                    👑
-                  </span>
-                )}
-                <ChevronDown className="w-3.5 h-3.5 text-[#86837c] shrink-0" />
-              </div>
-            </button>
+            {userProfile?.avatar ? (
+              <img
+                src={userProfile.avatar}
+                alt={userName}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              initial.toUpperCase()
+            )}
+          </div>
+          <div className="min-w-0 flex items-center gap-1.5 text-xs truncate">
+            <span className={`truncate font-semibold ${isMoon ? 'text-[#ede8e1]' : 'text-slate-800'}`}>
+              {userName}
+            </span>
+            <ChevronDown className="w-3.5 h-3.5 text-[#86837c] shrink-0" />
+          </div>
+        </button>
 
             {onOpenGetApp && (
               <button
@@ -476,9 +434,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
                 <Smartphone className="w-4 h-4 text-[#d97757]" />
               </button>
             )}
-          </div>
-        );
-      })()}
+      </div>
     </div>
   );
 

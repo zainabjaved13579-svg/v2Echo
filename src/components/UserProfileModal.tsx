@@ -80,11 +80,6 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
 
   if (!isOpen) return null;
 
-  // Check if owner
-  const isOwner =
-    (email && email.toLowerCase().includes('shaheerh328@gmail.com')) ||
-    (name && name.toLowerCase().includes('shaheer') && email.toLowerCase().includes('shaheer'));
-
   const handleCustomUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     setUploadError(null);
     const file = e.target.files?.[0];
@@ -245,23 +240,6 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
 
         {/* Content Body */}
         <form onSubmit={handleSave} className="p-5 overflow-y-auto space-y-5">
-          {/* Owner Recognition Banner if Shaheer */}
-          {isOwner && (
-            <div className="p-3.5 rounded-2xl bg-gradient-to-r from-amber-500/20 via-blue-500/15 to-purple-500/20 border border-amber-500/40 text-amber-200 flex items-center gap-3 shadow-md animate-fadeIn">
-              <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 text-slate-950 flex items-center justify-center font-bold text-lg shadow-lg shrink-0">
-                <Crown className="w-5 h-5 text-slate-950 fill-slate-950" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <span className="font-extrabold text-sm text-white">Founder & Owner of Sapphire AI</span>
-                  <span className="px-2 py-0.5 rounded-full bg-amber-400/20 border border-amber-400/40 text-amber-300 text-[10px] font-bold">
-                    Official Creator
-                  </span>
-                </div>
-                <p className="text-xs text-amber-100/90 truncate">Shaheer Hassan • shaheerh328@gmail.com</p>
-              </div>
-            </div>
-          )}
 
           {/* Active Preview & Avatar */}
           <div className="flex flex-col items-center justify-center py-1">
@@ -302,7 +280,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. Shaheer, Alex, Sam..."
+                placeholder="e.g. Alex, Sam, Taylor..."
                 required
                 className={`w-full px-3.5 py-2.5 rounded-xl border text-sm font-medium focus:outline-none focus:border-[#d97757] ${
                   isLight ? 'bg-slate-50 border-slate-200 text-slate-900' : 'bg-[#191817] border-[#33312e] text-[#ede8e1]'
@@ -319,7 +297,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="shaheerh328@gmail.com"
+                placeholder="user@gmail.com"
                 className={`w-full px-3.5 py-2.5 rounded-xl border text-sm font-medium focus:outline-none focus:border-[#d97757] ${
                   isLight ? 'bg-slate-50 border-slate-200 text-slate-900' : 'bg-[#191817] border-[#33312e] text-[#ede8e1]'
                 }`}
@@ -513,7 +491,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                 <div className="space-y-2">
                   <input
                     type="text"
-                    placeholder="Account Name (e.g. Shaheer Hassan)"
+                    placeholder="Account Name"
                     value={newAccountName}
                     onChange={(e) => setNewAccountName(e.target.value)}
                     className={`w-full px-3 py-1.5 rounded-lg border text-xs ${
@@ -522,7 +500,7 @@ export const UserProfileModal: React.FC<UserProfileModalProps> = ({
                   />
                   <input
                     type="email"
-                    placeholder="Account Email (e.g. shaheerh328@gmail.com)"
+                    placeholder="Account Email (e.g. user@gmail.com)"
                     value={newAccountEmail}
                     onChange={(e) => setNewAccountEmail(e.target.value)}
                     className={`w-full px-3 py-1.5 rounded-lg border text-xs ${

@@ -54,7 +54,7 @@ export class ErrorBoundary extends Component<Props, State> {
       return (
         <div className="min-h-screen w-full flex flex-col items-center justify-center bg-[#151515] text-white p-6 font-['Plus_Jakarta_Sans',sans-serif] select-none">
           <div className="w-full max-w-md bg-[#20201f] border border-[#2b2b2a] rounded-3xl p-6 sm:p-8 shadow-2xl text-center space-y-6">
-            <div className="w-16 h-16 rounded-2xl bg-[#111111] border border-[#2b2b2a] p-2 mx-auto flex items-center justify-center shadow-lg">
+            <div className="w-16 h-16 rounded-2xl bg-white border border-slate-200 p-2 mx-auto flex items-center justify-center shadow-lg">
               <img
                 src={SAPPHIRE_LOGO_URL}
                 alt="Sapphire"

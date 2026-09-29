@@ -120,25 +120,30 @@ export default function App() {
     }
   });
 
-  // Guest Mode State (no cloud save, instant access, history stays strictly in guest mode)
-  const [isGuestMode, setIsGuestMode] = useState<boolean>(() => {
-    return localStorage.getItem('sapphire_guest_mode') === 'true';
-  });
+  // Guest Mode State: 0 things saved in guest mode. When refreshed, returns to login panel immediately.
+  const [isGuestMode, setIsGuestMode] = useState<boolean>(false);
 
-  // Stored active user (Google or verified Gmail)
+  useEffect(() => {
+    try {
+      localStorage.removeItem('sapphire_guest_mode');
+      localStorage.removeItem('sapphire_guest_sessions');
+    } catch {}
+  }, []);
+
+  // Stored active user (Google authentication)
   const [authUser, setAuthUser] = useState<User | any>(() => {
     return getStoredActiveUser();
   });
   const [authLoading, setAuthLoading] = useState(true);
 
-  // Load sessions strictly based on mode (Guest sessions vs Signed-in sessions)
+  // Load sessions strictly based on mode (Only authenticated users have persisted sessions; guests get ephemeral session)
   const [sessions, setSessions] = useState<ChatSession[]>(() => {
     const storedUser = getStoredActiveUser();
-    const guest = localStorage.getItem('sapphire_guest_mode') === 'true';
-    const key = guest || !storedUser
-      ? 'sapphire_guest_sessions'
-      : `sapphire_user_sessions_${storedUser.uid || storedUser.email}`;
-    return loadSessionsForStorage(key, DEFAULT_SETTINGS);
+    if (storedUser) {
+      const key = `sapphire_user_sessions_${storedUser.uid || storedUser.email}`;
+      return loadSessionsForStorage(key, DEFAULT_SETTINGS);
+    }
+    return [createNewSession(DEFAULT_SETTINGS)];
   });
 
   // Current session ID
@@ -150,7 +155,9 @@ export default function App() {
 
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(() =>
+    typeof window !== 'undefined' ? window.innerWidth >= 1024 : false
+  );
   const [isPersonaModalOpen, setIsPersonaModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isLanguageModalOpen, setIsLanguageModalOpen] = useState(false);
@@ -278,11 +285,13 @@ export default function App() {
     (sessions && sessions[0]) ||
     createNewSession(settings);
 
-  // Save sessions to localStorage strictly isolated by mode (Guest history stays strictly in guest mode)
+  // Save sessions to localStorage strictly for authenticated Google users (in Guest Mode: 0 things saved!)
   useEffect(() => {
-    const key = isGuestMode || !authUser
-      ? 'sapphire_guest_sessions'
-      : `sapphire_user_sessions_${authUser.uid || authUser.email}`;
+    if (isGuestMode || !authUser) {
+      // In guest mode: NOTHING is saved to storage. 0 things saved!
+      return;
+    }
+    const key = `sapphire_user_sessions_${authUser.uid || authUser.email}`;
     try {
       localStorage.setItem(key, JSON.stringify(sessions));
     } catch (e) {
@@ -290,21 +299,23 @@ export default function App() {
     }
   }, [sessions, isGuestMode, authUser]);
 
-  // Save settings to localStorage
+  // Save settings to localStorage (only for authenticated users)
   useEffect(() => {
+    if (isGuestMode || !authUser) return;
     try {
       localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify(settings));
     } catch (e) {
       console.error('Failed to save settings:', e);
     }
-  }, [settings]);
+  }, [settings, isGuestMode, authUser]);
 
-  // Save active session id
+  // Save active session id (only for authenticated users)
   useEffect(() => {
+    if (isGuestMode || !authUser) return;
     if (currentSessionId) {
       localStorage.setItem(STORAGE_KEY_CURRENT, currentSessionId);
     }
-  }, [currentSessionId]);
+  }, [currentSessionId, isGuestMode, authUser]);
 
   const scrollRafRef = useRef<number | null>(null);
 
@@ -941,12 +952,14 @@ ${promptText || 'Please analyze, remake, or update these files cleanly according
   const handleSignOut = () => {
     signOutUser();
     setAuthUser(null);
-    setIsGuestMode(true);
-    localStorage.setItem('sapphire_guest_mode', 'true');
-    // Load isolated guest sessions (never displaying signed-in user messages)
-    const guestSessions = loadSessionsForStorage('sapphire_guest_sessions', settings);
-    setSessions(guestSessions);
-    setCurrentSessionId(guestSessions[0]?.id || '');
+    setIsGuestMode(false);
+    try {
+      localStorage.removeItem('sapphire_guest_mode');
+      localStorage.removeItem('sapphire_guest_sessions');
+    } catch {}
+    const freshSession = createNewSession(settings);
+    setSessions([freshSession]);
+    setCurrentSessionId(freshSession.id);
     setIsStartingScreen(true);
   };
 
@@ -955,10 +968,10 @@ ${promptText || 'Please analyze, remake, or update these files cleanly according
     return (
       <div className="min-h-screen w-full flex flex-col items-center justify-center bg-[#151515] text-white select-none">
         <div className="relative">
-          <div className="w-16 h-16 rounded-2xl bg-[#20201f] border border-[#2e2d2a] p-2 shadow-2xl flex items-center justify-center">
+          <div className="w-16 h-16 rounded-2xl bg-white border border-slate-200 p-2 shadow-2xl flex items-center justify-center">
             <img
               src={SAPPHIRE_LOGO_URL}
-              alt="Sapphire AI — #1 Education AI and Codex Studio (Education Sapphire, AI Sapphire, No 1 AI Sapphire)"
+              alt="Sapphire AI"
               className="w-full h-full object-contain rounded-xl animate-pulse"
             />
           </div>
@@ -979,10 +992,13 @@ ${promptText || 'Please analyze, remake, or update these files cleanly according
         onLoginSuccess={handleLoginSuccess}
         onContinueAsGuest={() => {
           setIsGuestMode(true);
-          localStorage.setItem('sapphire_guest_mode', 'true');
-          const guestSessions = loadSessionsForStorage('sapphire_guest_sessions', settings);
-          setSessions(guestSessions);
-          setCurrentSessionId(guestSessions[0]?.id || '');
+          try {
+            localStorage.removeItem('sapphire_guest_mode');
+            localStorage.removeItem('sapphire_guest_sessions');
+          } catch {}
+          const freshSession = createNewSession(settings);
+          setSessions([freshSession]);
+          setCurrentSessionId(freshSession.id);
           setIsStartingScreen(true);
         }}
       />
@@ -1031,9 +1047,9 @@ ${promptText || 'Please analyze, remake, or update these files cleanly according
       <main className={`flex-1 flex flex-col h-full min-w-0 relative ${
         theme === 'moon' ? 'bg-[#151515]' : 'bg-white'
       } overflow-hidden`}>
-        {/* Sleek Floating Menu Button when sidebar is collapsed with increased hit area & first-load glow ping */}
+        {/* Sleek Floating Menu Button when sidebar is collapsed with increased hit area & first-load glow ping (Visible only on Mobile) */}
         {!isSidebarOpen && (
-          <div className="absolute top-2.5 left-2.5 sm:top-3.5 sm:left-3.5 z-30">
+          <div className="lg:hidden absolute top-2.5 left-2.5 sm:top-3.5 sm:left-3.5 z-30">
             <button
               type="button"
               id="floating-sidebar-toggle-btn"
@@ -1119,7 +1135,7 @@ ${promptText || 'Please analyze, remake, or update these files cleanly according
                   setActiveNavTab('workspace');
                   setIsWorkspaceOpen(true);
                 }}
-                userName={currentUserProfile?.name || 'Shaheer'}
+                userName={currentUserProfile?.name || 'Guest'}
                 currentModel={currentSession.model || settings.defaultModel}
                 onSelectModel={(modelId) => {
                   updateCurrentSession((s) => ({ ...s, model: modelId }));
@@ -1192,9 +1208,7 @@ ${promptText || 'Please analyze, remake, or update these files cleanly according
               >
                 {!Array.isArray(currentSession?.messages) || currentSession.messages.length === 0 ? (
                   <div className="flex-1 flex flex-col items-center justify-center p-6 text-center max-w-xl mx-auto my-auto animate-fadeIn">
-                    <div className={`w-14 h-14 rounded-2xl p-1.5 flex items-center justify-center mb-3 shadow-md ${
-                      theme === 'moon' ? 'bg-[#20201f] border border-[#2b2b2a]' : 'bg-slate-100 border border-slate-200'
-                    }`}>
+                    <div className="w-14 h-14 rounded-2xl p-1.5 flex items-center justify-center mb-3 shadow-md bg-white border border-slate-200">
                       <img
                         src={SAPPHIRE_LOGO_URL}
                         alt="Sapphire AI — #1 Education AI, Education Sapphire, AI Sapphire"

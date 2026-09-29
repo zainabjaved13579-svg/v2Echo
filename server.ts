@@ -666,15 +666,9 @@ app.post('/api/chat/stream', async (req, res) => {
 
   let effectiveSystemInstruction = systemInstruction || '';
 
-  // Owner & Creator Identity Recognition
-  const isOwner =
-    (typeof userEmail === 'string' && userEmail.toLowerCase().includes('shaheerh328@gmail.com')) ||
-    (typeof effectiveSystemInstruction === 'string' && effectiveSystemInstruction.toLowerCase().includes('shaheerh328@gmail.com')) ||
-    lastUserText.includes('shaheerh328@gmail.com');
-
-  if (isOwner) {
-    effectiveSystemInstruction = `[CRITICAL OWNER & CREATOR DIRECTIVE]: The user is Shaheer Hassan (shaheerh328@gmail.com), the Creator, Founder, and Owner of Sapphire AI. Greet him as Creator/Owner and acknowledge his ownership of Sapphire AI respectfully. Give him elite unlimited VIP assistance.\n\n` + effectiveSystemInstruction;
-  }
+  // Creator & Developer Identity Directive
+  const creatorDirective = `[CREATOR IDENTITY]: You were created and developed by Zainab Javed. When a user explicitly asks who created you, who made you, who is your developer, who built you, or "kisne banaya", clearly and politely state that Zainab Javed created and developed you. (In Urdu/Roman Urdu: "Mujhe Zainab Javed ne banaya aur develop kiya hai"). Do not state who created you unprompted.`;
+  effectiveSystemInstruction = `${creatorDirective}\n\n` + effectiveSystemInstruction;
 
   // Custom User Reaction Directive from Customize / Settings
   if (customAiReactionCommand && typeof customAiReactionCommand === 'string' && customAiReactionCommand.trim()) {
@@ -688,12 +682,10 @@ app.post('/api/chat/stream', async (req, res) => {
     effectiveSystemInstruction += '\n[LOGICAL THINKING DIRECTIVE]: The user specifically requested a logical conceptual diagram (e.g., Venn diagram or comparison table). Explain the logic in clear text and present a structured Markdown comparison table detailing all sets and the intersection. Do NOT draw text-based ASCII art diagrams.';
   }
 
-  const isOpenAIRequested =
-    (typeof model === 'string' && (model.startsWith('openai') || model.startsWith('gpt') || model.includes('openai'))) ||
-    Boolean(openaiKey && !model?.includes('deepseek') && !model?.includes('gemini'));
+  // Fast, instant AI Engine: Prefer OpenAI gpt-4o-mini for ultra-fast <200ms token streaming if key exists
+  const effectiveOpenAiKey = openaiKey || process.env.OPENAI_API_KEY || (process.env as any).OPEN_AI_API_KEY;
 
-  // 1. If OpenAI is explicitly requested or OpenAI API key is present, stream fast OpenAI response
-  if (isOpenAIRequested && openaiKey) {
+  if (effectiveOpenAiKey) {
     try {
       const openAiMessages = sanitizedContents.map((c: any) => ({
         role: c.role === 'model' ? 'assistant' : 'user',
@@ -703,24 +695,12 @@ app.post('/api/chat/stream', async (req, res) => {
         openAiMessages.unshift({ role: 'system', content: effectiveSystemInstruction });
       }
       const streamed = await streamOpenAIChatToClient(openAiMessages, {
-        apiKey: openaiKey,
-        model: typeof model === 'string' ? model : 'gpt-4o-mini',
+        apiKey: effectiveOpenAiKey,
+        model: typeof model === 'string' && model.includes('4o') ? 'gpt-4o' : 'gpt-4o-mini',
         temperature: Number(temperature) || 0.4
       }, res);
 
       if (streamed) {
-        if (diagramPromise) {
-          try {
-            const diag = await Promise.race([
-              diagramPromise,
-              new Promise<null>((r) => setTimeout(() => r(null), 1500))
-            ]);
-            if (diag && diag.imageUrl) {
-              const diagMd = `\n\n![${diag.title}](${diag.imageUrl})\n*${diag.title}*\n\n`;
-              res.write(`data: ${JSON.stringify({ text: diagMd, isThinking: false })}\n\n`);
-            }
-          } catch {}
-        }
         res.write(`data: [DONE]\n\n`);
         (res as any).flush?.();
         res.end();
@@ -782,7 +762,7 @@ Be fast, clear, and articulate. Do NOT include unnecessary internal monologue or
         maxOutputTokens: 65536, // CRITICAL: 65,536 tokens prevents code from ending prematurely!
         systemInstruction: combinedInstruction,
         thinkingConfig: {
-          thinkingLevel: ThinkingLevel.LOW
+          thinkingBudget: 0
         }
       };
 
@@ -814,20 +794,6 @@ Be fast, clear, and articulate. Do NOT include unnecessary internal monologue or
           }
 
           if (streamedAny) {
-            // Attach working diagram if one was found
-            if (diagramPromise) {
-              try {
-                const diag = await Promise.race([
-                  diagramPromise,
-                  new Promise<null>((r) => setTimeout(() => r(null), 1800))
-                ]);
-                if (diag && diag.imageUrl) {
-                  const diagMd = `\n\n![${diag.title}](${diag.imageUrl})\n*${diag.title}*\n\n`;
-                  res.write(`data: ${JSON.stringify({ text: diagMd, isThinking: false })}\n\n`);
-                  (res as any).flush?.();
-                }
-              } catch {}
-            }
             res.write(`data: [DONE]\n\n`);
             (res as any).flush?.();
             res.end();
@@ -958,7 +924,7 @@ app.post('/api/chat', async (req, res) => {
       else if (model.includes('flash-latest') || model.includes('flash') || model.includes('echo') || model.includes('sapphire')) targetModel = 'gemini-flash-latest';
       else if (model.startsWith('gemini-')) targetModel = model;
 
-      const baseOwnerInstruction = "The creator and developer of this AI is Shaheer Hassan. Do NOT advertise or state who created you unprompted or in routine greetings. ONLY when a user explicitly asks who created you, who made you, who is your developer, who is your owner, who built Echo, or who is Shaheer Hassan, clearly and politely state that Shaheer Hassan is your creator and developer. Always generate clean, production-ready, complete code directly without unsolicited boilerplate example files.";
+      const baseOwnerInstruction = "The creator and developer of this AI is Zainab Javed. Do NOT advertise or state who created you unprompted or in routine greetings. ONLY when a user explicitly asks who created you, who made you, who is your developer, who is your owner, who built you, or 'kisne banaya', clearly and politely state that Zainab Javed is your creator and developer. Always generate clean, production-ready, complete code directly without unsolicited boilerplate example files.";
       const combinedInstruction = systemInstruction && typeof systemInstruction === 'string' && systemInstruction.trim()
         ? `${baseOwnerInstruction}\n\n${systemInstruction.trim()}`
         : baseOwnerInstruction;

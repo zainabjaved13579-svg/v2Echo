@@ -525,7 +525,7 @@ Please engineer the updated or new files now using the full multi-engine ensembl
             <img
               src={SAPPHIRE_LOGO_URL}
               alt="Sapphire Codex Studio"
-              className="w-8 h-8 rounded-xl object-contain p-0.5 border border-[#2b2b2a] bg-[#1a1a1a] shadow-md shadow-[#d97757]/20 shrink-0"
+              className="w-8 h-8 rounded-xl object-contain p-0.5 border border-white/20 bg-white shadow-md shadow-[#d97757]/20 shrink-0"
             />
             <div>
               <div className="flex items-center gap-2">
@@ -997,111 +997,19 @@ Please engineer the updated or new files now using the full multi-engine ensembl
         <div className="w-full lg:w-[40%] flex flex-col bg-[#151515] overflow-hidden">
           {/* Chat Header: Real AI Engine Badges & Keys Selector */}
           <div className="p-3 border-b border-[#2b2b2a] bg-[#111111] flex flex-col gap-2.5 shrink-0">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between pb-1">
               <div className="flex items-center gap-2">
-                <Wand2 className="w-4 h-4 text-[#d97757]" />
-                <span className="text-xs font-bold text-white tracking-wide">Codex AI Engine:</span>
+                <Code2 className="w-4 h-4 text-[#d97757]" />
+                <span className="text-xs font-bold text-white tracking-wide">Sapphire Codex Engine</span>
                 <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-[#d97757]/15 text-[#d97757] font-semibold border border-[#d97757]/30">
-                  {selectedEngine === 'openai'
-                    ? '🤖 OpenAI GPT-4o'
-                    : selectedEngine === 'deepseek'
-                    ? '🧠 DeepSeek Coder'
-                    : selectedEngine === 'gemini'
-                    ? '⚡ Google Gemini 2.5'
-                    : selectedEngine === 'google-ai-studio'
-                    ? '🔮 AI Studio Pro'
-                    : '🌌 Hybrid Ensemble'}
+                  Autonomous Studio
                 </span>
               </div>
 
-              {/* Status pill & Keys button */}
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setShowApiKeysModal(true)}
-                  className="px-2.5 py-1 rounded-xl bg-[#20201f] hover:bg-[#282724] border border-[#2b2b2a] text-[11px] text-[#ede8e1] flex items-center gap-1.5 transition-colors cursor-pointer"
-                  title="Configure AI API Keys (OpenAI, DeepSeek, Google Gemini)"
-                >
-                  <Key className="w-3.5 h-3.5 text-[#d97757]" />
-                  <span>AI API Keys</span>
-                  {(keysForm.openaiKey || keysForm.deepseekKey || keysForm.geminiKey) && (
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                  )}
-                </button>
-
-                <div className="flex items-center gap-1.5 text-[11px] text-[#a19e97]">
-                  <span className={`w-2 h-2 rounded-full ${isGenerating ? 'bg-amber-400 animate-ping' : 'bg-emerald-400'}`} />
-                  <span>{isGenerating ? 'Synthesizing...' : 'Ready'}</span>
-                </div>
+              <div className="flex items-center gap-1.5 text-[11px] text-[#a19e97]">
+                <span className={`w-2 h-2 rounded-full ${isGenerating ? 'bg-amber-400 animate-ping' : 'bg-emerald-400'}`} />
+                <span>{isGenerating ? 'Synthesizing...' : 'Ready'}</span>
               </div>
-            </div>
-
-            {/* The 5 Engine Architect Modes - Clearly labeled real engines */}
-            <div className="flex items-center gap-1.5 flex-wrap">
-              <button
-                onClick={() => setSelectedEngine('openai')}
-                className={`px-3 py-1.5 rounded-2xl text-xs font-medium transition-all cursor-pointer border flex items-center gap-1.5 ${
-                  selectedEngine === 'openai'
-                    ? 'bg-teal-500/20 text-teal-400 border-teal-500/50 font-semibold shadow-xs'
-                    : 'bg-[#20201f] text-[#a19e97] border-[#2b2b2a] hover:text-white'
-                }`}
-                title="OpenAI GPT-4o & GPT-4o Mini Engine for ultra-fast answers and code generation"
-              >
-                <Zap className="w-3.5 h-3.5 text-teal-400" />
-                <span>OpenAI GPT-4o</span>
-              </button>
-
-              <button
-                onClick={() => setSelectedEngine('gemini')}
-                className={`px-3 py-1.5 rounded-2xl text-xs font-medium transition-all cursor-pointer border flex items-center gap-1.5 ${
-                  selectedEngine === 'gemini'
-                    ? 'bg-purple-500/20 text-purple-400 border-purple-500/50 font-semibold shadow-xs'
-                    : 'bg-[#20201f] text-[#a19e97] border-[#2b2b2a] hover:text-white'
-                }`}
-                title="Google Gemini 2.5 Flash for instant low-latency code"
-              >
-                <Sparkles className="w-3.5 h-3.5 text-purple-400" />
-                <span>Google Gemini</span>
-              </button>
-
-              <button
-                onClick={() => setSelectedEngine('deepseek')}
-                className={`px-3 py-1.5 rounded-2xl text-xs font-medium transition-all cursor-pointer border flex items-center gap-1.5 ${
-                  selectedEngine === 'deepseek'
-                    ? 'bg-blue-500/20 text-blue-400 border-blue-500/50 font-semibold shadow-xs'
-                    : 'bg-[#20201f] text-[#a19e97] border-[#2b2b2a] hover:text-white'
-                }`}
-                title="DeepSeek R1 / V3 Coder for deep algorithmic logic"
-              >
-                <Cpu className="w-3.5 h-3.5 text-blue-400" />
-                <span>DeepSeek Coder</span>
-              </button>
-
-              <button
-                onClick={() => setSelectedEngine('google-ai-studio')}
-                className={`px-3 py-1.5 rounded-2xl text-xs font-medium transition-all cursor-pointer border flex items-center gap-1.5 ${
-                  selectedEngine === 'google-ai-studio'
-                    ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/50 font-semibold shadow-xs'
-                    : 'bg-[#20201f] text-[#a19e97] border-[#2b2b2a] hover:text-white'
-                }`}
-                title="Google AI Studio Pro - Extended Thinking & multi-file architect"
-              >
-                <Bot className="w-3.5 h-3.5 text-emerald-400" />
-                <span>AI Studio Pro</span>
-              </button>
-
-              <button
-                onClick={() => setSelectedEngine('ensemble')}
-                className={`px-3 py-1.5 rounded-2xl text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer border ${
-                  selectedEngine === 'ensemble'
-                    ? 'bg-[#d97757]/20 text-[#d97757] border-[#d97757]/50 shadow-xs'
-                    : 'bg-[#20201f] text-[#a19e97] border-[#2b2b2a] hover:text-white'
-                }`}
-                title="Autonomous Multi-AI Collective: Combines OpenAI, Gemini & DeepSeek"
-              >
-                <Layers className="w-3.5 h-3.5 text-[#d97757]" />
-                <span>Hybrid Ensemble</span>
-              </button>
             </div>
           </div>
 

@@ -558,9 +558,7 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
                 <img
                   src={SAPPHIRE_LOGO_URL}
                   alt="Sapphire AI — #1 Education AI and Codex Studio (Education Sapphire, AI Sapphire)"
-                  className={`w-7 h-7 sm:w-8 sm:h-8 rounded-xl object-contain p-0.5 ring-1 ring-[#d97757]/40 shadow-xs ${
-                    theme === 'moon' ? 'bg-[#201f1d]' : 'bg-white'
-                  }`}
+                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl object-contain p-0.5 ring-1 ring-[#d97757]/40 shadow-xs bg-white"
                 />
                 {message.isStreaming && (
                   <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-[#d97757] rounded-full animate-ping" />
