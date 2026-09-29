@@ -83,15 +83,15 @@ export const PROMPT_STARTERS = [
 export const AVAILABLE_MODELS = [
   {
     id: 'openai-gpt-4o-mini',
-    name: 'OpenAI GPT-4o Mini',
+    name: 'Sapphire Flash Mini',
     tag: 'Ultra-Fast Instant',
-    description: 'Official OpenAI high-speed lightweight engine for fast answers and rapid code generation'
+    description: 'High-speed lightweight engine for fast answers and rapid code generation'
   },
   {
     id: 'openai-gpt-4o',
-    name: 'OpenAI GPT-4o',
-    tag: 'OpenAI Flagship',
-    description: 'Premier OpenAI frontier model with high-level intelligence and multi-file reasoning'
+    name: 'Sapphire Studio',
+    tag: 'Flagship',
+    description: 'Premier flagship model with high-level intelligence and multi-file reasoning'
   },
   {
     id: 'sapphire-3.7-flash',
@@ -103,13 +103,13 @@ export const AVAILABLE_MODELS = [
     id: 'deepseek-chat',
     name: 'Sapphire-V3 Coder & Chat',
     tag: 'Ultra-Fast Code & Chat',
-    description: 'Sapphire frontier model with elite programming, instant speed, and massive context'
+    description: 'Frontier model with elite programming, instant speed, and massive context'
   },
   {
     id: 'deepseek-reasoner',
     name: 'Sapphire-R1 Reasoner',
     tag: 'Deep Reasoning',
-    description: 'Sapphire chain-of-thought mathematical reasoning, logic, and deep analysis'
+    description: 'Chain-of-thought mathematical reasoning, logic, and deep analysis'
   },
   {
     id: 'sapphire-flash-latest',
