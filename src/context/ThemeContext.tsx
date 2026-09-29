@@ -31,9 +31,10 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     try {
       const saved = localStorage.getItem(THEME_STORAGE_KEY);
       if (saved === 'light' || saved === 'white') return 'light';
-      return 'moon';
+      if (saved === 'moon' || saved === 'dark') return 'moon';
+      return 'light';
     } catch {
-      return 'moon';
+      return 'light';
     }
   });
 
