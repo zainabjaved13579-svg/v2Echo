@@ -28,6 +28,7 @@ import { LanguageSelectorModal } from './components/LanguageSelectorModal';
 import { DownloadModal } from './components/DownloadModal';
 import { UserProfileModal } from './components/UserProfileModal';
 import { AndroidShortcutModal } from './components/AndroidShortcutModal';
+import { AboutModal } from './components/AboutModal';
 import { Auth } from './components/Auth';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { auth } from './services/firebase';
@@ -120,7 +121,7 @@ export default function App() {
     }
   });
 
-  // Guest Mode State: 0 things saved in guest mode. When refreshed, returns to login panel immediately.
+  // Guest Mode State
   const [isGuestMode, setIsGuestMode] = useState<boolean>(false);
 
   useEffect(() => {
@@ -130,13 +131,11 @@ export default function App() {
     } catch {}
   }, []);
 
-  // Stored active user (Google authentication)
   const [authUser, setAuthUser] = useState<User | any>(() => {
     return getStoredActiveUser();
   });
   const [authLoading, setAuthLoading] = useState(true);
 
-  // Load sessions strictly based on mode (Only authenticated users have persisted sessions; guests get ephemeral session)
   const [sessions, setSessions] = useState<ChatSession[]>(() => {
     const storedUser = getStoredActiveUser();
     if (storedUser) {
@@ -146,7 +145,6 @@ export default function App() {
     return [createNewSession(DEFAULT_SETTINGS)];
   });
 
-  // Current session ID
   const [currentSessionId, setCurrentSessionId] = useState<string>(() => {
     const savedId = localStorage.getItem(STORAGE_KEY_CURRENT);
     if (savedId && sessions.some((s) => s.id === savedId)) return savedId;
@@ -164,10 +162,10 @@ export default function App() {
   const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
   const [isAndroidShortcutModalOpen, setIsAndroidShortcutModalOpen] = useState(false);
+  const [isAboutModalOpen, setIsAboutModalOpen] = useState(false);
   const [isStartingScreen, setIsStartingScreen] = useState<boolean>(true);
   const [showSidebarPulse, setShowSidebarPulse] = useState<boolean>(true);
 
-  // Subtle ping pulse on initial application load to guide user's attention to sidebar toggle
   useEffect(() => {
     const pulseTimer = setTimeout(() => {
       setShowSidebarPulse(false);
@@ -177,10 +175,8 @@ export default function App() {
 
   const { theme } = useAppTheme();
 
-  // Active navigation tab ('chat' | 'workspace' | 'codex' | 'projects' | 'artifacts' | 'customize')
   const [activeNavTab, setActiveNavTab] = useState<string>('chat');
 
-  // Monitor Firebase & Local Verified Auth State with safety timeout (prevents infinite white/loading screen)
   useEffect(() => {
     let resolved = false;
     const safetyTimeout = setTimeout(() => {
@@ -221,11 +217,9 @@ export default function App() {
     };
   }, []);
 
-  // User Profile & Onboarding State
   const [currentUserProfile, setCurrentUserProfile] = useState(loadUserProfile);
   const [isUserProfileModalOpen, setIsUserProfileModalOpen] = useState(false);
 
-  // Onboarding prompt for new users
   useEffect(() => {
     const hasSeenOnboarding = localStorage.getItem('echo_profile_onboarding_shown');
     const isCompleted = hasUserCompletedSetup();
@@ -238,7 +232,6 @@ export default function App() {
     }
   }, [isGuestMode]);
 
-  // Automatic Cloud Sync for user data & files (STRICTLY DISABLED IN GUEST MODE)
   useEffect(() => {
     if (isGuestMode) return;
     if (sessions.length > 0 && currentUserProfile) {
@@ -249,7 +242,6 @@ export default function App() {
     }
   }, [sessions, currentUserProfile, isGuestMode]);
 
-  // Reply tracking state
   const [replyTo, setReplyTo] = useState<{
     id: string;
     role: 'user' | 'model';
@@ -257,7 +249,6 @@ export default function App() {
     senderName?: string;
   } | null>(null);
 
-  // Workspace & Code Preview Modal States
   const [isWorkspaceOpen, setIsWorkspaceOpen] = useState(false);
   const [workspaceSelectedFileId, setWorkspaceSelectedFileId] = useState<string | undefined>(undefined);
   const [previewModalState, setPreviewModalState] = useState<{
@@ -279,16 +270,13 @@ export default function App() {
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const isAutoScrollRef = useRef(true);
 
-  // Active session (safely guarded)
   const currentSession =
     (sessions && sessions.find((s) => s.id === currentSessionId)) ||
     (sessions && sessions[0]) ||
     createNewSession(settings);
 
-  // Save sessions to localStorage strictly for authenticated Google users (in Guest Mode: 0 things saved!)
   useEffect(() => {
     if (isGuestMode || !authUser) {
-      // In guest mode: NOTHING is saved to storage. 0 things saved!
       return;
     }
     const key = `sapphire_user_sessions_${authUser.uid || authUser.email}`;
@@ -299,7 +287,6 @@ export default function App() {
     }
   }, [sessions, isGuestMode, authUser]);
 
-  // Save settings to localStorage (only for authenticated users)
   useEffect(() => {
     if (isGuestMode || !authUser) return;
     try {
@@ -309,7 +296,6 @@ export default function App() {
     }
   }, [settings, isGuestMode, authUser]);
 
-  // Save active session id (only for authenticated users)
   useEffect(() => {
     if (isGuestMode || !authUser) return;
     if (currentSessionId) {
@@ -319,7 +305,6 @@ export default function App() {
 
   const scrollRafRef = useRef<number | null>(null);
 
-  // Auto-scroll when messages change or stream updates
   const scrollToBottom = (behavior: ScrollBehavior = 'smooth', force = false) => {
     if (!force && !isAutoScrollRef.current) return;
 
@@ -336,7 +321,6 @@ export default function App() {
     }
   };
 
-  // Keep view smoothly locked to bottom during token streaming
   const scheduleScrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
     if (!isAutoScrollRef.current) return;
     if (scrollRafRef.current) cancelAnimationFrame(scrollRafRef.current);
@@ -347,7 +331,6 @@ export default function App() {
     });
   };
 
-  // User scrolling detection - pause if scrolled up, resume if near bottom
   const handleScroll = () => {
     if (!chatContainerRef.current) return;
     const { scrollTop, scrollHeight, clientHeight } = chatContainerRef.current;
@@ -355,7 +338,6 @@ export default function App() {
     isAutoScrollRef.current = distanceToBottom < 120;
   };
 
-  // Auto-scroll on session change, stream start/end, message count change
   useEffect(() => {
     if (!isStartingScreen && currentSession?.messages.length > 0) {
       isAutoScrollRef.current = true;
@@ -373,7 +355,6 @@ export default function App() {
     }
   }, [currentSession?.messages.length, isLoading]);
 
-  // Helper to update any session by specific ID
   const updateSessionById = (
     sessionId: string,
     updater: (prev: ChatSession) => ChatSession
@@ -388,12 +369,10 @@ export default function App() {
     );
   };
 
-  // Helper to update active session
   const updateCurrentSession = (updater: (prev: ChatSession) => ChatSession) => {
     updateSessionById(currentSession.id, updater);
   };
 
-  // Create new chat (creates a fresh session tab with unique Date.now() ID and navigates)
   const handleNewChat = () => {
     const fresh = createNewSession(settings);
     setSessions((prev) => [fresh, ...prev]);
@@ -402,13 +381,11 @@ export default function App() {
     setInput('');
     setReplyTo(null);
 
-    // Sync to Firestore if authenticated and not in guest mode
     if (!isGuestMode && authUser?.uid) {
       syncTabToFirestore(authUser.uid, fresh);
     }
   };
 
-  // Close session tab - if all closed, creates a fresh new tab
   const handleCloseSessionTab = (sessionId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     if (!isGuestMode && authUser?.uid) {
@@ -432,7 +409,6 @@ export default function App() {
     });
   };
 
-  // Select session
   const handleSelectSession = (id: string) => {
     setCurrentSessionId(id);
     setIsStartingScreen(false);
@@ -441,7 +417,6 @@ export default function App() {
     }
   };
 
-  // Delete session
   const handleDeleteSession = (id: string) => {
     if (!isGuestMode && authUser?.uid) {
       deleteTabFromFirestore(authUser.uid, id);
@@ -464,14 +439,12 @@ export default function App() {
     });
   };
 
-  // Rename session
   const handleRenameSession = (id: string, newTitle: string) => {
     setSessions((prev) =>
       prev.map((s) => (s.id === id ? { ...s, title: newTitle, updatedAt: Date.now() } : s))
     );
   };
 
-  // Clear current session messages
   const handleClearMessages = () => {
     if (confirm('Are you sure you want to clear all messages in this conversation?')) {
       updateCurrentSession((s) => ({
@@ -482,7 +455,6 @@ export default function App() {
     }
   };
 
-  // Clear all sessions for the active mode
   const handleClearAllSessions = () => {
     if (confirm('Are you sure you want to delete conversation history? This cannot be undone.')) {
       const fresh = createNewSession(settings);
@@ -497,7 +469,6 @@ export default function App() {
     }
   };
 
-  // Stop generation
   const handleStop = () => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -512,7 +483,6 @@ export default function App() {
     }));
   };
 
-  // Open Live Preview for code block (supports single file or full multi-file project)
   const handlePreviewCode = (code: string, language: string, filename?: string, files?: any[]) => {
     let resolvedFiles: WorkspaceFile[] = [];
     if (Array.isArray(files) && files.length > 0) {
@@ -552,7 +522,6 @@ export default function App() {
     });
   };
 
-  // Open File & Workspace Modal
   const handleOpenFileManager = (fileId?: string) => {
     if (fileId) {
       setWorkspaceSelectedFileId(fileId);
@@ -560,7 +529,6 @@ export default function App() {
     setIsWorkspaceOpen(true);
   };
 
-  // Insert code into active chat input
   const handleInsertCodeToChat = (code: string, fileName: string) => {
     setInput((prev) => {
       const comment = `// File: ${fileName}\n`;
@@ -568,7 +536,6 @@ export default function App() {
     });
   };
 
-  // Send message (Supports Text, Multiple Images Vision, and Unlimited File Uploads / Rewrites)
   const handleSendMessage = async (
     text: string,
     image?: ImageAttachment,
@@ -612,7 +579,6 @@ export default function App() {
       timestamp: Date.now()
     };
 
-    // Auto-generate session title from first prompt
     const sessionTitle =
       (effectiveFiles.length === 1
         ? `Edit: ${effectiveFiles[0].name}`
@@ -620,7 +586,6 @@ export default function App() {
         ? `${effectiveFiles.length} Files: ${effectiveFiles[0].name}`
         : promptText.slice(0, 36)) || 'New Conversation';
 
-    // If on Starting Screen ("Into the Unknown"), spawn a clean separate session / tab
     const isFromStarting = isStartingScreen;
     let targetSessionId = currentSession.id;
     let targetSession = currentSession;
@@ -643,13 +608,11 @@ export default function App() {
       setIsSidebarOpen(true);
     }
 
-    // Force auto-scroll to bottom immediately
     isAutoScrollRef.current = true;
     scrollToBottom('smooth', true);
     setTimeout(() => scrollToBottom('smooth', true), 60);
     setTimeout(() => scrollToBottom('smooth', true), 220);
 
-    // Normal High-Speed Chat Streaming Mode (with code generation or file rewrite)
     const newModelMessage: ChatMessage = {
       id: modelMessageId,
       role: 'model',
@@ -661,7 +624,6 @@ export default function App() {
       modelUsed: targetSession.model
     };
 
-    // Prepare message for Gemini with all uploaded files context (<25MB support)
     let geminiFormattedUserText = promptText;
     if (effectiveFiles.length > 0) {
       const fileBlocks = effectiveFiles.map((f, idx) => {
@@ -732,19 +694,16 @@ ${promptText || 'Please analyze, remake, or update these files cleanly according
           scheduleScrollToBottom('smooth');
         },
         onDone: async (finalText, stats) => {
-          // Auto-save any code blocks into the workspace files storage
           autoSaveAiCodeBlocks(finalText, targetSessionId, modelMessageId);
 
           let modifiedContent: string | undefined = undefined;
           let modifiedFileName: string | undefined = undefined;
 
-          // If a file was uploaded for rewrite, extract the modified code and auto-save
           if (file) {
             modifiedFileName = file.name;
             const codeMatch = finalText.match(/```(?:\w+)?\s*\n([\s\S]*?)```/);
             modifiedContent = codeMatch ? codeMatch[1].trim() : finalText;
 
-            // Save or update in file storage service
             const allFiles = fileStorageService.getFiles();
             const existingFile = allFiles.find((f) => f.name === file.name);
             if (existingFile) {
@@ -757,7 +716,6 @@ ${promptText || 'Please analyze, remake, or update these files cleanly according
               );
             }
 
-            // If user opened via showOpenFilePicker, auto-save directly to file location on disk!
             if (file.fileHandle && typeof file.fileHandle.createWritable === 'function') {
               try {
                 const writable = await file.fileHandle.createWritable();
@@ -792,7 +750,6 @@ ${promptText || 'Please analyze, remake, or update these files cleanly according
           scrollToBottom('smooth', true);
           setTimeout(() => scrollToBottom('smooth', true), 100);
 
-          // Auto-speak response if enabled or active (natural human voice in English / Urdu / Hindi)
           if (settings.autoSpeakResponses && finalText && finalText.trim()) {
             try {
               const detectedLang = settings.selectedLanguage === 'auto'
@@ -853,7 +810,6 @@ ${promptText || 'Please analyze, remake, or update these files cleanly according
     }
   };
 
-  // Regenerate last response
   const handleRegenerate = async () => {
     if (isLoading || currentSession.messages.length === 0) return;
 
@@ -867,7 +823,6 @@ ${promptText || 'Please analyze, remake, or update these files cleanly according
       promptToReplay = prevUserMsg.text;
       imageToReplay = prevUserMsg.image;
 
-      // Remove last model message and user message
       updateCurrentSession((s) => ({
         ...s,
         messages: s.messages.slice(0, -2),
@@ -886,7 +841,6 @@ ${promptText || 'Please analyze, remake, or update these files cleanly according
     handleSendMessage(promptToReplay, imageToReplay);
   };
 
-  // Continue generating incomplete code
   const handleContinueCode = (msg: ChatMessage) => {
     const raw = (msg.text || '').trim();
     const lastSnippet = raw.slice(-200);
@@ -894,7 +848,6 @@ ${promptText || 'Please analyze, remake, or update these files cleanly according
     handleSendMessage(continuePrompt);
   };
 
-  // Export chat
   const handleExportChat = (format: 'markdown' | 'json') => {
     let content = '';
     let filename = `${currentSession.title.toLowerCase().replace(/[^a-z0-9]/g, '_')}_echo_chat`;
@@ -940,7 +893,6 @@ ${promptText || 'Please analyze, remake, or update these files cleanly according
         email: user.email || prev.email,
         avatar: user.photoURL || prev.avatar
       }));
-      // Switch sessions to signed-in user's private store (never merging guest messages)
       const userKey = `sapphire_user_sessions_${user.uid || user.email}`;
       const userSessions = loadSessionsForStorage(userKey, settings);
       setSessions(userSessions);
@@ -963,7 +915,6 @@ ${promptText || 'Please analyze, remake, or update these files cleanly according
     setIsStartingScreen(true);
   };
 
-  // Route protection: If auth state is initializing, show sleek branded loader with timeout protection
   if (authLoading && !authUser && !isGuestMode) {
     return (
       <div className="min-h-screen w-full flex flex-col items-center justify-center bg-[#151515] text-white select-none">
@@ -985,7 +936,6 @@ ${promptText || 'Please analyze, remake, or update these files cleanly according
     );
   }
 
-  // Route protection: If user is not authenticated and not in guest mode, render Login Screen
   if (!authUser && !isGuestMode) {
     return (
       <Auth
@@ -1009,7 +959,7 @@ ${promptText || 'Please analyze, remake, or update these files cleanly according
     <div className={`flex h-full w-full ${
       theme === 'moon' ? 'bg-[#151515] text-white' : 'bg-slate-50 text-slate-900'
     } overflow-hidden select-none sm:select-auto font-['Plus_Jakarta_Sans',sans-serif]`}>
-      {/* Sidebar: Shown in chat view or toggled open */}
+      {/* Sidebar */}
       <AnimatePresence>
         {(!isStartingScreen || isSidebarOpen) && activeNavTab !== 'codex' && (
           <ChatSidebar
@@ -1034,6 +984,7 @@ ${promptText || 'Please analyze, remake, or update these files cleanly according
             onOpenFileManager={() => handleOpenFileManager()}
             onOpenImageGen={() => setIsImageModalOpen(true)}
             onOpenGetApp={() => setIsDownloadModalOpen(true)}
+            onOpenAbout={() => setIsAboutModalOpen(true)}
             onOpenCodex={() => {
               setActiveNavTab('codex');
               setIsStartingScreen(false);
@@ -1047,7 +998,7 @@ ${promptText || 'Please analyze, remake, or update these files cleanly according
       <main className={`flex-1 flex flex-col h-full min-w-0 relative ${
         theme === 'moon' ? 'bg-[#151515]' : 'bg-white'
       } overflow-hidden`}>
-        {/* Sleek Floating Menu Button when sidebar is collapsed with increased hit area & first-load glow ping (Visible only on Mobile) */}
+        {/* Floating Menu Button */}
         {!isSidebarOpen && (
           <div className="lg:hidden absolute top-2.5 left-2.5 sm:top-3.5 sm:left-3.5 z-30">
             <button
@@ -1065,10 +1016,8 @@ ${promptText || 'Please analyze, remake, or update these files cleanly according
               title="Open Sidebar"
               aria-label="Open Sidebar"
             >
-              {/* Expanded invisible touch hit target for small mobile touch screens */}
               <span className="absolute -inset-3 sm:-inset-1.5 rounded-2xl pointer-events-auto" aria-hidden="true" />
 
-              {/* Subtle ping animation & glow pulse on initial application load */}
               {showSidebarPulse && (
                 <>
                   <span className="absolute -inset-1 rounded-2xl bg-[#d97757]/40 animate-ping pointer-events-none" />
@@ -1083,7 +1032,6 @@ ${promptText || 'Please analyze, remake, or update these files cleanly according
 
         <AnimatePresence mode="wait" initial={false}>
           {activeNavTab === 'codex' ? (
-            /* Dedicated Google AI Studio Codex App Engine Screen with Live Preview */
             <motion.div
               key="codex-engine-view"
               initial={{ opacity: 0 }}
@@ -1102,7 +1050,6 @@ ${promptText || 'Please analyze, remake, or update these files cleanly according
               />
             </motion.div>
           ) : isStartingScreen ? (
-            /* Starting Screen: Sapphire Clean Prompt Screen */
             <motion.div
               key="starting-screen"
               initial={{ opacity: 0 }}
@@ -1144,7 +1091,6 @@ ${promptText || 'Please analyze, remake, or update these files cleanly according
               />
             </motion.div>
           ) : (
-            /* Active Chat Stream View */
             <motion.div
               key="chat-view"
               initial={{ opacity: 0 }}
@@ -1155,7 +1101,6 @@ ${promptText || 'Please analyze, remake, or update these files cleanly according
                 theme === 'moon' ? 'bg-[#151515]' : 'bg-white'
               } overflow-hidden`}
             >
-              {/* Header with Theme Toggle & controls */}
               <ChatHeader
                 currentSession={currentSession}
                 userProfile={currentUserProfile}
@@ -1175,7 +1120,6 @@ ${promptText || 'Please analyze, remake, or update these files cleanly according
                 onGoHome={() => setIsStartingScreen(true)}
               />
 
-              {/* Guest Mode Banner: history only in guest mode */}
               {isGuestMode && (
                 <div className={`px-4 py-2 flex items-center justify-between text-xs border-b ${
                   theme === 'moon' ? 'bg-[#20201f] border-[#2b2b2a] text-white' : 'bg-amber-50 border-amber-200 text-amber-900'
@@ -1198,7 +1142,6 @@ ${promptText || 'Please analyze, remake, or update these files cleanly according
                 </div>
               )}
 
-              {/* Scrollable Conversation Stream */}
               <div
                 ref={chatContainerRef}
                 onScroll={handleScroll}
@@ -1250,7 +1193,6 @@ ${promptText || 'Please analyze, remake, or update these files cleanly according
                 )}
               </div>
 
-              {/* Floating Input Dock */}
               <ChatInput
                 input={input}
                 setInput={setInput}
@@ -1310,7 +1252,13 @@ ${promptText || 'Please analyze, remake, or update these files cleanly according
         onClearAllHistory={handleClearAllSessions}
       />
 
-      {/* Simplified, Clean File Manager & AI Code Sandbox Modal */}
+      {/* About Modal */}
+      <AboutModal
+        isOpen={isAboutModalOpen}
+        onClose={() => setIsAboutModalOpen(false)}
+      />
+
+      {/* File Manager Modal */}
       {isWorkspaceOpen && (
         <FileManagerModal
           isOpen={isWorkspaceOpen}
@@ -1322,7 +1270,7 @@ ${promptText || 'Please analyze, remake, or update these files cleanly according
         />
       )}
 
-      {/* User Profile & Google Cloud Sync Modal */}
+      {/* User Profile Modal */}
       <UserProfileModal
         isOpen={isUserProfileModalOpen}
         onClose={() => setIsUserProfileModalOpen(false)}
@@ -1337,7 +1285,7 @@ ${promptText || 'Please analyze, remake, or update these files cleanly according
         isGuestMode={isGuestMode}
       />
 
-      {/* Standalone Code Live Preview Modal */}
+      {/* Code Preview Modal */}
       <CodePreviewModal
         isOpen={previewModalState.isOpen}
         onClose={() => setPreviewModalState((p) => ({ ...p, isOpen: false }))}
@@ -1352,7 +1300,7 @@ ${promptText || 'Please analyze, remake, or update these files cleanly according
         }}
       />
 
-      {/* Human Voice Language Selector Modal */}
+      {/* Language Selector Modal */}
       <LanguageSelectorModal
         isOpen={isLanguageModalOpen}
         onClose={() => setIsLanguageModalOpen(false)}
@@ -1363,19 +1311,19 @@ ${promptText || 'Please analyze, remake, or update these files cleanly according
         onSelectSamplePrompt={(p) => handleSendMessage(p)}
       />
 
-      {/* Direct App Download Modal (Android APK & Windows EXE) */}
+      {/* Download Modal */}
       <DownloadModal
         isOpen={isDownloadModalOpen}
         onClose={() => setIsDownloadModalOpen(false)}
       />
 
-      {/* Android Hardware & Navigation Bar Shortcut Modal */}
+      {/* Android Shortcut Modal */}
       <AndroidShortcutModal
         isOpen={isAndroidShortcutModalOpen}
         onClose={() => setIsAndroidShortcutModalOpen(false)}
       />
 
-      {/* Sapphire Vision AI Image Creation & Editing Studio Modal */}
+      {/* Image Generation Modal */}
       <GenerateImageModal
         isOpen={isImageModalOpen}
         onClose={() => setIsImageModalOpen(false)}

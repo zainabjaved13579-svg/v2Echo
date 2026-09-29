@@ -16,6 +16,7 @@ import {
   X,
   Code2,
   Smartphone,
+  Info,
   Image as ImageIcon
 } from 'lucide-react';
 import { ChatSession, UserProfile } from '../types';
@@ -26,6 +27,7 @@ interface ChatSidebarProps {
   isOpen: boolean;
   onClose: () => void;
   onOpen?: () => void;
+  onOpenAbout?: () => void;
   sessions: ChatSession[];
   currentSessionId: string;
   userProfile?: UserProfile | null;
@@ -51,6 +53,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
   isOpen,
   onClose,
   onOpen,
+  onOpenAbout,
   sessions,
   currentSessionId,
   userProfile,
@@ -200,32 +203,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
           </span>
         </button>
 
-        {/* 4. Customize */}
-        <button
-          id="sidebar-customize-btn"
-          onClick={() => {
-            if (onOpenCustomize) onOpenCustomize();
-            else onOpenSettings();
-            if (window.innerWidth < 1024) onClose();
-          }}
-          className={`w-full py-2.5 px-3.5 rounded-2xl text-xs font-medium flex items-center justify-between transition-all cursor-pointer ${
-            activeNavTab === 'customize'
-              ? isMoon
-                ? 'bg-[#222222] text-[#ede8e1] font-semibold shadow-xs'
-                : 'bg-[#efe9df] text-[#2a2620] font-semibold shadow-xs'
-              : isMoon
-              ? 'text-[#a19e97] hover:bg-[#1a1a1a] hover:text-[#ede8e1]'
-              : 'text-[#6b6459] hover:bg-[#f5f1ea] hover:text-[#2a2620]'
-          }`}
-          title="Customize Theme & Preferences"
-        >
-          <div className="flex items-center gap-2.5">
-            <Sliders className={`w-4 h-4 ${isMoon ? 'text-[#a19e97]' : 'text-[#6b6459]'}`} />
-            <span>Customize</span>
-          </div>
-        </button>
-
-        {/* 5. PWA */}
+        {/* 3. PWA */}
         {onOpenGetApp && (
           <button
             id="sidebar-pwa-btn"
@@ -251,6 +229,54 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
             </span>
           </button>
         )}
+
+        {/* 4. About */}
+        {onOpenAbout && (
+          <button
+            id="sidebar-about-btn"
+            onClick={() => {
+              onOpenAbout();
+              if (window.innerWidth < 1024) onClose();
+            }}
+            className={`w-full py-2.5 px-3.5 rounded-2xl text-xs font-medium flex items-center justify-between transition-all cursor-pointer ${
+              isMoon
+                ? 'text-[#a19e97] hover:bg-[#1a1a1a] hover:text-[#ede8e1]'
+                : 'text-[#6b6459] hover:bg-[#f5f1ea] hover:text-[#2a2620]'
+            }`}
+            title="About Sapphire AI"
+          >
+            <div className="flex items-center gap-2.5">
+              <Info className="w-4 h-4 text-[#d97757]" />
+              <span>About</span>
+            </div>
+            <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${
+              isMoon ? 'bg-[#222222] text-[#d97757]' : 'bg-[#efe9df] text-[#d97757]'
+            }`}>
+              v2.5
+            </span>
+          </button>
+        )}
+
+        {/* 5. Customize — now matches CodeX/PWA/About style (no active highlight) */}
+        <button
+          id="sidebar-customize-btn"
+          onClick={() => {
+            if (onOpenCustomize) onOpenCustomize();
+            else onOpenSettings();
+            if (window.innerWidth < 1024) onClose();
+          }}
+          className={`w-full py-2.5 px-3.5 rounded-2xl text-xs font-medium flex items-center justify-between transition-all cursor-pointer ${
+            isMoon
+              ? 'text-[#a19e97] hover:bg-[#1a1a1a] hover:text-[#ede8e1]'
+              : 'text-[#6b6459] hover:bg-[#f5f1ea] hover:text-[#2a2620]'
+          }`}
+          title="Customize Theme & Preferences"
+        >
+          <div className="flex items-center gap-2.5">
+            <Sliders className={`w-4 h-4 ${isMoon ? 'text-[#a19e97]' : 'text-[#6b6459]'}`} />
+            <span>Customize</span>
+          </div>
+        </button>
       </div>
 
       {/* Chats Header */}
