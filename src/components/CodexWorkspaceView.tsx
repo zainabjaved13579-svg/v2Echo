@@ -985,10 +985,11 @@ Please engineer the updated or new files now using the full multi-engine ensembl
                     );
                   })}
                 </div>
-              </div>
-            )}
-          </div>
+              )}
+            </div>
+          )}
         </div>
+      </div>
 
         {/* ========================================================================= */}
         {/* RIGHT SIDE: Codex AI Chat Interface (Width ~40%) */}
