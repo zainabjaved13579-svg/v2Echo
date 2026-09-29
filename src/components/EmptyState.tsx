@@ -160,7 +160,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
 
   return (
     <div className={`relative min-h-full w-full flex flex-col overflow-x-hidden select-none ${
-      theme === 'moon' ? 'bg-[#151515] text-white' : 'bg-[#191817] text-[#ede8e1]'
+      theme === 'moon' ? 'bg-[#151515] text-white' : 'bg-[#faf7f2] text-[#2a2620]'
     } font-['Plus_Jakarta_Sans',sans-serif]`}>
 
       {/* Subtle Glow Orbs */}
@@ -189,10 +189,10 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
         <ThemeToggle size="sm" />
       </div>
 
-      {/* Main Content — 3 sections: Greeting (center), Chips+Input (bottom) */}
+      {/* Main Content */}
       <div className="relative z-10 flex-1 flex flex-col items-center justify-between px-4 sm:px-6 py-4 sm:py-8 max-w-2xl mx-auto w-full">
 
-        {/* TOP SECTION: Greeting (screen ke beech mein) */}
+        {/* TOP SECTION: Greeting */}
         <div className="flex-1 flex flex-col items-center justify-center w-full">
 
           <motion.div
@@ -211,7 +211,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
             </div>
 
             <h1 className={`text-[22px] leading-tight sm:text-3xl md:text-4xl tracking-tight font-semibold ${
-              theme === 'moon' ? 'text-white' : 'text-slate-900'
+              theme === 'moon' ? 'text-white' : 'text-[#2a2620]'
             }`}>
               {greetingTime},{' '}
               <span className="bg-gradient-to-r from-[#d97757] to-[#e89a7a] bg-clip-text text-transparent">
@@ -220,7 +220,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
             </h1>
 
             <p className={`hidden xs:block text-[11px] sm:text-xs font-normal ${
-              theme === 'moon' ? 'text-[#737373]' : 'text-slate-500'
+              theme === 'moon' ? 'text-[#737373]' : 'text-[#9a9186]'
             }`}>
               #1 Education AI & Autonomous Codex Studio — ready to build, learn & create
             </p>
@@ -228,10 +228,10 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
 
         </div>
 
-        {/* BOTTOM SECTION: Chips + Input (dono neeche saath) */}
+        {/* BOTTOM SECTION: Chips + Input */}
         <div className="w-full flex flex-col items-center gap-3 sm:gap-4">
 
-          {/* Suggestion Chips — Input ke UPAR */}
+          {/* Suggestion Chips */}
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -253,7 +253,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
                   className={`inline-flex items-center gap-1.5 px-3 sm:px-3.5 py-1.5 rounded-xl text-[11px] sm:text-xs font-medium border transition-colors cursor-pointer shadow-xs ${
                     theme === 'moon'
                       ? 'bg-[#20201f] hover:bg-[#282724] hover:border-[#d97757]/40 text-white border-[#2b2b2a]'
-                      : 'bg-[#201f1d] hover:bg-[#282724] hover:border-[#d97757]/40 text-[#a19e97] hover:text-[#ede8e1] border-[#33312e]'
+                      : 'bg-white hover:bg-[#f5f1ea] hover:border-[#d97757]/40 text-[#6b6459] hover:text-[#2a2620] border-[#e8e2d8]'
                   }`}
                 >
                   <IconComp className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-[#d97757]" />
@@ -263,7 +263,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
             })}
           </motion.div>
 
-          {/* Input Box — sabse neeche */}
+          {/* Input Box */}
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
@@ -271,7 +271,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
             className={`w-full relative rounded-2xl sm:rounded-3xl border shadow-xl transition-all p-3 sm:p-4 text-left mb-1 sm:mb-2 ${
               theme === 'moon'
                 ? 'bg-[#20201f] border-[#2b2b2a] focus-within:border-[#d97757]/50'
-                : 'bg-[#201f1d] border-[#33312e] focus-within:border-[#d97757]/50'
+                : 'bg-white border-[#e8e2d8] focus-within:border-[#d97757]/50'
             }`}
           >
             {/* Attached Files */}
@@ -281,7 +281,9 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
                   <div
                     key={idx}
                     className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-lg border text-[11px] ${
-                      theme === 'moon' ? 'bg-[#151515] border-[#2b2b2a] text-white' : 'bg-[#282724] border-[#383633] text-[#ede8e1]'
+                      theme === 'moon'
+                        ? 'bg-[#151515] border-[#2b2b2a] text-white'
+                        : 'bg-[#f5f1ea] border-[#e8e2d8] text-[#2a2620]'
                     }`}
                   >
                     <FileCode className="w-3 h-3 text-[#d97757]" />
@@ -289,7 +291,9 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
                     <button
                       type="button"
                       onClick={() => setAttachedFiles((prev) => prev.filter((_, i) => i !== idx))}
-                      className="text-[#a19e97] hover:text-white cursor-pointer ml-0.5"
+                      className={`cursor-pointer ml-0.5 ${
+                        theme === 'moon' ? 'text-[#a19e97] hover:text-white' : 'text-[#9a9186] hover:text-[#2a2620]'
+                      }`}
                     >
                       ×
                     </button>
@@ -305,14 +309,16 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
               onKeyDown={handleKeyDown}
               placeholder="How can I help you today?"
               rows={2}
-              className={`w-full bg-transparent placeholder-[#737373] text-[13px] sm:text-sm focus:outline-none resize-none leading-relaxed font-normal ${
-                theme === 'moon' ? 'text-white' : 'text-[#ede8e1]'
+              className={`w-full bg-transparent text-[13px] sm:text-sm focus:outline-none resize-none leading-relaxed font-normal ${
+                theme === 'moon'
+                  ? 'text-white placeholder-[#737373]'
+                  : 'text-[#2a2620] placeholder-[#9a9186]'
               }`}
             />
 
             {/* Bottom Controls */}
             <div className={`pt-2 sm:pt-3 flex items-center justify-between gap-2 border-t ${
-              theme === 'moon' ? 'border-[#2b2b2a]' : 'border-[#2a2926]'
+              theme === 'moon' ? 'border-[#2b2b2a]' : 'border-[#e8e2d8]'
             }`}>
               {/* Plus Button */}
               <div className="relative">
@@ -322,7 +328,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
                   className={`w-8 h-8 rounded-xl flex items-center justify-center transition-colors cursor-pointer border ${
                     theme === 'moon'
                       ? 'bg-[#151515] hover:bg-[#282724] text-white border-[#2b2b2a]'
-                      : 'bg-[#282724] hover:bg-[#32302c] text-[#ede8e1] border-[#383633]'
+                      : 'bg-[#f5f1ea] hover:bg-[#efe9df] text-[#2a2620] border-[#e8e2d8]'
                   }`}
                   title="Add files or images"
                 >
@@ -338,14 +344,14 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
                       className={`absolute left-0 bottom-10 z-50 w-44 rounded-xl shadow-2xl p-1.5 space-y-1 text-xs border ${
                         theme === 'moon'
                           ? 'bg-[#20201f] border-[#2b2b2a] text-white'
-                          : 'bg-[#201f1d] border-[#33312e] text-[#ede8e1]'
+                          : 'bg-white border-[#e8e2d8] text-[#2a2620]'
                       }`}
                     >
                       <button
                         type="button"
                         onClick={() => fileInputRef.current?.click()}
                         className={`w-full px-3 py-2 rounded-lg flex items-center gap-2.5 transition-colors cursor-pointer text-left ${
-                          theme === 'moon' ? 'hover:bg-[#151515]' : 'hover:bg-[#282724]'
+                          theme === 'moon' ? 'hover:bg-[#151515]' : 'hover:bg-[#f5f1ea]'
                         }`}
                       >
                         <Paperclip className="w-3.5 h-3.5 text-[#d97757]" />
@@ -355,7 +361,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
                         type="button"
                         onClick={() => imageInputRef.current?.click()}
                         className={`w-full px-3 py-2 rounded-lg flex items-center gap-2.5 transition-colors cursor-pointer text-left ${
-                          theme === 'moon' ? 'hover:bg-[#151515]' : 'hover:bg-[#282724]'
+                          theme === 'moon' ? 'hover:bg-[#151515]' : 'hover:bg-[#f5f1ea]'
                         }`}
                       >
                         <ImageIcon className="w-3.5 h-3.5 text-[#d97757]" />
@@ -376,11 +382,11 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
                     className={`flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[11px] transition-colors cursor-pointer border ${
                       theme === 'moon'
                         ? 'bg-[#151515] hover:bg-[#282724] text-white border-[#2b2b2a]'
-                        : 'bg-[#282724] hover:bg-[#32302c] text-[#ede8e1] border-[#383633]'
+                        : 'bg-[#f5f1ea] hover:bg-[#efe9df] text-[#2a2620] border-[#e8e2d8]'
                     }`}
                   >
                     <span className="font-medium">{selectedModelName}</span>
-                    <ChevronDown className="w-3 h-3 text-[#a19e97]" />
+                    <ChevronDown className={`w-3 h-3 ${theme === 'moon' ? 'text-[#a19e97]' : 'text-[#9a9186]'}`} />
                   </button>
 
                   <AnimatePresence>
@@ -392,7 +398,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
                         className={`absolute right-0 bottom-10 z-50 w-56 rounded-xl shadow-2xl p-1.5 space-y-1 text-xs border ${
                           theme === 'moon'
                             ? 'bg-[#20201f] border-[#2b2b2a] text-white'
-                            : 'bg-[#201f1d] border-[#33312e] text-[#ede8e1]'
+                            : 'bg-white border-[#e8e2d8] text-[#2a2620]'
                         }`}
                       >
                         {modelChoices.map((item) => (
@@ -409,11 +415,11 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
                                 ? 'bg-[#d97757]/20 text-[#d97757] font-semibold'
                                 : theme === 'moon'
                                 ? 'hover:bg-[#151515] text-[#a3a3a3] hover:text-white'
-                                : 'hover:bg-[#252422] text-[#a19e97]'
+                                : 'hover:bg-[#f5f1ea] text-[#6b6459] hover:text-[#2a2620]'
                             }`}
                           >
                             <span className="font-semibold text-[11px]">{item.name}</span>
-                            <span className="text-[10px] text-[#86837c]">{item.sub}</span>
+                            <span className={`text-[10px] ${theme === 'moon' ? 'text-[#86837c]' : 'text-[#9a9186]'}`}>{item.sub}</span>
                           </button>
                         ))}
                       </motion.div>
@@ -430,7 +436,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
                       ? 'bg-[#d97757]/20 text-[#d97757] border-[#d97757]/50 font-medium'
                       : theme === 'moon'
                       ? 'bg-[#151515] hover:bg-[#282724] text-[#a3a3a3] hover:text-white border-[#2b2b2a]'
-                      : 'bg-[#282724] hover:bg-[#32302c] text-[#a19e97] border-[#383633]'
+                      : 'bg-[#f5f1ea] hover:bg-[#efe9df] text-[#6b6459] border-[#e8e2d8]'
                   }`}
                   title="Toggle Live Web Search"
                 >
@@ -447,7 +453,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
                       ? 'bg-rose-600 text-white animate-pulse border-rose-500'
                       : theme === 'moon'
                       ? 'bg-[#151515] hover:bg-[#282724] text-[#a3a3a3] hover:text-white border-[#2b2b2a]'
-                      : 'bg-[#282724] hover:bg-[#32302c] text-[#a19e97] hover:text-[#ede8e1] border-[#383633]'
+                      : 'bg-[#f5f1ea] hover:bg-[#efe9df] text-[#6b6459] border-[#e8e2d8]'
                   }`}
                   title="Voice dictation"
                 >
@@ -461,7 +467,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
                   className={`p-2 rounded-xl transition-colors cursor-pointer border ${
                     theme === 'moon'
                       ? 'bg-[#151515] hover:bg-[#282724] text-[#a3a3a3] hover:text-white border-[#2b2b2a]'
-                      : 'bg-[#282724] hover:bg-[#32302c] text-[#a19e97] hover:text-[#ede8e1] border-[#383633]'
+                      : 'bg-[#f5f1ea] hover:bg-[#efe9df] text-[#6b6459] border-[#e8e2d8]'
                   }`}
                   title="Voice mode"
                 >
