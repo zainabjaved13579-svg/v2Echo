@@ -602,61 +602,14 @@ export function autoSaveAiCodeBlocks(
   return savedFiles;
 }
 
-// ============================================================
-// SMART PROJECT FILE MATCHING
-// Picks only files belonging to the SAME project/message so
-// preview doesn't mix old CSS/JS from other projects.
-// ============================================================
-function getProjectSiblingFiles(
-  mainFile: WorkspaceFile,
-  workspaceFiles: WorkspaceFile[]
-): WorkspaceFile[] {
-  return workspaceFiles.filter((f) => {
-    if (f.id === mainFile.id) return false;
-    if (f.name === mainFile.name && f.path === mainFile.path) return false;
-
-    // 1. Match by chatSessionId (most accurate — same AI session)
-    if (mainFile.chatSessionId && f.chatSessionId === mainFile.chatSessionId) {
-      return true;
-    }
-
-    // 2. Match by chatMessageId (very accurate — same AI message)
-    if (mainFile.chatMessageId && f.chatMessageId === mainFile.chatMessageId) {
-      return true;
-    }
-
-    // 3. Match by same folder
-    const mainFolder = mainFile.path.substring(0, mainFile.path.lastIndexOf('/'));
-    const fFolder = f.path.substring(0, f.path.lastIndexOf('/'));
-    if (mainFolder && fFolder && mainFolder === fFolder) {
-      return true;
-    }
-
-    // 4. Match by recent update (within 5 minutes of the main file)
-    if (Math.abs(f.updatedAt - mainFile.updatedAt) < 5 * 60 * 1000) {
-      return true;
-    }
-
-    return false;
-  });
-}
-
-// ============================================================
-// BUILD UNIFIED LIVE PREVIEW BUNDLE
-// Works for both chat preview AND workspace preview.
-// Smart-matches project files, inlines CSS + JS into the HTML
-// so the whole multi-file project renders in the iframe.
-// ============================================================
-export function buildLivePreviewBundle(
-  file: WorkspaceFile,
-  allFiles: WorkspaceFile[] = []
-): string {
+// Generate unified HTML bundle for Live Preview
+export function buildLivePreviewBundle(file: WorkspaceFile, allFiles: WorkspaceFile[] = []): string {
   const lang = (file.language || getLanguageFromFileName(file.name)).toLowerCase();
 
   // If allFiles is empty, load from persistent workspace
   const workspaceFiles = allFiles.length > 0 ? allFiles : loadWorkspaceFiles();
 
-  // ===== HTML PROJECT WITH MULTI-FILE BUNDLE =====
+  // If already full HTML document
   if (lang === 'html' || file.name.endsWith('.html')) {
     let html = file.content;
 
@@ -684,63 +637,29 @@ ${html}
       '<script src="https://cdn.tailwindcss.com"></script>'
     );
 
-    // ===== SMART PROJECT FILE MATCHING =====
-    // Only pick CSS/JS files that belong to the SAME project/message
-    const projectFiles = getProjectSiblingFiles(file, workspaceFiles);
-
-    const cssFiles = projectFiles.filter(
-      (f) => f.name.endsWith('.css') || f.language === 'css'
-    );
-    const jsFiles = projectFiles.filter(
-      (f) =>
-        f.name.endsWith('.js') ||
-        f.name.endsWith('.ts') ||
-        f.name.endsWith('.jsx') ||
-        f.name.endsWith('.tsx') ||
-        f.name.endsWith('.mjs') ||
-        f.name.endsWith('.cjs') ||
-        f.language === 'javascript' ||
-        f.language === 'typescript'
+    // Auto-link and inline all adjacent css and js files in workspace (e.g. style.css, script.js)
+    const cssFiles = workspaceFiles.filter((f) => f.name.endsWith('.css') && f.id !== file.id);
+    const jsFiles = workspaceFiles.filter(
+      (f) => (f.name.endsWith('.js') || f.name.endsWith('.ts') || f.name.endsWith('.jsx') || f.name.endsWith('.tsx')) && f.id !== file.id
     );
 
-    // ===== INLINE ALL CSS FILES =====
     cssFiles.forEach((cssFile) => {
-      // First: replace the <link href="style.css"> tag with inline <style>
-      const escapedName = cssFile.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const linkRegex = new RegExp(
-        `<link[^>]*href=["'](?:\\.\\/|\\/)?${escapedName}["'][^>]*\\/?>`,
-        'gi'
-      );
-
+      const linkRegex = new RegExp(`<link[^>]*href=["'](?:\\.\\/)?${cssFile.name.replace('.', '\\.')}["'][^>]*>`, 'gi');
       if (linkRegex.test(html)) {
-        html = html.replace(
-          linkRegex,
-          `<style data-inlined="${cssFile.name}">\n/* Auto-bundled: ${cssFile.name} */\n${cssFile.content}\n</style>`
-        );
-      } else if (!html.includes(cssFile.content.slice(0, 40))) {
-        // No <link> tag found — auto-inject before </head>
+        html = html.replace(linkRegex, `<style data-inlined="${cssFile.name}">\n/* Auto-bundled: ${cssFile.name} */\n${cssFile.content}\n</style>`);
+      } else if (!html.includes(cssFile.content.slice(0, 30))) {
         if (html.includes('</head>')) {
-          html = html.replace(
-            '</head>',
-            `<style data-inlined="${cssFile.name}">\n/* Auto-bundled: ${cssFile.name} */\n${cssFile.content}\n</style>\n</head>`
-          );
+          html = html.replace('</head>', `<style data-inlined="${cssFile.name}">\n/* Auto-bundled: ${cssFile.name} */\n${cssFile.content}\n</style>\n</head>`);
         } else {
           html = `<style data-inlined="${cssFile.name}">\n/* Auto-bundled: ${cssFile.name} */\n${cssFile.content}\n</style>\n${html}`;
         }
       }
     });
 
-    // ===== INLINE ALL JS FILES =====
     jsFiles.forEach((jsFile) => {
-      // Remove the <script src="script.js"></script> tag
-      const escapedName = jsFile.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const scriptRegex = new RegExp(
-        `<script[^>]*src=["'](?:\\.\\/|\\/)?${escapedName}["'][^>]*>\\s*<\\/script>`,
-        'gi'
-      );
+      const scriptRegex = new RegExp(`<script[^>]*src=["'](?:\\.\\/)?${jsFile.name.replace('.', '\\.')}["'][^>]*>\\s*<\\/script>`, 'gi');
       html = html.replace(scriptRegex, '');
-
-      if (!html.includes(jsFile.content.slice(0, 40))) {
+      if (!html.includes(jsFile.content.slice(0, 30))) {
         const injected = `<script data-inlined="${jsFile.name}">\n// Auto-bundled: ${jsFile.name}\ntry {\n${jsFile.content}\n} catch (e) { console.error('Error in ${jsFile.name}:', e); }\n</script>`;
         if (html.includes('</body>')) {
           html = html.replace('</body>', `${injected}\n</body>`);
@@ -753,18 +672,8 @@ ${html}
     return html;
   }
 
-  // ===== CSS PREVIEW PLAYGROUND =====
+  // If CSS file: create preview playground
   if (lang === 'css' || file.name.endsWith('.css')) {
-    // Also pull in any HTML/JS from same project for context
-    const projectFiles = getProjectSiblingFiles(file, workspaceFiles);
-    const htmlSibling = projectFiles.find((f) => f.name.endsWith('.html'));
-
-    if (htmlSibling) {
-      // We have an HTML sibling — build full project preview from that
-      return buildLivePreviewBundle(htmlSibling, workspaceFiles);
-    }
-
-    // Standalone CSS preview
     return `<!DOCTYPE html>
 <html>
 <head>
@@ -773,11 +682,8 @@ ${html}
   <style>
     ${file.content}
   </style>
-  <style>
-    body { padding: 30px; font-family: sans-serif; }
-  </style>
 </head>
-<body>
+<body style="padding: 30px; font-family: sans-serif;">
   <div style="max-width: 600px; margin: 0 auto; background: #fff; padding: 24px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
     <h1>CSS Stylesheet Preview</h1>
     <p>Styles from <code>${file.path}</code> are loaded and applied here.</p>
@@ -787,25 +693,8 @@ ${html}
 </html>`;
   }
 
-  // ===== JS / TS / JSX / TSX LIVE RUNNER =====
-  if (
-    lang === 'javascript' ||
-    lang === 'typescript' ||
-    lang === 'js' ||
-    lang === 'ts' ||
-    lang === 'jsx' ||
-    lang === 'tsx'
-  ) {
-    // Check for HTML sibling in same project
-    const projectFiles = getProjectSiblingFiles(file, workspaceFiles);
-    const htmlSibling = projectFiles.find((f) => f.name.endsWith('.html'));
-
-    if (htmlSibling) {
-      // Full project preview from HTML sibling
-      return buildLivePreviewBundle(htmlSibling, workspaceFiles);
-    }
-
-    // Standalone JS runner
+  // If JavaScript / TypeScript / JSX: create live runner sandbox with interactive console & Babel
+  if (lang === 'javascript' || lang === 'typescript' || lang === 'js' || lang === 'ts' || lang === 'jsx' || lang === 'tsx') {
     const safeContent = JSON.stringify(file.content);
     return `<!DOCTYPE html>
 <html>
@@ -859,6 +748,7 @@ ${html}
           const res = Babel.transform(rawCode, { presets: ['env', 'typescript', 'react'] });
           executable = res.code;
         } catch (babelErr) {
+          // If babel transpile had syntax issue, log warning and try raw
           printLog('warn', 'Babel note: ' + babelErr.message);
         }
       }
@@ -873,7 +763,7 @@ ${html}
 </html>`;
   }
 
-  // ===== SVG PREVIEW =====
+  // If SVG: directly render SVG graphic
   if (lang === 'svg' || file.name.endsWith('.svg')) {
     return `<!DOCTYPE html>
 <html>
@@ -894,7 +784,7 @@ ${html}
 </html>`;
   }
 
-  // ===== FALLBACK / TEXT / MARKDOWN =====
+  // Fallback / Text / Markdown / Python simulator
   return `<!DOCTYPE html>
 <html>
 <head>
@@ -925,6 +815,7 @@ export async function saveFileToDiskLocation(
   try {
     let handle = existingHandle;
 
+    // Use showSaveFilePicker if available and no existing handle
     if (!handle && typeof (window as any).showSaveFilePicker === 'function') {
       const ext = filename.split('.').pop() || 'txt';
       try {
@@ -955,6 +846,7 @@ export async function saveFileToDiskLocation(
     console.warn('Direct file handle write unavailable, falling back to download:', err);
   }
 
+  // Fallback: browser download
   const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -1015,6 +907,7 @@ export interface ExtractedCodeFile {
 export function extractCodeFilesFromMarkdown(markdown: string): ExtractedCodeFile[] {
   if (!markdown || !markdown.includes('```')) return [];
 
+  // Auto-heal unclosed code blocks if generation ended before completing
   let normalizedMarkdown = markdown;
   const fenceCount = (markdown.match(/```/g) || []).length;
   if (fenceCount % 2 !== 0) {
@@ -1032,6 +925,7 @@ export function extractCodeFilesFromMarkdown(markdown: string): ExtractedCodeFil
     const codeContent = match[3] || '';
     if (!codeContent.trim()) continue;
 
+    // Do not extract exam paper patterns, questionnaires, or general text documents as code files
     const isExamOrPattern =
       ['markdown', 'md', 'text', 'txt', 'exam', 'paper', 'pattern'].includes(rawLang) &&
       /(###\s*section|section\s+[a-c]:|paper\s*pattern|question\s*paper|total\s*marks|attempt\s*any)/i.test(codeContent);
@@ -1074,6 +968,7 @@ export async function exportAllFilesAsZip(filesInput?: WorkspaceFile[]): Promise
   const zip = new JSZip();
 
   for (const file of files) {
+    // Remove leading slash for ZIP directory structure
     const cleanPath = file.path.replace(/^\/+/, '') || file.name;
     if (file.content.startsWith('data:') && file.content.includes(';base64,')) {
       const base64Data = file.content.split(';base64,')[1];
@@ -1083,6 +978,7 @@ export async function exportAllFilesAsZip(filesInput?: WorkspaceFile[]): Promise
     }
   }
 
+  // Add a manifest file
   const manifest = {
     project: 'Sapphire AI Workspace',
     exportedAt: new Date().toISOString(),
@@ -1107,6 +1003,7 @@ export async function exportAllFilesAsZip(filesInput?: WorkspaceFile[]): Promise
   URL.revokeObjectURL(url);
 }
 
+// AI Edit History Storage Key
 const STORAGE_KEY_AI_HISTORY = 'echo_workspace_ai_history_v1';
 
 export function loadAiEditHistory(): import('../types').AiEditHistoryItem[] {
@@ -1126,6 +1023,7 @@ export function saveAiEditHistoryItem(item: import('../types').AiEditHistoryItem
   try {
     const history = loadAiEditHistory();
     history.unshift(item);
+    // Keep last 50 edits
     const trimmed = history.slice(0, 50);
     localStorage.setItem(STORAGE_KEY_AI_HISTORY, JSON.stringify(trimmed));
   } catch (err) {
@@ -1137,6 +1035,7 @@ export function clearAiEditHistory(): void {
   localStorage.removeItem(STORAGE_KEY_AI_HISTORY);
 }
 
+// Import all files from a ZIP archive, keeping full relative paths
 export async function importZipArchive(file: File | Blob): Promise<WorkspaceFile[]> {
   const zip = new JSZip();
   const loadedZip = await zip.loadAsync(file);
@@ -1146,6 +1045,7 @@ export async function importZipArchive(file: File | Blob): Promise<WorkspaceFile
   const filePromises: Promise<void>[] = [];
 
   loadedZip.forEach((relativePath, zipEntry) => {
+    // Ignore directories and OS metadata
     if (zipEntry.dir || relativePath.startsWith('__MACOSX') || relativePath.includes('.DS_Store')) {
       return;
     }
@@ -1178,8 +1078,10 @@ export async function importZipArchive(file: File | Blob): Promise<WorkspaceFile
 
   await Promise.all(filePromises);
 
+  // Merge into existing workspace files
   if (extractedFiles.length > 0) {
     const current = loadWorkspaceFiles();
+    // Overwrite or append
     const updated = [...extractedFiles, ...current.filter((c) => !extractedFiles.some((e) => e.path === c.path))];
     saveWorkspaceFiles(updated);
   }
@@ -1187,6 +1089,7 @@ export async function importZipArchive(file: File | Blob): Promise<WorkspaceFile
   return extractedFiles;
 }
 
+// Convenient unified service object
 export const fileStorageService = {
   getFiles: loadWorkspaceFiles,
   saveFiles: saveWorkspaceFiles,
@@ -1216,3 +1119,4 @@ export const fileStorageService = {
   getAiHistory: loadAiEditHistory,
   saveAiHistory: saveAiEditHistoryItem
 };
+
