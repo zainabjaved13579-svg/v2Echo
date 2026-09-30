@@ -1040,14 +1040,15 @@ ${promptText || 'Please analyze, remake, or update these files cleanly according
               transition={{ duration: 0.2 }}
               className="flex-1 h-full w-full overflow-hidden"
             >
-              <CodexWorkspaceView
-                settings={settings}
-                onUpdateSettings={(newSettings) => setSettings(newSettings)}
-                onClose={() => {
-                  setActiveNavTab('chat');
-                  setIsStartingScreen(false);
-                }}
-              />
+             <CodexWorkspaceView
+  settings={settings}
+  onUpdateSettings={(newSettings) => setSettings(newSettings)}
+  onClose={() => {
+    setActiveNavTab('chat');
+    setIsStartingScreen(false);
+  }}
+  userProfile={currentUserProfile}
+/>
             </motion.div>
           ) : isStartingScreen ? (
             <motion.div

@@ -14,9 +14,6 @@ import {
   Smartphone,
   Info,
   MessageSquare,
-  FolderOpen,
-  Plug,
-  Clock,
   PanelRightOpen
 } from 'lucide-react';
 import { ChatSession, UserProfile } from '../types';
@@ -196,24 +193,6 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
           <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#d97757]/15 text-[#d97757] font-bold tracking-wider">
             BETA
           </span>
-        </button>
-
-        {/* Plugins */}
-        <button
-          className={`w-full py-2 px-3 rounded-lg text-[13px] font-medium flex items-center gap-2.5 transition-colors cursor-pointer ${textSub} ${bgHover} hover:${text}`}
-          title="Plugins"
-        >
-          <Plug className="w-4 h-4" />
-          <span>Plugins</span>
-        </button>
-
-        {/* Automation */}
-        <button
-          className={`w-full py-2 px-3 rounded-lg text-[13px] font-medium flex items-center gap-2.5 transition-colors cursor-pointer ${textSub} ${bgHover} hover:${text}`}
-          title="Automation"
-        >
-          <Clock className="w-4 h-4" />
-          <span>Automation</span>
         </button>
 
         {/* PWA */}

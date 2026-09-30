@@ -13,10 +13,9 @@ import {
   FileText,
   SlidersHorizontal,
   FolderInput,
-  Loader2,
-  Plug
+  Loader2
 } from 'lucide-react';
-import { AppSettings } from '../types';
+import { AppSettings, UserProfile } from '../types';
 import { SAPPHIRE_LOGO_URL } from '../data/constants';
 import { useAppTheme } from '../context/ThemeContext';
 
@@ -24,6 +23,7 @@ interface CodexWorkspaceViewProps {
   settings: AppSettings;
   onUpdateSettings?: (settings: AppSettings) => void;
   onClose?: () => void;
+  userProfile?: UserProfile | null;
 }
 
 interface AgentMessage {
@@ -47,7 +47,8 @@ const WORKSPACE_ITEMS = [
 export const CodexWorkspaceView: React.FC<CodexWorkspaceViewProps> = ({
   settings,
   onUpdateSettings,
-  onClose
+  onClose,
+  userProfile
 }) => {
   const { theme } = useAppTheme();
   const isMoon = theme === 'moon';
@@ -57,6 +58,10 @@ export const CodexWorkspaceView: React.FC<CodexWorkspaceViewProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [activeSession, setActiveSession] = useState('Meet Sapphire Agent');
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const userName = userProfile?.name || 'Guest';
+  const userAvatar = userProfile?.avatar;
+  const initial = userName.charAt(0).toUpperCase();
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -233,7 +238,7 @@ export const CodexWorkspaceView: React.FC<CodexWorkspaceViewProps> = ({
           <button
             className={`w-full py-2 px-3 rounded-lg text-[13px] font-medium flex items-center gap-2.5 transition-colors cursor-pointer ${textSub} ${bgHover} hover:${text}`}
           >
-            <Plug className="w-4 h-4" />
+            <Bot className="w-4 h-4" />
             <span>Plugins</span>
           </button>
           <button
@@ -302,20 +307,32 @@ export const CodexWorkspaceView: React.FC<CodexWorkspaceViewProps> = ({
           </div>
         </div>
 
-        {/* User Profile */}
+        {/* ===== User Profile (Logged-in user) ===== */}
         <div
           className={`p-3 border-t ${borderSubtle} flex items-center gap-2.5 mt-2`}
         >
           <div
-            className={`w-7 h-7 rounded-full ${bgCard} border ${border} flex items-center justify-center shrink-0`}
+            className={`w-7 h-7 rounded-full ${bgCard} border ${border} flex items-center justify-center shrink-0 overflow-hidden`}
           >
-            <User className={`w-3.5 h-3.5 ${textSub}`} />
+            {userAvatar ? (
+              <img
+                src={userAvatar}
+                alt={userName}
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <span className={`text-[11px] font-bold ${text}`}>
+                {initial}
+              </span>
+            )}
           </div>
           <div className="flex-1 min-w-0">
             <p className={`text-[13px] font-semibold ${text} truncate`}>
-              Sapphire
+              {userName}
             </p>
-            <p className={`text-[11px] ${textMuted} truncate`}>User</p>
+            <p className={`text-[11px] ${textMuted} truncate`}>
+              {userProfile?.email || 'Guest'}
+            </p>
           </div>
         </div>
       </aside>
@@ -342,15 +359,14 @@ export const CodexWorkspaceView: React.FC<CodexWorkspaceViewProps> = ({
         {/* Messages Area */}
         <div className="flex-1 overflow-y-auto px-6 py-8">
           <div className="max-w-3xl mx-auto space-y-6">
-            {/* Welcome message (initial state) */}
             {messages.length === 0 && (
               <div
                 className={`text-[14px] ${text} leading-[1.7] space-y-5`}
               >
                 <p>
-                  I'm <strong>Sapphire Agent</strong>, an open-source agent built
-                  on Sapphire's "everything is a plugin" architecture. Run me as
-                  a desktop app or launch the web UI from code.
+                  I'm <strong>Sapphire Agent</strong>, an open-source agent
+                  built on Sapphire's "everything is a plugin" architecture.
+                  Run me as a desktop app or launch the web UI from code.
                 </p>
 
                 <div>
@@ -365,16 +381,16 @@ export const CodexWorkspaceView: React.FC<CodexWorkspaceViewProps> = ({
                       features, and run tests.
                     </li>
                     <li>
-                      <strong>Research</strong> — Find information, verify facts,
-                      and cite sources.
+                      <strong>Research</strong> — Find information, verify
+                      facts, and cite sources.
                     </li>
                     <li>
                       <strong>Background tasks</strong> — Run scripts,
                       batch-process files, and track progress.
                     </li>
                     <li>
-                      <strong>Plugins</strong> — Add or build plugins to fit your
-                      workflow.
+                      <strong>Plugins</strong> — Add or build plugins to fit
+                      your workflow.
                     </li>
                   </ol>
                 </div>
@@ -383,7 +399,6 @@ export const CodexWorkspaceView: React.FC<CodexWorkspaceViewProps> = ({
               </div>
             )}
 
-            {/* Chat Messages */}
             {messages.map((msg) => (
               <div key={msg.id}>
                 {msg.role === 'user' ? (
@@ -396,7 +411,6 @@ export const CodexWorkspaceView: React.FC<CodexWorkspaceViewProps> = ({
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {/* Thinking indicator */}
                     {msg.isThinking && (
                       <div
                         className={`flex items-center gap-1.5 text-[12px] ${textMuted} px-2 py-1`}
@@ -406,7 +420,6 @@ export const CodexWorkspaceView: React.FC<CodexWorkspaceViewProps> = ({
                       </div>
                     )}
 
-                    {/* Agent Response */}
                     <div
                       className={`text-[14px] ${text} leading-[1.7] whitespace-pre-wrap`}
                     >
@@ -451,7 +464,6 @@ export const CodexWorkspaceView: React.FC<CodexWorkspaceViewProps> = ({
               />
 
               <div className="flex items-center justify-between pt-2 mt-1">
-                {/* Left Controls */}
                 <div className="flex items-center gap-1">
                   <button
                     className={`p-1.5 rounded-lg ${bgHover} ${textSub} cursor-pointer transition-colors`}
@@ -469,7 +481,6 @@ export const CodexWorkspaceView: React.FC<CodexWorkspaceViewProps> = ({
                   </button>
                 </div>
 
-                {/* Right Controls */}
                 <div className="flex items-center gap-2">
                   <button
                     className={`px-2.5 py-1.5 rounded-lg ${bgHover} ${textSub} text-[12px] font-medium flex items-center gap-1.5 cursor-pointer transition-colors`}
