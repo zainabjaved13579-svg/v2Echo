@@ -1,23 +1,23 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
-  Menu,
   Plus,
-  Box,
   Sliders,
-  Folder,
   Search,
   SlidersHorizontal,
-  Download,
   ChevronDown,
   Trash2,
   Edit2,
   Check,
   X,
-  Code2,
+  Bot,
   Smartphone,
   Info,
-  Image as ImageIcon
+  MessageSquare,
+  FolderOpen,
+  Plug,
+  Clock,
+  PanelRightOpen
 } from 'lucide-react';
 import { ChatSession, UserProfile } from '../types';
 import { SAPPHIRE_LOGO_URL } from '../data/constants';
@@ -52,7 +52,6 @@ interface ChatSidebarProps {
 export const ChatSidebar: React.FC<ChatSidebarProps> = ({
   isOpen,
   onClose,
-  onOpen,
   onOpenAbout,
   sessions,
   currentSessionId,
@@ -63,13 +62,9 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
   onDeleteSession,
   onRenameSession,
   onOpenSettings,
-  onOpenFileWorkspace,
   onOpenGetApp,
   onOpenCodex,
-  onOpenProjects,
-  onOpenArtifacts,
   onOpenCustomize,
-  onOpenImageGen,
   activeNavTab = 'chat'
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -107,103 +102,121 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
 
   const { theme } = useAppTheme();
   const userName = userProfile?.name || 'Guest';
-  const initial = userName.charAt(0).toLowerCase();
-
+  const initial = userName.charAt(0).toUpperCase();
   const isMoon = theme === 'moon';
 
-  const sidebarContent = (
-    <div className={`w-full h-full flex flex-col shrink-0 min-w-0 ${
-      isMoon
-        ? 'bg-[#111111] text-[#ede8e1] border-r border-[#222222]'
-        : 'bg-[#faf7f2] text-[#2a2620] border-r border-[#e8e2d8]'
-    } select-none font-['Plus_Jakarta_Sans',sans-serif]`}>
+  // === Theme Colors (CodexWorkspaceView style) ===
+  const bgSidebar = isMoon ? 'bg-[#1a1a1a]' : 'bg-[#f0ebe2]';
+  const bgCard = isMoon ? 'bg-[#1e1e1e]' : 'bg-white';
+  const bgHover = isMoon ? 'hover:bg-[#252525]' : 'hover:bg-[#e8e2d8]';
+  const border = isMoon ? 'border-[#2a2a2a]' : 'border-[#e0dace]';
+  const borderSubtle = isMoon ? 'border-[#262626]' : 'border-[#e8e2d8]';
+  const text = isMoon ? 'text-white' : 'text-[#2a2620]';
+  const textSub = isMoon ? 'text-[#a19e97]' : 'text-[#6b6459]';
+  const textMuted = isMoon ? 'text-[#666]' : 'text-[#9a9186]';
+  const textBright = isMoon ? 'text-[#f5f2eb]' : 'text-[#1a1712]';
 
-      {/* Brand Header with New Sapphire Logo */}
-      <div className="px-4 pt-4 pb-2 flex items-center justify-between border-b border-inherit">
-        <div className="flex items-center gap-2.5">
-          <img
-            src={SAPPHIRE_LOGO_URL}
-            alt="Sapphire AI"
-            className="w-8 h-8 rounded-xl object-contain p-1 border border-[#e8e2d8] bg-white ring-1 ring-[#d97757]/30 shadow-sm"
-          />
-          <div>
+  const sidebarContent = (
+    <div
+      className={`w-full h-full flex flex-col shrink-0 min-w-0 ${bgSidebar} ${text} border-r ${borderSubtle} font-['Plus_Jakarta_Sans',sans-serif]`}
+    >
+      {/* ===== Brand Header ===== */}
+      <div className="px-4 pt-4 pb-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <img
+              src={SAPPHIRE_LOGO_URL}
+              alt="Sapphire AI"
+              className="w-7 h-7 rounded-lg object-contain p-0.5 border border-[#e8e2d8] bg-white"
+            />
             <div className="flex items-center gap-1.5">
-              <span className={`font-bold text-sm tracking-tight ${isMoon ? 'text-[#f5f2eb]' : 'text-[#2a2620]'}`}>
+              <span className={`font-bold text-[15px] ${textBright} tracking-tight`}>
                 Sapphire
               </span>
-              <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-[#d97757]/20 text-[#d97757] font-semibold">
+              <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#d97757]/20 text-[#d97757] font-bold tracking-wider">
                 AI
               </span>
             </div>
-            <p className={`text-[10px] -mt-0.5 ${isMoon ? 'text-[#86837c]' : 'text-[#9a9186]'}`}>
-              Education &amp; Codex Studio
-            </p>
+          </div>
+          <div className="flex items-center gap-0.5">
+            <button
+              type="button"
+              onClick={onClose}
+              className={`lg:hidden p-1.5 rounded-lg ${bgHover} ${textSub} cursor-pointer transition-colors`}
+              title="Close sidebar"
+            >
+              <X className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              className={`hidden lg:flex p-1.5 rounded-lg ${bgHover} ${textSub} cursor-pointer transition-colors`}
+              title="Toggle panel"
+            >
+              <PanelRightOpen className="w-4 h-4" />
+            </button>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={onClose}
-          className={`lg:hidden p-1.5 rounded-xl transition-colors cursor-pointer ${
-            isMoon
-              ? 'text-[#86837c] hover:text-white hover:bg-[#20201f]'
-              : 'text-[#9a9186] hover:text-[#2a2620] hover:bg-[#efe9df]'
-          }`}
-          title="Close sidebar"
-        >
-          <X className="w-4 h-4" />
-        </button>
       </div>
 
-      {/* Top Navigation Action Section */}
-      <div className="p-3.5 space-y-2 pt-3">
-        {/* 1. New */}
+      {/* ===== New Chat Button ===== */}
+      <div className="px-3 pb-3">
         <button
           id="sidebar-new-btn"
           onClick={() => {
             onNewChat();
             if (window.innerWidth < 1024) onClose();
           }}
-          className={`w-full py-2.5 px-3.5 rounded-2xl text-xs font-semibold flex items-center gap-2.5 transition-all active:scale-[0.98] cursor-pointer shadow-xs ${
-            isMoon
-              ? 'bg-[#1a1a1a] hover:bg-[#222222] text-[#ede8e1] border border-[#2a2a2a]'
-              : 'bg-white hover:bg-[#f5f1ea] text-[#2a2620] border border-[#e8e2d8]'
-          }`}
-          title="Start new chat"
+          className={`w-full py-2.5 px-3 rounded-xl text-[13px] font-semibold flex items-center justify-center gap-2 transition-all active:scale-[0.98] cursor-pointer ${bgCard} ${text} border ${border} ${bgHover} shadow-xs`}
         >
-          <div className="w-5 h-5 rounded-xl bg-[#d97757]/15 flex items-center justify-center shrink-0">
-            <Plus className="w-3.5 h-3.5 text-[#d97757]" />
-          </div>
-          <span>New</span>
+          <Plus className="w-4 h-4" />
+          <span>New Session</span>
         </button>
+      </div>
 
-        {/* 2. CodeX */}
+      {/* ===== Top Nav Items ===== */}
+      <nav className="px-3 pb-3 space-y-0.5">
+        {/* Agent */}
         <button
-          id="sidebar-codex-btn"
+          id="sidebar-agent-btn"
           onClick={() => {
             if (onOpenCodex) onOpenCodex();
             if (window.innerWidth < 1024) onClose();
           }}
-          className={`w-full py-2.5 px-3.5 rounded-2xl text-xs font-medium flex items-center justify-between transition-all cursor-pointer ${
-            activeNavTab === 'codex'
-              ? isMoon
-                ? 'bg-[#222222] text-[#ede8e1] font-semibold shadow-xs'
-                : 'bg-[#efe9df] text-[#2a2620] font-semibold shadow-xs'
-              : isMoon
-              ? 'text-[#a19e97] hover:bg-[#1a1a1a] hover:text-[#ede8e1]'
-              : 'text-[#6b6459] hover:bg-[#f5f1ea] hover:text-[#2a2620]'
+          className={`w-full py-2 px-3 rounded-lg text-[13px] font-medium flex items-center justify-between transition-colors cursor-pointer ${
+            activeNavTab === 'agent' || activeNavTab === 'codex'
+              ? `${bgCard} ${text} shadow-sm`
+              : `${textSub} ${bgHover} hover:${text}`
           }`}
-          title="CodeX Multi-Model Studio"
+          title="Sapphire Agent"
         >
           <div className="flex items-center gap-2.5">
-            <Code2 className="w-4 h-4 text-[#d97757]" />
-            <span>CodeX</span>
+            <Bot className="w-4 h-4 text-[#d97757]" />
+            <span>Agent</span>
           </div>
-          <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#d97757]/15 text-[#d97757] font-semibold">
-            Pro
+          <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#d97757]/15 text-[#d97757] font-bold tracking-wider">
+            BETA
           </span>
         </button>
 
-        {/* 3. PWA */}
+        {/* Plugins */}
+        <button
+          className={`w-full py-2 px-3 rounded-lg text-[13px] font-medium flex items-center gap-2.5 transition-colors cursor-pointer ${textSub} ${bgHover} hover:${text}`}
+          title="Plugins"
+        >
+          <Plug className="w-4 h-4" />
+          <span>Plugins</span>
+        </button>
+
+        {/* Automation */}
+        <button
+          className={`w-full py-2 px-3 rounded-lg text-[13px] font-medium flex items-center gap-2.5 transition-colors cursor-pointer ${textSub} ${bgHover} hover:${text}`}
+          title="Automation"
+        >
+          <Clock className="w-4 h-4" />
+          <span>Automation</span>
+        </button>
+
+        {/* PWA */}
         {onOpenGetApp && (
           <button
             id="sidebar-pwa-btn"
@@ -211,26 +224,22 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
               onOpenGetApp();
               if (window.innerWidth < 1024) onClose();
             }}
-            className={`w-full py-2.5 px-3.5 rounded-2xl text-xs font-medium flex items-center justify-between transition-all cursor-pointer ${
-              isMoon
-                ? 'text-[#a19e97] hover:bg-[#1a1a1a] hover:text-[#ede8e1]'
-                : 'text-[#6b6459] hover:bg-[#f5f1ea] hover:text-[#2a2620]'
-            }`}
+            className={`w-full py-2 px-3 rounded-lg text-[13px] font-medium flex items-center justify-between transition-colors cursor-pointer ${textSub} ${bgHover} hover:${text}`}
             title="Install PWA"
           >
             <div className="flex items-center gap-2.5">
               <Smartphone className="w-4 h-4 text-[#d97757]" />
               <span>PWA</span>
             </div>
-            <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${
-              isMoon ? 'bg-[#222222] text-[#d97757]' : 'bg-[#efe9df] text-[#d97757]'
-            }`}>
-              Install
+            <span
+              className={`text-[9px] px-1.5 py-0.5 rounded font-bold tracking-wider ${bgCard} ${textSub}`}
+            >
+              INSTALL
             </span>
           </button>
         )}
 
-        {/* 4. About */}
+        {/* About */}
         {onOpenAbout && (
           <button
             id="sidebar-about-btn"
@@ -238,26 +247,22 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
               onOpenAbout();
               if (window.innerWidth < 1024) onClose();
             }}
-            className={`w-full py-2.5 px-3.5 rounded-2xl text-xs font-medium flex items-center justify-between transition-all cursor-pointer ${
-              isMoon
-                ? 'text-[#a19e97] hover:bg-[#1a1a1a] hover:text-[#ede8e1]'
-                : 'text-[#6b6459] hover:bg-[#f5f1ea] hover:text-[#2a2620]'
-            }`}
+            className={`w-full py-2 px-3 rounded-lg text-[13px] font-medium flex items-center justify-between transition-colors cursor-pointer ${textSub} ${bgHover} hover:${text}`}
             title="About Sapphire AI"
           >
             <div className="flex items-center gap-2.5">
               <Info className="w-4 h-4 text-[#d97757]" />
               <span>About</span>
             </div>
-            <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${
-              isMoon ? 'bg-[#222222] text-[#d97757]' : 'bg-[#efe9df] text-[#d97757]'
-            }`}>
+            <span
+              className={`text-[9px] px-1.5 py-0.5 rounded font-bold tracking-wider ${bgCard} ${textSub}`}
+            >
               v2.5
             </span>
           </button>
         )}
 
-        {/* 5. Customize — now matches CodeX/PWA/About style (no active highlight) */}
+        {/* Customize */}
         <button
           id="sidebar-customize-btn"
           onClick={() => {
@@ -265,186 +270,152 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
             else onOpenSettings();
             if (window.innerWidth < 1024) onClose();
           }}
-          className={`w-full py-2.5 px-3.5 rounded-2xl text-xs font-medium flex items-center justify-between transition-all cursor-pointer ${
-            isMoon
-              ? 'text-[#a19e97] hover:bg-[#1a1a1a] hover:text-[#ede8e1]'
-              : 'text-[#6b6459] hover:bg-[#f5f1ea] hover:text-[#2a2620]'
-          }`}
+          className={`w-full py-2 px-3 rounded-lg text-[13px] font-medium flex items-center gap-2.5 transition-colors cursor-pointer ${textSub} ${bgHover} hover:${text}`}
           title="Customize Theme & Preferences"
         >
-          <div className="flex items-center gap-2.5">
-            <Sliders className={`w-4 h-4 ${isMoon ? 'text-[#a19e97]' : 'text-[#6b6459]'}`} />
-            <span>Customize</span>
-          </div>
+          <Sliders className="w-4 h-4" />
+          <span>Customize</span>
         </button>
-      </div>
+      </nav>
 
-      {/* Chats Header */}
-      <div className={`px-4 pt-3 pb-1.5 flex items-center justify-between text-xs ${
-        isMoon ? 'text-[#a19e97]' : 'text-[#6b6459]'
-      }`}>
-        <span className="font-semibold text-xs tracking-wide">Chats</span>
-        <div className="flex items-center gap-1.5">
-          <button
-            type="button"
-            onClick={() => setShowSearchInput((prev) => !prev)}
-            className={`p-1.5 rounded-xl transition-colors cursor-pointer ${
-              isMoon
-                ? 'hover:bg-[#1a1a1a] text-[#86837c] hover:text-white'
-                : 'hover:bg-[#efe9df] text-[#6b6459] hover:text-[#2a2620]'
-            }`}
-            title="Search chats"
-          >
-            <Search className="w-3.5 h-3.5" />
-          </button>
-          <button
-            type="button"
-            onClick={onOpenSettings}
-            className={`p-1.5 rounded-xl transition-colors cursor-pointer ${
-              isMoon
-                ? 'hover:bg-[#1a1a1a] text-[#86837c] hover:text-white'
-                : 'hover:bg-[#efe9df] text-[#6b6459] hover:text-[#2a2620]'
-            }`}
-            title="Chat settings"
-          >
-            <SlidersHorizontal className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      </div>
-
-      {/* Search Bar */}
-      {showSearchInput && (
-        <div className="px-3.5 pb-2">
-          <input
-            type="text"
-            placeholder="Search chats..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className={`w-full rounded-2xl px-3 py-1.5 text-xs focus:outline-none transition-colors ${
-              isMoon
-                ? 'bg-[#1a1a1a] border border-[#2a2a2a] text-[#ede8e1] placeholder-[#86837c]'
-                : 'bg-white border border-[#e8e2d8] text-[#2a2620] placeholder-[#9a9186]'
-            }`}
-          />
-        </div>
-      )}
-
-      {/* Chat Session List */}
-      <div className="flex-1 overflow-y-auto px-2.5 space-y-1 no-scrollbar">
-        {filteredSessions.length === 0 ? (
-          <div className={`px-3 py-4 text-xs ${isMoon ? 'text-[#86837c]' : 'text-[#9a9186]'}`}>
-            No chats yet
+      {/* ===== Chats Section Header ===== */}
+      <div className="flex-1 flex flex-col overflow-hidden px-3">
+        <div className={`flex items-center justify-between px-2 py-1.5 ${textMuted}`}>
+          <span className="text-[11px] font-semibold uppercase tracking-wide">
+            Chats
+          </span>
+          <div className="flex items-center gap-0.5">
+            <button
+              type="button"
+              onClick={() => setShowSearchInput((prev) => !prev)}
+              className={`p-1 rounded ${bgHover} cursor-pointer transition-colors`}
+              title="Search chats"
+            >
+              <Search className="w-3 h-3" />
+            </button>
+            <button
+              type="button"
+              onClick={onOpenSettings}
+              className={`p-1 rounded ${bgHover} cursor-pointer transition-colors`}
+              title="Chat settings"
+            >
+              <SlidersHorizontal className="w-3 h-3" />
+            </button>
           </div>
-        ) : (
-          filteredSessions.map((session) => {
-            const isSelected = session.id === currentSessionId;
-            const isEditing = editingId === session.id;
+        </div>
 
-            return (
-              <div
-                key={session.id}
-                onClick={() => {
-                  if (!isEditing) {
-                    onSelectSession(session.id);
-                    if (window.innerWidth < 1024) onClose();
-                  }
-                }}
-                className={`group relative flex items-center justify-between px-3 py-2 rounded-2xl text-xs transition-colors cursor-pointer ${
-                  isSelected
-                    ? isMoon
-                      ? 'bg-[#222222] text-[#ede8e1] font-semibold'
-                      : 'bg-[#efe9df] text-[#2a2620] font-semibold'
-                    : isMoon
-                    ? 'text-[#a19e97] hover:bg-[#1a1a1a] hover:text-[#ede8e1]'
-                    : 'text-[#6b6459] hover:bg-[#f5f1ea] hover:text-[#2a2620]'
-                }`}
-              >
-                <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                  <span className={`w-1.5 h-1.5 rounded-full shrink-0 transition-colors ${
-                    isSelected
-                      ? 'bg-[#d97757]'
-                      : isMoon
-                      ? 'bg-[#555] group-hover:bg-[#ede8e1]'
-                      : 'bg-[#b8b0a4] group-hover:bg-[#2a2620]'
-                  }`} />
-
-                  {isEditing ? (
-                    <input
-                      type="text"
-                      value={editTitle}
-                      onChange={(e) => setEditTitle(e.target.value)}
-                      onClick={(e) => e.stopPropagation()}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') handleSaveRename(session.id, e as any);
-                        if (e.key === 'Escape') handleCancelRename(e as any);
-                      }}
-                      className={`w-full px-2 py-1 rounded-xl text-xs focus:outline-none ${
-                        isMoon
-                          ? 'bg-[#111111] text-white border border-[#2a2a2a]'
-                          : 'bg-white text-[#2a2620] border border-[#d8d0c2]'
-                      }`}
-                      autoFocus
-                    />
-                  ) : (
-                    <span className="truncate">{session.title || 'Untitled'}</span>
-                  )}
-                </div>
-
-                <div className="flex items-center gap-1 shrink-0 ml-1">
-                  {isEditing ? (
-                    <>
-                      <button
-                        onClick={(e) => handleSaveRename(session.id, e)}
-                        className="p-1 text-emerald-500 hover:text-emerald-600 cursor-pointer"
-                      >
-                        <Check className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={handleCancelRename}
-                        className={`p-1 cursor-pointer ${
-                          isMoon ? 'text-[#7d7a74] hover:text-white' : 'text-[#9a9186] hover:text-[#2a2620]'
-                        }`}
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    </>
-                  ) : (
-                    <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1 transition-opacity">
-                      <button
-                        onClick={(e) => handleStartRename(session, e)}
-                        className={`p-1 cursor-pointer rounded-lg ${
-                          isMoon
-                            ? 'text-[#7d7a74] hover:text-white hover:bg-black/20'
-                            : 'text-[#9a9186] hover:text-[#2a2620] hover:bg-[#e8e2d8]'
-                        }`}
-                        title="Rename"
-                      >
-                        <Edit2 className="w-3 h-3" />
-                      </button>
-                      <button
-                        onClick={(e) => handleDelete(session.id, e)}
-                        className={`p-1 cursor-pointer rounded-lg ${
-                          isMoon
-                            ? 'text-[#7d7a74] hover:text-rose-400 hover:bg-black/20'
-                            : 'text-[#9a9186] hover:text-rose-500 hover:bg-rose-50'
-                        }`}
-                        title="Delete"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })
+        {/* Search Bar */}
+        {showSearchInput && (
+          <div className="px-0 pb-2">
+            <input
+              type="text"
+              placeholder="Search chats..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className={`w-full rounded-lg px-3 py-1.5 text-[13px] focus:outline-none transition-colors ${bgCard} border ${border} ${text} placeholder:${textMuted}`}
+            />
+          </div>
         )}
+
+        {/* Chat Session List */}
+        <div className="flex-1 overflow-y-auto space-y-0.5 no-scrollbar">
+          {filteredSessions.length === 0 ? (
+            <div className={`px-3 py-4 text-[13px] ${textMuted}`}>
+              No chats yet
+            </div>
+          ) : (
+            filteredSessions.map((session) => {
+              const isSelected = session.id === currentSessionId;
+              const isEditing = editingId === session.id;
+
+              return (
+                <div
+                  key={session.id}
+                  onClick={() => {
+                    if (!isEditing) {
+                      onSelectSession(session.id);
+                      if (window.innerWidth < 1024) onClose();
+                    }
+                  }}
+                  className={`group relative flex items-center justify-between py-1.5 px-3 rounded-lg text-[13px] font-medium transition-colors cursor-pointer ${
+                    isSelected
+                      ? `${bgCard} ${text} shadow-sm`
+                      : `${textSub} ${bgHover} hover:${text}`
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                    <MessageSquare
+                      className={`w-4 h-4 shrink-0 ${
+                        isSelected ? 'text-[#d97757]' : ''
+                      }`}
+                    />
+
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={editTitle}
+                        onChange={(e) => setEditTitle(e.target.value)}
+                        onClick={(e) => e.stopPropagation()}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter')
+                            handleSaveRename(session.id, e as any);
+                          if (e.key === 'Escape')
+                            handleCancelRename(e as any);
+                        }}
+                        className={`w-full px-2 py-0.5 rounded text-[13px] focus:outline-none ${bgCard} ${text} border ${border}`}
+                        autoFocus
+                      />
+                    ) : (
+                      <span className="truncate">{session.title || 'Untitled'}</span>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-0.5 shrink-0 ml-1">
+                    {isEditing ? (
+                      <>
+                        <button
+                          onClick={(e) => handleSaveRename(session.id, e)}
+                          className="p-1 text-emerald-500 hover:text-emerald-600 cursor-pointer"
+                        >
+                          <Check className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={handleCancelRename}
+                          className={`p-1 cursor-pointer ${textMuted} hover:${text}`}
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </>
+                    ) : (
+                      <div className="opacity-0 group-hover:opacity-100 flex items-center gap-0.5 transition-opacity">
+                        <button
+                          onClick={(e) => handleStartRename(session, e)}
+                          className={`p-1 cursor-pointer rounded ${bgHover} ${textSub}`}
+                          title="Rename"
+                        >
+                          <Edit2 className="w-3 h-3" />
+                        </button>
+                        <button
+                          onClick={(e) => handleDelete(session.id, e)}
+                          className={`p-1 cursor-pointer rounded ${bgHover} hover:text-rose-400`}
+                          title="Delete"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
       </div>
 
-      {/* User Profile Pill */}
-      <div className={`p-3.5 border-t flex items-center justify-between gap-2 shrink-0 ${
-        isMoon ? 'border-[#222222]' : 'border-[#e8e2d8]'
-      }`}>
+      {/* ===== User Profile Footer ===== */}
+      <div
+        className={`p-3 border-t ${borderSubtle} flex items-center gap-2.5 mt-2`}
+      >
         <button
           type="button"
           onClick={() => {
@@ -453,11 +424,9 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
           }}
           className="flex items-center gap-2.5 min-w-0 text-left hover:opacity-85 transition-opacity cursor-pointer flex-1"
         >
-          <div className={`w-8 h-8 rounded-2xl flex items-center justify-center text-xs font-bold shrink-0 overflow-hidden border ${
-            isMoon
-              ? 'bg-[#1a1a1a] border-[#2a2a2a] text-[#ede8e1]'
-              : 'bg-white border-[#e8e2d8] text-[#2a2620]'
-          }`}>
+          <div
+            className={`w-7 h-7 rounded-full ${bgCard} border ${border} flex items-center justify-center shrink-0 overflow-hidden`}
+          >
             {userProfile?.avatar ? (
               <img
                 src={userProfile.avatar}
@@ -465,14 +434,14 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
                 className="w-full h-full object-cover"
               />
             ) : (
-              initial.toUpperCase()
+              <span className={`text-[11px] font-bold ${text}`}>{initial}</span>
             )}
           </div>
-          <div className="min-w-0 flex items-center gap-1.5 text-xs truncate">
-            <span className={`truncate font-semibold ${isMoon ? 'text-[#ede8e1]' : 'text-[#2a2620]'}`}>
-              {userName}
-            </span>
-            <ChevronDown className={`w-3.5 h-3.5 shrink-0 ${isMoon ? 'text-[#86837c]' : 'text-[#9a9186]'}`} />
+          <div className="min-w-0 flex items-center gap-1 text-[13px] truncate">
+            <span className={`truncate font-semibold ${text}`}>{userName}</span>
+            <ChevronDown
+              className={`w-3.5 h-3.5 shrink-0 ${textMuted}`}
+            />
           </div>
         </button>
 
@@ -480,11 +449,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
           <button
             type="button"
             onClick={onOpenGetApp}
-            className={`p-2 rounded-2xl transition-colors cursor-pointer shrink-0 ${
-              isMoon
-                ? 'text-[#86837c] hover:text-white hover:bg-[#1a1a1a]'
-                : 'text-[#6b6459] hover:text-[#2a2620] hover:bg-[#efe9df]'
-            }`}
+            className={`p-1.5 rounded-lg ${bgHover} ${textSub} cursor-pointer transition-colors shrink-0`}
             title="Install PWA"
           >
             <Smartphone className="w-4 h-4 text-[#d97757]" />
@@ -499,7 +464,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
       {/* DESKTOP: Persistent Sidebar */}
       <aside
         className={`hidden lg:flex h-full shrink-0 ${
-          isOpen ? 'w-72' : 'w-0 overflow-hidden border-none'
+          isOpen ? 'w-[260px]' : 'w-0 overflow-hidden border-none'
         }`}
       >
         {sidebarContent}
@@ -521,7 +486,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
               animate={{ x: 0 }}
               exit={{ x: -300 }}
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-              className="relative w-72 h-full z-10"
+              className="relative w-[260px] h-full z-10"
             >
               {sidebarContent}
             </motion.div>
@@ -531,4 +496,5 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
     </>
   );
 };
+
 export default ChatSidebar;
