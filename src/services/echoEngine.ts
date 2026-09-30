@@ -642,14 +642,19 @@ export const InteractiveApp: React.FC = () => {
 Import \`InteractiveApp\` into your main page layout and mount it. Fully compatible with Tailwind CSS.`;
     }
 
-    // Default HTML / CSS / JS multi-file website
-    return `### 📁 Project Architecture & Structure
+    // Intelligent intent branch for specific web apps
+    const isCalculator = lower.includes('calc') || lower.includes('calculator') || lower.includes('hisab');
+    const isTodo = lower.includes('todo') || lower.includes('task') || lower.includes('list') || lower.includes('notes');
+    const isGame = lower.includes('game') || lower.includes('snake') || lower.includes('pong') || lower.includes('tic tac');
+
+    if (isCalculator) {
+      return `### 📁 Project Architecture & Structure
 
 \`\`\`
-project/
-├── index.html     # Semantic responsive layout & accessibility
-├── style.css      # Modern dark-mode styling, fluid CSS variables & flexbox/grid
-└── script.js      # Robust DOM event listeners & reactive state
+calculator-pro/
+├── index.html     # Semantic calculator display & keypad matrix
+├── style.css      # Dark glassmorphism, responsive grid & active animations
+└── script.js      # Complete arithmetic engine with history & keyboard support
 \`\`\`
 
 #### \`index.html\`
@@ -659,26 +664,411 @@ project/
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Application</title>
+  <title>Pro Calculator — Precision Engine</title>
   <link rel="stylesheet" href="style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 </head>
 <body>
-  <div class="container">
-    <header class="header">
-      <div class="badge">Production Ready</div>
-      <h1>Interactive Application</h1>
-      <p>Clean, responsive, mobile and desktop optimized.</p>
+  <div class="calc-wrapper">
+    <header class="calc-header">
+      <div class="calc-badge">⚡ Precision Calculator</div>
+      <div class="brand">Sapphire Math Engine</div>
     </header>
 
-    <main class="card">
-      <div class="counter-display">
-        <span class="label">Count</span>
-        <span id="counter" class="value">0</span>
+    <div class="calc-display">
+      <div id="calc-history" class="history-line"></div>
+      <div id="calc-output" class="current-line">0</div>
+    </div>
+
+    <div class="calc-keypad">
+      <button class="key action" data-action="clear">AC</button>
+      <button class="key action" data-action="delete">DEL</button>
+      <button class="key action" data-action="percent">%</button>
+      <button class="key op" data-op="/">÷</button>
+
+      <button class="key num" data-val="7">7</button>
+      <button class="key num" data-val="8">8</button>
+      <button class="key num" data-val="9">9</button>
+      <button class="key op" data-op="*">×</button>
+
+      <button class="key num" data-val="4">4</button>
+      <button class="key num" data-val="5">5</button>
+      <button class="key num" data-val="6">6</button>
+      <button class="key op" data-op="-">−</button>
+
+      <button class="key num" data-val="1">1</button>
+      <button class="key num" data-val="2">2</button>
+      <button class="key num" data-val="3">3</button>
+      <button class="key op" data-op="+">+</button>
+
+      <button class="key num zero" data-val="0">0</button>
+      <button class="key num" data-val=".">.</button>
+      <button class="key equals" data-action="calculate">=</button>
+    </div>
+  </div>
+  <script src="script.js"></script>
+</body>
+</html>
+\`\`\`
+
+#### \`style.css\`
+\`\`\`css filename="style.css"
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+}
+
+body {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at 50% 0%, #1c2130 0%, #0c0e14 100%);
+  color: #edeef2;
+  padding: 20px;
+}
+
+.calc-wrapper {
+  width: 100%;
+  max-width: 380px;
+  background: rgba(22, 26, 38, 0.75);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 28px;
+  padding: 24px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.calc-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.calc-badge {
+  font-size: 11px;
+  font-weight: 700;
+  color: #d97757;
+  background: rgba(217, 119, 87, 0.15);
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(217, 119, 87, 0.3);
+}
+
+.brand {
+  font-size: 11px;
+  color: #8b92a5;
+  font-weight: 600;
+}
+
+.calc-display {
+  background: #08090d;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 18px;
+  padding: 18px;
+  margin-bottom: 20px;
+  text-align: right;
+  min-height: 100px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+.history-line {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 14px;
+  color: #838a9d;
+  min-height: 20px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.current-line {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 38px;
+  font-weight: 700;
+  color: #ffffff;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.calc-keypad {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+.key {
+  height: 60px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.04);
+  color: #f1f3f9;
+  font-size: 18px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.key:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: translateY(-2px);
+}
+
+.key:active {
+  transform: translateY(1px);
+}
+
+.key.action {
+  background: rgba(239, 68, 68, 0.12);
+  color: #f87171;
+  border-color: rgba(239, 68, 68, 0.25);
+}
+
+.key.action:hover {
+  background: rgba(239, 68, 68, 0.25);
+}
+
+.key.op {
+  background: rgba(56, 189, 248, 0.12);
+  color: #38bdf8;
+  border-color: rgba(56, 189, 248, 0.25);
+}
+
+.key.op:hover {
+  background: rgba(56, 189, 248, 0.25);
+}
+
+.key.equals {
+  background: #d97757;
+  color: #ffffff;
+  border-color: #d97757;
+  box-shadow: 0 4px 14px rgba(217, 119, 87, 0.4);
+}
+
+.key.equals:hover {
+  background: #c26546;
+}
+
+.key.zero {
+  grid-column: span 2;
+}
+\`\`\`
+
+#### \`script.js\`
+\`\`\`javascript filename="script.js"
+document.addEventListener('DOMContentLoaded', () => {
+  const displayHistory = document.getElementById('calc-history');
+  const displayCurrent = document.getElementById('calc-output');
+  const keys = document.querySelectorAll('.key');
+
+  let currentVal = '0';
+  let historyVal = '';
+  let pendingOp = null;
+  let resetOnNextInput = false;
+
+  function updateScreen() {
+    displayCurrent.textContent = currentVal;
+    displayHistory.textContent = historyVal;
+  }
+
+  function handleNum(num) {
+    if (resetOnNextInput) {
+      currentVal = num === '.' ? '0.' : num;
+      resetOnNextInput = false;
+      updateScreen();
+      return;
+    }
+    if (num === '.' && currentVal.includes('.')) return;
+    if (currentVal === '0' && num !== '.') {
+      currentVal = num;
+    } else {
+      if (currentVal.length < 14) currentVal += num;
+    }
+    updateScreen();
+  }
+
+  function handleOp(op) {
+    if (pendingOp && !resetOnNextInput) {
+      calculate();
+    }
+    pendingOp = op;
+    historyVal = currentVal + ' ' + (op === '*' ? '×' : op === '/' ? '÷' : op);
+    resetOnNextInput = true;
+    updateScreen();
+  }
+
+  function calculate() {
+    if (!pendingOp || resetOnNextInput) return;
+    const prev = parseFloat(historyVal);
+    const curr = parseFloat(currentVal);
+    if (isNaN(prev) || isNaN(curr)) return;
+
+    let res = 0;
+    switch (pendingOp) {
+      case '+': res = prev + curr; break;
+      case '-': res = prev - curr; break;
+      case '*': res = prev * curr; break;
+      case '/': res = curr !== 0 ? prev / curr : 'Error'; break;
+    }
+
+    if (typeof res === 'number') {
+      res = Math.round(res * 100000000) / 100000000;
+    }
+
+    historyVal = historyVal + ' ' + currentVal + ' =';
+    currentVal = res.toString();
+    pendingOp = null;
+    resetOnNextInput = true;
+    updateScreen();
+  }
+
+  function handleAction(act) {
+    if (act === 'clear') {
+      currentVal = '0';
+      historyVal = '';
+      pendingOp = null;
+      resetOnNextInput = false;
+    } else if (act === 'delete') {
+      if (currentVal.length > 1) {
+        currentVal = currentVal.slice(0, -1);
+      } else {
+        currentVal = '0';
+      }
+    } else if (act === 'percent') {
+      const val = parseFloat(currentVal);
+      if (!isNaN(val)) currentVal = (val / 100).toString();
+    } else if (act === 'calculate') {
+      calculate();
+    }
+    updateScreen();
+  }
+
+  keys.forEach((key) => {
+    key.addEventListener('click', () => {
+      if (key.dataset.val) handleNum(key.dataset.val);
+      if (key.dataset.op) handleOp(key.dataset.op);
+      if (key.dataset.action) handleAction(key.dataset.action);
+    });
+  });
+
+  // Physical Keyboard Support
+  window.addEventListener('keydown', (e) => {
+    if ((e.key >= '0' && e.key <= '9') || e.key === '.') handleNum(e.key);
+    if (['+', '-', '*', '/'].includes(e.key)) handleOp(e.key);
+    if (e.key === 'Enter' || e.key === '=') { e.preventDefault(); calculate(); }
+    if (e.key === 'Backspace') handleAction('delete');
+    if (e.key === 'Escape') handleAction('clear');
+  });
+});
+\`\`\`
+
+#### 🚀 How to Run
+Test it instantly in the **Chrome Live Preview** pane or download as a stand-alone responsive web app!`;
+    }
+
+    // Default 2x Professional Multi-File Web Application (Modern Dashboard & Task Manager)
+    return `### 📁 Project Architecture & Structure
+
+\`\`\`
+sapphire-app/
+├── index.html     # Semantic responsive layout, search, filters & stats
+├── style.css      # Dark glassmorphism, responsive flex/grid, micro-interactions
+└── script.js      # Reactive state management, local storage & event listeners
+\`\`\`
+
+#### \`index.html\`
+\`\`\`html filename="index.html"
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sapphire Professional Studio Application</title>
+  <link rel="stylesheet" href="style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="app-shell">
+    <!-- Navigation Bar -->
+    <nav class="nav-bar">
+      <div class="brand-group">
+        <div class="logo-mark">💎</div>
+        <div>
+          <h2>Sapphire Studio</h2>
+          <span class="sub-text">Autonomous 2.5 Architecture</span>
+        </div>
       </div>
-      <div class="actions">
-        <button id="increment-btn" class="btn btn-primary">Increment</button>
-        <button id="reset-btn" class="btn btn-secondary">Reset</button>
+      <div class="nav-actions">
+        <button id="theme-btn" class="icon-btn" title="Toggle Theme">🌙</button>
+        <span class="status-pill online">System Active</span>
       </div>
+    </nav>
+
+    <!-- Main Workspace -->
+    <main class="main-content">
+      <!-- Metric Highlights -->
+      <section class="metrics-grid">
+        <div class="metric-card">
+          <span class="metric-label">Total Entries</span>
+          <span id="metric-total" class="metric-val">0</span>
+        </div>
+        <div class="metric-card">
+          <span class="metric-label">Completed Tasks</span>
+          <span id="metric-completed" class="metric-val text-emerald">0</span>
+        </div>
+        <div class="metric-card">
+          <span class="metric-label">Efficiency Score</span>
+          <span class="metric-val text-amber">99.4%</span>
+        </div>
+      </section>
+
+      <!-- Task Creator Box -->
+      <section class="card panel">
+        <div class="panel-header">
+          <h3>Interactive Task & Data Manager</h3>
+          <span class="tag">Live Reactivity</span>
+        </div>
+
+        <form id="action-form" class="form-row">
+          <input
+            id="task-input"
+            type="text"
+            placeholder="Type a new objective or task and press Enter..."
+            required
+            autocomplete="off"
+          />
+          <select id="priority-select">
+            <option value="high">High Priority</option>
+            <option value="medium" selected>Medium</option>
+            <option value="low">Low</option>
+          </select>
+          <button type="submit" class="btn primary">+ Add Task</button>
+        </form>
+
+        <!-- Filters -->
+        <div class="filter-row">
+          <div class="filter-tabs">
+            <button class="filter-tab active" data-filter="all">All</button>
+            <button class="filter-tab" data-filter="pending">Pending</button>
+            <button class="filter-tab" data-filter="completed">Completed</button>
+          </div>
+          <button id="clear-all-btn" class="text-btn">Clear All</button>
+        </div>
+
+        <!-- Task List -->
+        <div id="items-list" class="items-list">
+          <!-- Dynamically populated -->
+        </div>
+      </section>
     </main>
   </div>
   <script src="script.js"></script>
@@ -689,159 +1079,457 @@ project/
 #### \`style.css\`
 \`\`\`css filename="style.css"
 :root {
-  --bg-dark: #090d16;
-  --card-bg: #111827;
-  --text-main: #f3f4f6;
-  --text-muted: #9ca3af;
-  --primary: #6366f1;
-  --primary-hover: #4f46e5;
-  --border: rgba(255, 255, 255, 0.08);
+  --bg-dark: #0b0c10;
+  --panel-bg: rgba(22, 24, 34, 0.7);
+  --border-color: rgba(255, 255, 255, 0.08);
+  --accent: #d97757;
+  --accent-hover: #c26546;
+  --text-main: #edf0f7;
+  --text-muted: #8b92a5;
+  --success: #10b981;
 }
 
 * {
-  box-sizing: border-box;
   margin: 0;
   padding: 0;
+  box-sizing: border-box;
+  font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
 }
 
 body {
-  background-color: var(--bg-dark);
+  background: radial-gradient(circle at 50% 0%, #171a26 0%, var(--bg-dark) 100%);
   color: var(--text-main);
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   min-height: 100vh;
+  padding: 24px 16px;
+  display: flex;
+  justify-content: center;
+}
+
+.app-shell {
+  width: 100%;
+  max-width: 820px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.nav-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  background: var(--panel-bg);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+}
+
+.brand-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.logo-mark {
+  width: 36px;
+  height: 36px;
+  background: rgba(217, 119, 87, 0.15);
+  border: 1px solid rgba(217, 119, 87, 0.3);
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px;
+  font-size: 18px;
 }
 
-.container {
-  width: 100%;
-  max-width: 520px;
-  text-align: center;
-}
-
-.header {
-  margin-bottom: 24px;
-}
-
-.badge {
-  display: inline-block;
-  padding: 4px 12px;
-  background: rgba(99, 102, 241, 0.15);
-  color: var(--primary);
-  border-radius: 999px;
-  font-size: 0.75rem;
+h2 {
+  font-size: 16px;
   font-weight: 700;
-  margin-bottom: 12px;
+  letter-spacing: -0.02em;
 }
 
-.header h1 {
-  font-size: 1.8rem;
-  font-weight: 800;
-  margin-bottom: 8px;
-}
-
-.header p {
-  font-size: 0.9rem;
+.sub-text {
+  font-size: 11px;
   color: var(--text-muted);
 }
 
-.card {
-  background: var(--card-bg);
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  padding: 32px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
-}
-
-.counter-display {
-  margin-bottom: 24px;
-}
-
-.counter-display .label {
-  display: block;
-  font-size: 0.8rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--text-muted);
-}
-
-.counter-display .value {
-  font-size: 3.5rem;
-  font-weight: 800;
-  color: #fff;
-  font-variant-numeric: tabular-nums;
-}
-
-.actions {
+.nav-actions {
   display: flex;
+  align-items: center;
   gap: 12px;
-  justify-content: center;
+}
+
+.icon-btn {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 6px 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.icon-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.status-pill {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.12);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+.metric-card {
+  background: var(--panel-bg);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.metric-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.metric-val {
+  font-size: 24px;
+  font-weight: 800;
+}
+
+.text-emerald { color: #10b981; }
+.text-amber { color: #f59e0b; }
+
+.panel {
+  background: var(--panel-bg);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--border-color);
+  border-radius: 24px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.panel-header h3 {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.tag {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--accent);
+  background: rgba(217, 119, 87, 0.15);
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+
+.form-row {
+  display: flex;
+  gap: 10px;
+}
+
+input[type="text"] {
+  flex: 1;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--border-color);
+  color: #fff;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+input[type="text"]:focus {
+  border-color: var(--accent);
+}
+
+select {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  font-size: 13px;
+  outline: none;
+  cursor: pointer;
 }
 
 .btn {
-  padding: 12px 24px;
+  padding: 12px 20px;
   border-radius: 12px;
-  font-weight: 600;
-  font-size: 0.9rem;
-  cursor: pointer;
+  font-weight: 700;
+  font-size: 13px;
   border: none;
-  transition: all 0.15s ease;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
 }
 
-.btn-primary {
-  background: var(--primary);
+.btn.primary {
+  background: var(--accent);
   color: #fff;
 }
 
-.btn-primary:hover {
-  background: var(--primary-hover);
+.btn.primary:hover {
+  background: var(--accent-hover);
+  transform: translateY(-1px);
 }
 
-.btn-secondary {
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--text-main);
-  border: 1px solid var(--border);
+.filter-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 12px;
 }
 
-.btn-secondary:hover {
+.filter-tabs {
+  display: flex;
+  gap: 6px;
+}
+
+.filter-tab {
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.filter-tab.active {
   background: rgba(255, 255, 255, 0.1);
+  color: #fff;
 }
 
-@media (max-width: 480px) {
-  .actions {
-    flex-direction: column;
-  }
+.text-btn {
+  background: none;
+  border: none;
+  font-size: 12px;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.text-btn:hover {
+  color: #f87171;
+}
+
+.items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 120px;
+}
+
+.item-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-color);
+  transition: all 0.2s;
+}
+
+.item-card:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.item-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.checkbox {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+.item-text {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.item-text.done {
+  text-decoration: line-through;
+  color: var(--text-muted);
+}
+
+.priority-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 6px;
+  text-transform: uppercase;
+}
+
+.priority-high { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+.priority-medium { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+.priority-low { background: rgba(56, 189, 248, 0.2); color: #38bdf8; }
+
+.delete-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+}
+
+.delete-btn:hover {
+  color: #f87171;
+}
+
+@media (max-width: 640px) {
+  .metrics-grid { grid-template-columns: 1fr; }
+  .form-row { flex-direction: column; }
 }
 \`\`\`
 
 #### \`script.js\`
 \`\`\`javascript filename="script.js"
 document.addEventListener('DOMContentLoaded', () => {
-  let count = 0;
-  const counterEl = document.getElementById('counter');
-  const incrementBtn = document.getElementById('increment-btn');
-  const resetBtn = document.getElementById('reset-btn');
+  const form = document.getElementById('action-form');
+  const taskInput = document.getElementById('task-input');
+  const prioritySelect = document.getElementById('priority-select');
+  const itemsList = document.getElementById('items-list');
+  const filterTabs = document.querySelectorAll('.filter-tab');
+  const clearAllBtn = document.getElementById('clear-all-btn');
+  const metricTotal = document.getElementById('metric-total');
+  const metricCompleted = document.getElementById('metric-completed');
+  const themeBtn = document.getElementById('theme-btn');
 
-  function update() {
-    if (counterEl) counterEl.textContent = count.toString();
+  let currentFilter = 'all';
+  let tasks = JSON.parse(localStorage.getItem('sapphire_pro_tasks') || '[]');
+
+  if (tasks.length === 0) {
+    tasks = [
+      { id: '1', text: 'Set up autonomous code architecture', priority: 'high', completed: true },
+      { id: '2', text: 'Connect laptop workspace directory', priority: 'high', completed: false },
+      { id: '3', text: 'Run Chrome live preview test', priority: 'medium', completed: false }
+    ];
+    save();
   }
 
-  incrementBtn?.addEventListener('click', () => {
-    count++;
-    update();
+  function save() {
+    localStorage.setItem('sapphire_pro_tasks', JSON.stringify(tasks));
+    render();
+  }
+
+  function render() {
+    itemsList.innerHTML = '';
+    const filtered = tasks.filter((t) => {
+      if (currentFilter === 'pending') return !t.completed;
+      if (currentFilter === 'completed') return t.completed;
+      return true;
+    });
+
+    if (filtered.length === 0) {
+      itemsList.innerHTML = '<div style="text-align:center; padding: 32px; color: var(--text-muted); font-size: 13px;">No items match this view.</div>';
+    } else {
+      filtered.forEach((task) => {
+        const item = document.createElement('div');
+        item.className = 'item-card';
+        item.innerHTML = \`
+          <div class="item-left">
+            <input type="checkbox" class="checkbox" \${task.completed ? 'checked' : ''}>
+            <span class="item-text \${task.completed ? 'done' : ''}">\${task.text}</span>
+            <span class="priority-badge priority-\${task.priority}">\${task.priority}</span>
+          </div>
+          <button class="delete-btn" title="Delete">✕</button>
+        \`;
+
+        item.querySelector('.checkbox').addEventListener('change', () => {
+          task.completed = !task.completed;
+          save();
+        });
+
+        item.querySelector('.delete-btn').addEventListener('click', () => {
+          tasks = tasks.filter((t) => t.id !== task.id);
+          save();
+        });
+
+        itemsList.appendChild(item);
+      });
+    }
+
+    // Update metrics
+    const total = tasks.length;
+    const completed = tasks.filter((t) => t.completed).length;
+    if (metricTotal) metricTotal.textContent = total;
+    if (metricCompleted) metricCompleted.textContent = completed;
+  }
+
+  form?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const text = taskInput.value.trim();
+    if (!text) return;
+
+    tasks.unshift({
+      id: Date.now().toString(),
+      text,
+      priority: prioritySelect.value,
+      completed: false
+    });
+    taskInput.value = '';
+    save();
   });
 
-  resetBtn?.addEventListener('click', () => {
-    count = 0;
-    update();
+  filterTabs.forEach((tab) => {
+    tab.addEventListener('click', () => {
+      filterTabs.forEach((t) => t.classList.remove('active'));
+      tab.classList.add('active');
+      currentFilter = tab.dataset.filter;
+      render();
+    });
   });
+
+  clearAllBtn?.addEventListener('click', () => {
+    if (confirm('Clear all tasks?')) {
+      tasks = [];
+      save();
+    }
+  });
+
+  themeBtn?.addEventListener('click', () => {
+    document.body.classList.toggle('light-theme');
+  });
+
+  render();
 });
 \`\`\`
 
 #### 🚀 How to Run
-Open \`index.html\` in any web browser, or view it in the built-in **Live Preview** tab!`;
+Test live directly in the **Chrome Runner** preview or export the files into your laptop project!`;
   }
 
   // Writing Skills, Prompt Templates & Creative Text Requests

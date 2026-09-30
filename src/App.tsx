@@ -999,7 +999,7 @@ ${promptText || 'Please analyze, remake, or update these files cleanly according
         theme === 'moon' ? 'bg-[#151515]' : 'bg-white'
       } overflow-hidden`}>
         {/* Floating Menu Button */}
-        {!isSidebarOpen && (
+        {!isSidebarOpen && activeNavTab !== 'codex' && (
           <div className="lg:hidden absolute top-2.5 left-2.5 sm:top-3.5 sm:left-3.5 z-30">
             <button
               type="button"
@@ -1040,15 +1040,24 @@ ${promptText || 'Please analyze, remake, or update these files cleanly according
               transition={{ duration: 0.2 }}
               className="flex-1 h-full w-full overflow-hidden"
             >
-             <CodexWorkspaceView
-  settings={settings}
-  onUpdateSettings={(newSettings) => setSettings(newSettings)}
-  onClose={() => {
-    setActiveNavTab('chat');
-    setIsStartingScreen(false);
-  }}
-  userProfile={currentUserProfile}
-/>
+              <CodexWorkspaceView
+                settings={settings}
+                onUpdateSettings={(newSettings) => setSettings(newSettings)}
+                onClose={() => {
+                  setActiveNavTab('chat');
+                  setIsStartingScreen(false);
+                }}
+                userProfile={currentUserProfile}
+                onOpenPreview={(code, lang, filename, files) => {
+                  setPreviewModalState({
+                    isOpen: true,
+                    code,
+                    language: lang,
+                    filename,
+                    files
+                  });
+                }}
+              />
             </motion.div>
           ) : isStartingScreen ? (
             <motion.div

@@ -11,6 +11,7 @@ import {
   Check,
   X,
   Bot,
+  Code2,
   Smartphone,
   Info,
   MessageSquare,
@@ -172,26 +173,26 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
 
       {/* ===== Top Nav Items ===== */}
       <nav className="px-3 pb-3 space-y-0.5">
-        {/* Agent */}
+        {/* Codex Studio */}
         <button
-          id="sidebar-agent-btn"
+          id="sidebar-codex-btn"
           onClick={() => {
             if (onOpenCodex) onOpenCodex();
             if (window.innerWidth < 1024) onClose();
           }}
           className={`w-full py-2 px-3 rounded-lg text-[13px] font-medium flex items-center justify-between transition-colors cursor-pointer ${
-            activeNavTab === 'agent' || activeNavTab === 'codex'
-              ? `${bgCard} ${text} shadow-sm`
+            activeNavTab === 'codex'
+              ? `${bgCard} ${text} shadow-sm font-semibold`
               : `${textSub} ${bgHover} hover:${text}`
           }`}
-          title="Sapphire Agent"
+          title="Sapphire Codex Studio"
         >
           <div className="flex items-center gap-2.5">
-            <Bot className="w-4 h-4 text-[#d97757]" />
-            <span>Agent</span>
+            <Code2 className="w-4 h-4 text-[#d97757]" />
+            <span>Codex</span>
           </div>
-          <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#d97757]/15 text-[#d97757] font-bold tracking-wider">
-            BETA
+          <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#d97757]/20 text-[#d97757] font-bold tracking-wider">
+            STUDIO
           </span>
         </button>
 

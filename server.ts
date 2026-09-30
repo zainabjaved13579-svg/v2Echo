@@ -771,7 +771,7 @@ Be fast, clear, and articulate. Do NOT include unnecessary internal monologue or
       }
 
       // High-speed, low-latency models for instant response (resilient to model quotas)
-      const candidateModels = ['gemini-flash-latest', 'gemini-2.5-flash', 'gemini-3.8-flash'];
+      const candidateModels = ['gemini-2.5-flash', 'gemini-3.1-pro-preview', 'gemini-flash-latest', 'gemini-3.8-flash', 'gemini-2.5-pro'];
 
       let streamedAny = false;
 
@@ -942,7 +942,7 @@ app.post('/api/chat', async (req, res) => {
       }
 
       // Fast, resilient models
-      const candidateModels = ['gemini-flash-latest', 'gemini-2.5-flash', 'gemini-3.8-flash'];
+      const candidateModels = ['gemini-2.5-flash', 'gemini-3.1-pro-preview', 'gemini-flash-latest', 'gemini-3.8-flash', 'gemini-2.5-pro'];
 
       for (const currModel of candidateModels) {
         try {
