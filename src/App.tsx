@@ -165,6 +165,20 @@ export default function App() {
   const [isAboutModalOpen, setIsAboutModalOpen] = useState(false);
   const [isStartingScreen, setIsStartingScreen] = useState<boolean>(true);
   const [showSidebarPulse, setShowSidebarPulse] = useState<boolean>(true);
+  const [sidebarBtnRipples, setSidebarBtnRipples] = useState<{ id: number; x: number; y: number }[]>([]);
+
+  const handleSidebarToggleWithRipple = (e: React.MouseEvent<HTMLButtonElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const id = Date.now();
+    setSidebarBtnRipples((prev) => [...prev, { id, x, y }]);
+    setTimeout(() => {
+      setSidebarBtnRipples((prev) => prev.filter((r) => r.id !== id));
+    }, 650);
+    setIsSidebarOpen(true);
+    setShowSidebarPulse(false);
+  };
 
   useEffect(() => {
     const pulseTimer = setTimeout(() => {
@@ -1004,11 +1018,8 @@ ${promptText || 'Please analyze, remake, or update these files cleanly according
             <button
               type="button"
               id="floating-sidebar-toggle-btn"
-              onClick={() => {
-                setIsSidebarOpen(true);
-                setShowSidebarPulse(false);
-              }}
-              className={`relative min-w-[46px] min-h-[46px] sm:min-w-[42px] sm:min-h-[42px] p-3 sm:p-2.5 rounded-2xl border shadow-xl transition-all active:scale-95 cursor-pointer flex items-center justify-center touch-manipulation group select-none ${
+              onClick={handleSidebarToggleWithRipple}
+              className={`relative overflow-hidden min-w-[46px] min-h-[46px] sm:min-w-[42px] sm:min-h-[42px] p-3 sm:p-2.5 rounded-2xl border shadow-xl transition-transform duration-150 ease-out active:scale-95 cursor-pointer flex items-center justify-center touch-manipulation group select-none ${
                 theme === 'moon'
                   ? 'bg-[#20201f] hover:bg-[#282724] border-[#2b2b2a] text-white shadow-black/50'
                   : 'bg-white hover:bg-slate-100 border-slate-200 text-slate-700 shadow-slate-200/80'
@@ -1017,6 +1028,21 @@ ${promptText || 'Please analyze, remake, or update these files cleanly according
               aria-label="Open Sidebar"
             >
               <span className="absolute -inset-3 sm:-inset-1.5 rounded-2xl pointer-events-auto" aria-hidden="true" />
+
+              {/* Dynamic Ripple Wave on Click */}
+              {sidebarBtnRipples.map((ripple) => (
+                <span
+                  key={ripple.id}
+                  className="absolute rounded-full bg-[#d97757]/35 pointer-events-none animate-ping"
+                  style={{
+                    left: Math.max(0, ripple.x - 20),
+                    top: Math.max(0, ripple.y - 20),
+                    width: 40,
+                    height: 40,
+                    animationDuration: '650ms'
+                  }}
+                />
+              ))}
 
               {showSidebarPulse && (
                 <>

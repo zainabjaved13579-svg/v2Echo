@@ -615,6 +615,20 @@ app.post('/api/chat/stream', async (req, res) => {
     req.body?.openaiApiKey ||
     process.env.OPENAI_API_KEY ||
     (process.env as any).OPEN_AI_API_KEY;
+  const claudeKey =
+    (req.headers['x-claude-api-key'] as string) ||
+    (req.headers['x-anthropic-api-key'] as string) ||
+    req.body?.claudeApiKey ||
+    req.body?.anthropicApiKey ||
+    process.env.ANTHROPIC_API_KEY ||
+    (process.env as any).CLAUDE_API_KEY;
+  const grokKey =
+    (req.headers['x-grok-api-key'] as string) ||
+    (req.headers['x-xai-api-key'] as string) ||
+    req.body?.grokApiKey ||
+    req.body?.xaiApiKey ||
+    process.env.GROK_API_KEY ||
+    (process.env as any).XAI_API_KEY;
 
   const {
     contents,
@@ -682,38 +696,97 @@ app.post('/api/chat/stream', async (req, res) => {
     effectiveSystemInstruction += '\n[LOGICAL THINKING DIRECTIVE]: The user specifically requested a logical conceptual diagram (e.g., Venn diagram or comparison table). Explain the logic in clear text and present a structured Markdown comparison table detailing all sets and the intersection. Do NOT draw text-based ASCII art diagrams.';
   }
 
-  // Fast, instant AI Engine: Prefer OpenAI gpt-4o-mini for ultra-fast <200ms token streaming if key exists
-  const effectiveOpenAiKey = openaiKey || process.env.OPENAI_API_KEY || (process.env as any).OPEN_AI_API_KEY;
+  // Expansive Coding Directive for Big, Professional Code
+  if (isCodingRequest) {
+    effectiveSystemInstruction += `\n\n[EXPANSIVE ARCHITECTURE DIRECTIVE - CRITICAL]:
+You must generate BIG, COMPLETE, HIGH-LEVEL PRODUCTION CODE.
+Do NOT generate small, simplified, or minimal code.
+NEVER truncate, NEVER write short snippets, NEVER use placeholders or "// rest of code here".
+Provide full, multi-file code (HTML, CSS, JavaScript/TypeScript) with complete styling, animations, responsive design, and deep interactive features. Deliver expansive, high-caliber software engineering.`;
+  }
 
-  if (effectiveOpenAiKey) {
+  // Model routing based on request: Support every engine (DeepSeek, Gemini, OpenAI, Claude, and Grok)
+  const isClaudeRequested = typeof model === 'string' && (model.includes('claude') || model.includes('anthropic') || model.includes('sonnet') || model.includes('opus'));
+  const isGrokRequested = typeof model === 'string' && (model.includes('grok') || model.includes('xai'));
+  const isDeepSeekRequested = typeof model === 'string' && (model.includes('deepseek') || model.includes('reasoner'));
+  const isGeminiRequested = typeof model === 'string' && (model.includes('gemini') || model.includes('flash') || model.includes('pro'));
+  const isOpenAiRequested = typeof model === 'string' && (model.includes('openai') || model.includes('gpt'));
+  const isEnsemble = !isClaudeRequested && !isGrokRequested && !isDeepSeekRequested && !isGeminiRequested && !isOpenAiRequested;
+
+  // 1. If Claude is requested and key exists, stream Claude
+  if ((isClaudeRequested || (isEnsemble && !deepSeekKey && !apiKey)) && claudeKey) {
     try {
-      const openAiMessages = sanitizedContents.map((c: any) => ({
+      const claudeMessages = sanitizedContents.map((c: any) => ({
         role: c.role === 'model' ? 'assistant' : 'user',
         content: (c.parts || []).map((p: any) => p.text || '').join('\n')
       }));
-      if (effectiveSystemInstruction) {
-        openAiMessages.unshift({ role: 'system', content: effectiveSystemInstruction });
-      }
-      const streamed = await streamOpenAIChatToClient(openAiMessages, {
-        apiKey: effectiveOpenAiKey,
-        model: typeof model === 'string' && model.includes('4o') ? 'gpt-4o' : 'gpt-4o-mini',
-        temperature: Number(temperature) || 0.4
+      const streamed = await streamClaudeChatToClient(claudeMessages, {
+        apiKey: claudeKey,
+        model: model,
+        temperature: Number(temperature) || 0.3,
+        systemInstruction: effectiveSystemInstruction
       }, res);
-
       if (streamed) {
         res.write(`data: [DONE]\n\n`);
         (res as any).flush?.();
         res.end();
         return;
       }
-    } catch (openAiErr) {
-      console.warn('OpenAI stream failed, falling back to neural flash engine:', openAiErr);
-    }
+    } catch {}
   }
 
-  // Delegate all prompts directly to Gemini models for dynamic, high-quality, non-repeating answers
-  // If live API key is present, use official Google Gemini API with low-latency streaming
-  if (apiKey) {
+  // 2. If Grok is requested and key exists, stream Grok
+  if ((isGrokRequested || (isEnsemble && !deepSeekKey && !apiKey && !claudeKey)) && grokKey) {
+    try {
+      const grokMessages = sanitizedContents.map((c: any) => ({
+        role: c.role === 'model' ? 'assistant' : 'user',
+        content: (c.parts || []).map((p: any) => p.text || '').join('\n')
+      }));
+      if (effectiveSystemInstruction) {
+        grokMessages.unshift({ role: 'system', content: effectiveSystemInstruction });
+      }
+      const streamed = await streamGrokChatToClient(grokMessages, {
+        apiKey: grokKey,
+        model: model,
+        temperature: Number(temperature) || 0.3
+      }, res);
+      if (streamed) {
+        res.write(`data: [DONE]\n\n`);
+        (res as any).flush?.();
+        res.end();
+        return;
+      }
+    } catch {}
+  }
+
+  // 3. If DeepSeek is requested and key exists, stream DeepSeek
+  if ((isDeepSeekRequested || isEnsemble) && deepSeekKey) {
+    try {
+      const dsMessages = sanitizedContents.map((c: any) => ({
+        role: c.role === 'model' ? 'assistant' : 'user',
+        content: (c.parts || []).map((p: any) => p.text || '').join('\n')
+      }));
+      if (effectiveSystemInstruction) {
+        dsMessages.unshift({ role: 'system', content: effectiveSystemInstruction });
+      }
+      const streamed = await streamDeepSeekChatToClient(dsMessages, {
+        apiKey: deepSeekKey,
+        model: (typeof model === 'string' && model.includes('reasoner')) ? 'deepseek-reasoner' : 'deepseek-chat',
+        temperature: Number(temperature) || 0.3
+      }, res);
+      if (streamed) {
+        res.write(`data: [DONE]\n\n`);
+        (res as any).flush?.();
+        res.end();
+        return;
+      }
+    } catch {}
+  }
+
+  // 2. If Gemini is requested or in ensemble/default, stream Google Gemini with 65k token capacity
+  const effectiveOpenAiKey = openaiKey || process.env.OPENAI_API_KEY || (process.env as any).OPEN_AI_API_KEY;
+
+  if ((isGeminiRequested || isEnsemble || !effectiveOpenAiKey) && apiKey) {
     try {
       const ai = new GoogleGenAI({
         apiKey,
@@ -725,32 +798,10 @@ app.post('/api/chat/stream', async (req, res) => {
       });
 
       const baseInstruction = isCodingRequest
-        ? `You are Sapphire AI, an elite autonomous software architect and app builder.
-Never mention underlying model providers, platforms, or APIs (such as Gemini, DeepSeek, Google, OpenAI, Anthropic). Always refer to yourself strictly as Sapphire AI.
-
-CODING & MULTI-FILE PROJECT STANDARDS (CRITICAL - NEVER TRUNCATE):
-1. COMPLETE, UNTRUNCATED CODE GUARANTEE:
-   - You MUST generate 100% complete, fully implemented files from beginning to end.
-   - NEVER STOP HALFWAY. NEVER end a response early or leave a file incomplete.
-   - ALWAYS close all HTML tags (</div>, </section>, </body>, </html>), all JavaScript brackets ({ }, [ ]), and all markdown code fences (\`\`\`).
-   - NEVER use abbreviations, lazy comments like "// ... rest of code here", "// TODO", or placeholder snippets. Every function and style rule must be fully written out.
-2. PROJECT STRUCTURE FIRST:
-   - ALWAYS start your answer with a clean ASCII directory/file structure diagram showing exactly where each file belongs (e.g., 📁 project-name/ ├── index.html ├── style.css ├── script.js).
-3. INDIVIDUAL FILE CODE BLOCKS:
-   - Provide each file in its own markdown code block with an explicit filename tag or comment on line 1:
-     \`\`\`html filename="index.html"
-     <!-- index.html -->
-     \`\`\`
-     \`\`\`css filename="style.css"
-     /* style.css */
-     \`\`\`
-     \`\`\`javascript filename="script.js"
-     // script.js
-     \`\`\`
-4. Keep explanations concise and let the complete, production-ready code shine.`
-        : `You are Sapphire AI, an ultra-smart, professional, elite AI assistant.
-Never mention underlying model providers, platforms, or APIs (such as Gemini, DeepSeek, Google, OpenAI, Anthropic). Always refer to yourself strictly as Sapphire AI.
-Answer questions directly, accurately, and with high intellectual clarity.
+        ? `You are an elite, production-grade Software Architect and Full-Stack Code Developer.
+Generate MASSIVE, COMPLETE, HIGH-LEVEL PRODUCTION CODE for the user's project.
+Never truncate. Write 100% complete implementations.`
+        : `Answer questions directly, accurately, and with high intellectual clarity.
 Be fast, clear, and articulate. Do NOT include unnecessary internal monologue or meta-thinking tokens.`;
 
       const combinedInstruction = effectiveSystemInstruction && typeof effectiveSystemInstruction === 'string' && effectiveSystemInstruction.trim()
@@ -770,8 +821,8 @@ Be fast, clear, and articulate. Do NOT include unnecessary internal monologue or
         config.tools = [{ googleSearch: {} }];
       }
 
-      // High-speed, low-latency models for instant response (resilient to model quotas)
-      const candidateModels = ['gemini-2.5-flash', 'gemini-3.1-pro-preview', 'gemini-flash-latest', 'gemini-3.8-flash', 'gemini-2.5-pro'];
+      // High-speed, high-quality models
+      const candidateModels = ['gemini-2.5-flash', 'gemini-3.1-pro-preview', 'gemini-2.5-pro', 'gemini-flash-latest', 'gemini-3.8-flash'];
 
       let streamedAny = false;
 
@@ -800,14 +851,39 @@ Be fast, clear, and articulate. Do NOT include unnecessary internal monologue or
             return;
           }
         } catch (streamErr: any) {
-          // If stream already started sending chunks to client, don't try another model
           if (streamedAny) break;
-          // Otherwise silently continue to next model in candidateModels without error logging
         }
       }
-    } catch (error: any) {
-      // Silently fall back to next engine
-    }
+    } catch (error: any) {}
+  }
+
+  // 3. If OpenAI is requested or fallback, stream OpenAI GPT-4o
+  if (effectiveOpenAiKey) {
+    try {
+      const openAiMessages = sanitizedContents.map((c: any) => ({
+        role: c.role === 'model' ? 'assistant' : 'user',
+        content: (c.parts || []).map((p: any) => p.text || '').join('\n')
+      }));
+      if (effectiveSystemInstruction) {
+        openAiMessages.unshift({ role: 'system', content: effectiveSystemInstruction });
+      }
+      const targetOpenAiModel = isCodingRequest || (typeof model === 'string' && model.includes('4o'))
+        ? 'gpt-4o'
+        : 'gpt-4o-mini';
+
+      const streamed = await streamOpenAIChatToClient(openAiMessages, {
+        apiKey: effectiveOpenAiKey,
+        model: targetOpenAiModel,
+        temperature: Number(temperature) || 0.4
+      }, res);
+
+      if (streamed) {
+        res.write(`data: [DONE]\n\n`);
+        (res as any).flush?.();
+        res.end();
+        return;
+      }
+    } catch (openAiErr) {}
   }
 
   
@@ -847,6 +923,52 @@ Be fast, clear, and articulate. Do NOT include unnecessary internal monologue or
     } catch {
       // Silently fall back to instant high-speed generator
     }
+  }
+
+  // If Claude API key is available, stream real Claude responses
+  if (claudeKey) {
+    try {
+      const claudeMessages = sanitizedContents.map((c: any) => ({
+        role: c.role === 'model' ? 'assistant' : 'user',
+        content: (c.parts || []).map((p: any) => p.text || '').join('\n')
+      }));
+      const streamed = await streamClaudeChatToClient(claudeMessages, {
+        apiKey: claudeKey,
+        model: model,
+        temperature: Number(temperature) || 0.3,
+        systemInstruction: effectiveSystemInstruction
+      }, res);
+      if (streamed) {
+        res.write(`data: [DONE]\n\n`);
+        (res as any).flush?.();
+        res.end();
+        return;
+      }
+    } catch {}
+  }
+
+  // If Grok API key is available, stream real Grok responses
+  if (grokKey) {
+    try {
+      const grokMessages = sanitizedContents.map((c: any) => ({
+        role: c.role === 'model' ? 'assistant' : 'user',
+        content: (c.parts || []).map((p: any) => p.text || '').join('\n')
+      }));
+      if (effectiveSystemInstruction) {
+        grokMessages.unshift({ role: 'system', content: effectiveSystemInstruction });
+      }
+      const streamed = await streamGrokChatToClient(grokMessages, {
+        apiKey: grokKey,
+        model: model,
+        temperature: Number(temperature) || 0.3
+      }, res);
+      if (streamed) {
+        res.write(`data: [DONE]\n\n`);
+        (res as any).flush?.();
+        res.end();
+        return;
+      }
+    } catch {}
   }
 
   // High-speed Instant Engine streaming fallback (Zero variable needed!)
@@ -1147,6 +1269,196 @@ async function streamOpenAIChatToClient(
     return streamedAny;
   } catch (err) {
     console.warn('OpenAI streaming error:', err);
+    return false;
+  }
+}
+
+// Anthropic Claude Streaming Helper
+async function streamClaudeChatToClient(
+  messages: Array<{ role: string; content: string }>,
+  options: { apiKey?: string; model?: string; temperature?: number; systemInstruction?: string },
+  res: any
+): Promise<boolean> {
+  const apiKey =
+    options.apiKey ||
+    process.env.ANTHROPIC_API_KEY ||
+    (process.env as any).CLAUDE_API_KEY ||
+    '';
+  if (!apiKey) return false;
+
+  try {
+    let system = options.systemInstruction || '';
+    const anthropicMessages: Array<{ role: 'user' | 'assistant'; content: string }> = [];
+
+    for (const m of messages) {
+      if (m.role === 'system') {
+        system += (system ? '\n\n' : '') + m.content;
+      } else {
+        anthropicMessages.push({
+          role: m.role === 'assistant' || m.role === 'model' ? 'assistant' : 'user',
+          content: m.content || ''
+        });
+      }
+    }
+
+    if (anthropicMessages.length === 0) {
+      anthropicMessages.push({ role: 'user', content: 'Hello' });
+    }
+
+    if (anthropicMessages[0].role !== 'user') {
+      anthropicMessages.unshift({ role: 'user', content: 'Continue' });
+    }
+
+    const targetModel =
+      options.model && options.model.includes('3-5')
+        ? 'claude-3-5-sonnet-20241022'
+        : 'claude-3-7-sonnet-20250219';
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: targetModel,
+        max_tokens: 8192,
+        system: system || undefined,
+        messages: anthropicMessages,
+        temperature: options.temperature ?? 0.3,
+        stream: true
+      })
+    });
+
+    if (!response.ok || !response.body) {
+      return false;
+    }
+
+    const reader = (response.body as any).getReader();
+    const decoder = new TextDecoder('utf-8');
+    let buffer = '';
+    let streamedAny = false;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed || !trimmed.startsWith('data:')) continue;
+        const dataStr = trimmed.replace(/^data:\s*/, '');
+        if (dataStr === '[DONE]') continue;
+
+        try {
+          const parsed = JSON.parse(dataStr);
+          if (parsed.type === 'content_block_delta') {
+            if (parsed.delta?.type === 'text_delta' && parsed.delta?.text) {
+              res.write(`data: ${JSON.stringify({ text: parsed.delta.text, isThinking: false })}\n\n`);
+              (res as any).flush?.();
+              streamedAny = true;
+            } else if (parsed.delta?.type === 'thinking_delta' && parsed.delta?.thinking) {
+              res.write(`data: ${JSON.stringify({ thinking: parsed.delta.thinking })}\n\n`);
+              (res as any).flush?.();
+              streamedAny = true;
+            }
+          }
+        } catch {}
+      }
+    }
+
+    return streamedAny;
+  } catch (err) {
+    console.warn('Claude streaming error:', err);
+    return false;
+  }
+}
+
+// xAI Grok Streaming Helper
+async function streamGrokChatToClient(
+  messages: Array<{ role: string; content: string }>,
+  options: { apiKey?: string; model?: string; temperature?: number },
+  res: any
+): Promise<boolean> {
+  const apiKey =
+    options.apiKey ||
+    process.env.GROK_API_KEY ||
+    process.env.XAI_API_KEY ||
+    (process.env as any).GROK_KEY ||
+    '';
+  if (!apiKey) return false;
+
+  try {
+    const targetModel =
+      options.model && options.model.includes('code')
+        ? 'grok-beta'
+        : options.model && options.model.includes('grok-2')
+        ? 'grok-2-latest'
+        : 'grok-2-latest';
+
+    const response = await fetch('https://api.x.ai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: targetModel,
+        messages,
+        temperature: options.temperature ?? 0.3,
+        max_tokens: 16384,
+        stream: true
+      })
+    });
+
+    if (!response.ok || !response.body) {
+      return false;
+    }
+
+    const reader = (response.body as any).getReader();
+    const decoder = new TextDecoder('utf-8');
+    let buffer = '';
+    let streamedAny = false;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed || !trimmed.startsWith('data:')) continue;
+        const dataStr = trimmed.replace(/^data:\s*/, '');
+        if (dataStr === '[DONE]') continue;
+
+        try {
+          const parsed = JSON.parse(dataStr);
+          const content = parsed.choices?.[0]?.delta?.content || '';
+          const reasoning = parsed.choices?.[0]?.delta?.reasoning_content || '';
+          if (reasoning) {
+            res.write(`data: ${JSON.stringify({ thinking: reasoning })}\n\n`);
+            (res as any).flush?.();
+            streamedAny = true;
+          }
+          if (content) {
+            res.write(`data: ${JSON.stringify({ text: content, isThinking: false })}\n\n`);
+            (res as any).flush?.();
+            streamedAny = true;
+          }
+        } catch {}
+      }
+    }
+
+    return streamedAny;
+  } catch (err) {
+    console.warn('Grok streaming error:', err);
     return false;
   }
 }
