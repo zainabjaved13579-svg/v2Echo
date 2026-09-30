@@ -28,9 +28,9 @@ import {
   autoSaveFile,
   downloadWorkspaceFile,
   exportAllFilesAsZip,
-  loadWorkspaceFiles
+  loadWorkspaceFiles,
+  buildLivePreviewBundle
 } from '../services/fileStorageService';
-import { buildUnifiedLivePreviewBundle } from '../services/appEngineService';
 import { remakeAiCode } from '../services/codeService';
 import { SAPPHIRE_LOGO_URL } from '../data/constants';
 
@@ -223,14 +223,34 @@ export const CodePreviewModal: React.FC<CodePreviewModalProps> = ({
     }
   }, [filename, language]);
 
-  if (!isOpen) return null;
+  // ===== BUILD LIVE PREVIEW BUNDLE (FIXED) =====
+  const previewHtml = React.useMemo(() => {
+    if (projectFiles.length === 0) {
+      return '<!DOCTYPE html><html><body><h1>No files to preview</h1></body></html>';
+    }
 
-  // Build the live preview HTML from all active project files
-  const previewHtml = buildUnifiedLivePreviewBundle(
-    projectFiles,
-    selectedFileId,
-    activeTab === 'all-files' ? 'all' : previewScope
-  );
+    // Find active file
+    const activeFile = projectFiles.find((f) => f.id === selectedFileId) || projectFiles[0];
+    if (!activeFile) {
+      return '<!DOCTYPE html><html><body><h1>No active file</h1></body></html>';
+    }
+
+    // Mode 1: Full Web App or All Files → use HTML file as base
+    if (previewScope === 'app' || activeTab === 'all-files') {
+      const htmlFile = projectFiles.find((f) =>
+        f.name.toLowerCase().endsWith('.html') || f.language === 'html'
+      );
+      
+      if (htmlFile) {
+        return buildLivePreviewBundle(htmlFile, projectFiles);
+      }
+    }
+
+    // Mode 2: Preview the active file with all project files
+    return buildLivePreviewBundle(activeFile, projectFiles);
+  }, [projectFiles, selectedFileId, previewScope, activeTab, refreshKey]);
+
+  if (!isOpen) return null;
 
   return (
     <div
@@ -239,7 +259,7 @@ export const CodePreviewModal: React.FC<CodePreviewModalProps> = ({
       }}
       className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200 font-['Plus_Jakarta_Sans',sans-serif] select-none sm:select-auto"
     >
-      {/* Mobile Floating Close Action Button - ALWAYS visible on mobile */}
+      {/* Mobile Floating Close Action Button */}
       <button
         type="button"
         onClick={onClose}
@@ -259,7 +279,6 @@ export const CodePreviewModal: React.FC<CodePreviewModalProps> = ({
       >
         {/* Top Header Bar */}
         <header className="px-4 py-3 bg-[#111111] border-b border-[#2b2b2a] flex items-center justify-between gap-3 text-white shrink-0 select-none">
-          {/* Left: Brand & Active File */}
           <div className="flex items-center gap-2.5 min-w-0">
             <img
               src={SAPPHIRE_LOGO_URL}
@@ -285,7 +304,7 @@ export const CodePreviewModal: React.FC<CodePreviewModalProps> = ({
             </div>
           </div>
 
-          {/* Center: Mode Switcher (Preview | Split | Code | All Files) */}
+          {/* Mode Switcher */}
           <div className="flex items-center bg-[#20201f] border border-[#2b2b2a] rounded-2xl p-1 gap-1">
             <button
               type="button"
@@ -343,7 +362,6 @@ export const CodePreviewModal: React.FC<CodePreviewModalProps> = ({
 
           {/* Right Controls */}
           <div className="flex items-center gap-1.5">
-            {/* Viewport frames (when preview or split active) */}
             {(activeTab === 'preview' || activeTab === 'split') && (
               <div className="hidden lg:flex items-center bg-[#20201f] border border-[#2b2b2a] rounded-xl p-0.5 mr-1">
                 <button
@@ -352,7 +370,6 @@ export const CodePreviewModal: React.FC<CodePreviewModalProps> = ({
                   className={`p-1.5 rounded-lg text-xs transition-colors cursor-pointer ${
                     deviceView === 'desktop' ? 'bg-[#d97757] text-white' : 'text-[#86837c] hover:text-white'
                   }`}
-                  title="Desktop View (100%)"
                 >
                   <Monitor className="w-3.5 h-3.5" />
                 </button>
@@ -362,7 +379,6 @@ export const CodePreviewModal: React.FC<CodePreviewModalProps> = ({
                   className={`p-1.5 rounded-lg text-xs transition-colors cursor-pointer ${
                     deviceView === 'tablet' ? 'bg-[#d97757] text-white' : 'text-[#86837c] hover:text-white'
                   }`}
-                  title="Tablet View (768px)"
                 >
                   <Tablet className="w-3.5 h-3.5" />
                 </button>
@@ -372,14 +388,12 @@ export const CodePreviewModal: React.FC<CodePreviewModalProps> = ({
                   className={`p-1.5 rounded-lg text-xs transition-colors cursor-pointer ${
                     deviceView === 'mobile' ? 'bg-[#d97757] text-white' : 'text-[#86837c] hover:text-white'
                   }`}
-                  title="Mobile View (375px)"
                 >
                   <Smartphone className="w-3.5 h-3.5" />
                 </button>
               </div>
             )}
 
-            {/* Refresh sandbox */}
             <button
               type="button"
               onClick={() => setRefreshKey((k) => k + 1)}
@@ -389,65 +403,54 @@ export const CodePreviewModal: React.FC<CodePreviewModalProps> = ({
               <RefreshCw className="w-3.5 h-3.5" />
             </button>
 
-            {/* AI Remake button */}
             <button
               type="button"
               onClick={() => setShowRemakeBar((b) => !b)}
               className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-[#20201f] hover:bg-[#282724] border border-[#2b2b2a] text-xs font-medium text-[#d97757] hover:text-white transition-all cursor-pointer"
-              title="Remake or optimize code with AI"
             >
               <Wand2 className="w-3.5 h-3.5 text-[#d97757]" />
               <span>Remake</span>
             </button>
 
-            {/* Export all as zip */}
             <button
               type="button"
               onClick={() => exportAllFilesAsZip(projectFiles)}
               className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-[#20201f] hover:bg-[#282724] border border-[#2b2b2a] text-xs font-medium text-white transition-colors cursor-pointer"
-              title="Download ZIP of all project files"
             >
               <Download className="w-3.5 h-3.5 text-[#d97757]" />
               <span>Export ZIP</span>
             </button>
 
-            {/* Open in full Codex Studio if callback provided */}
             {onOpenCodexWorkspace && (
               <button
                 type="button"
                 onClick={onOpenCodexWorkspace}
                 className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-[#d97757] hover:bg-[#c86b4c] text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer"
-                title="Open in Full Codex Studio IDE"
               >
                 <Layers className="w-3.5 h-3.5" />
                 <span>Codex Studio</span>
               </button>
             )}
 
-            {/* Fullscreen Toggle */}
             <button
               type="button"
               onClick={() => setIsFullscreen((f) => !f)}
               className="p-2 rounded-2xl bg-[#20201f] hover:bg-[#282724] border border-[#2b2b2a] text-[#a19e97] hover:text-white transition-colors cursor-pointer"
-              title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
             >
               {isFullscreen ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
             </button>
 
-            {/* Close */}
             <button
               type="button"
               onClick={onClose}
               className="p-2 sm:p-2 rounded-2xl bg-rose-500/20 sm:bg-[#20201f] hover:bg-rose-500/30 sm:hover:bg-[#282724] border border-rose-500/40 sm:border-[#2b2b2a] text-rose-300 sm:text-[#a19e97] hover:text-white transition-colors cursor-pointer shrink-0 min-w-[38px] min-h-[38px] flex items-center justify-center shadow-xs"
-              title="Close Preview"
-              aria-label="Close Preview"
             >
               <X className="w-4 h-4 stroke-[2.5]" />
             </button>
           </div>
         </header>
 
-        {/* Multi-File Tab Bar (shown if multiple files or code/split mode) */}
+        {/* Multi-File Tab Bar */}
         {projectFiles.length > 1 && (
           <div className="h-10 bg-[#121212] border-b border-[#2b2b2a] px-3 flex items-center justify-between gap-2 overflow-x-auto shrink-0 select-none">
             <div className="flex items-center gap-1.5 overflow-x-auto py-1">
@@ -475,7 +478,6 @@ export const CodePreviewModal: React.FC<CodePreviewModalProps> = ({
             </div>
 
             <div className="flex items-center gap-2 shrink-0">
-              {/* Toggle: Selected File Preview vs Full Web App */}
               {(activeTab === 'preview' || activeTab === 'split') && projectFiles.some(f => f.name.toLowerCase().endsWith('.html')) && (
                 <div className="flex items-center bg-[#181817] p-0.5 rounded-xl border border-[#2b2b2a] text-xs">
                   <button
@@ -489,7 +491,6 @@ export const CodePreviewModal: React.FC<CodePreviewModalProps> = ({
                         ? 'bg-[#d97757] text-white shadow-xs font-semibold'
                         : 'text-[#86837c] hover:text-white'
                     }`}
-                    title="Preview currently active file"
                   >
                     Selected File
                   </button>
@@ -504,7 +505,6 @@ export const CodePreviewModal: React.FC<CodePreviewModalProps> = ({
                         ? 'bg-[#d97757] text-white shadow-xs font-semibold'
                         : 'text-[#86837c] hover:text-white'
                     }`}
-                    title="Preview bundled web app"
                   >
                     Full Web App
                   </button>
@@ -515,7 +515,6 @@ export const CodePreviewModal: React.FC<CodePreviewModalProps> = ({
                 type="button"
                 onClick={handleCopyCurrentFile}
                 className="px-2.5 py-1 rounded-lg bg-[#20201f] hover:bg-[#282724] border border-[#2b2b2a] text-xs text-[#ede8e1] flex items-center gap-1 cursor-pointer"
-                title="Copy active file code"
               >
                 {copiedCode ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3 text-[#a19e97]" />}
                 <span>{copiedCode ? 'Copied' : 'Copy'}</span>
@@ -524,7 +523,6 @@ export const CodePreviewModal: React.FC<CodePreviewModalProps> = ({
                 type="button"
                 onClick={handleDownloadCurrentFile}
                 className="px-2.5 py-1 rounded-lg bg-[#20201f] hover:bg-[#282724] border border-[#2b2b2a] text-xs text-[#ede8e1] flex items-center gap-1 cursor-pointer"
-                title="Download active file"
               >
                 <Download className="w-3 h-3 text-[#d97757]" />
                 <span className="hidden sm:inline">Download</span>
@@ -580,7 +578,6 @@ export const CodePreviewModal: React.FC<CodePreviewModalProps> = ({
               </button>
             </div>
 
-            {/* Quick preset chips */}
             <div className="flex flex-wrap gap-1.5 pt-0.5">
               {[
                 'Make responsive for PC monitors and mobile phones',
@@ -604,7 +601,7 @@ export const CodePreviewModal: React.FC<CodePreviewModalProps> = ({
           </div>
         )}
 
-        {/* Main Canvas Body: Depending on activeTab */}
+        {/* Main Canvas Body */}
         <div className="flex-1 bg-[#0d0d0f] relative overflow-hidden flex">
           {/* TAB 1: PREVIEW */}
           {activeTab === 'preview' && (
@@ -630,10 +627,9 @@ export const CodePreviewModal: React.FC<CodePreviewModalProps> = ({
             </div>
           )}
 
-          {/* TAB 2: SPLIT (Code on Left, Live Preview on Right) */}
+          {/* TAB 2: SPLIT */}
           {activeTab === 'split' && (
             <div className="w-full h-full flex flex-col md:flex-row overflow-hidden">
-              {/* Code Editor on Left */}
               <div className="flex-1 flex flex-col border-b md:border-b-0 md:border-r border-[#2b2b2a] bg-[#111111] overflow-hidden">
                 <div className="px-3 py-1.5 bg-[#151515] border-b border-[#2b2b2a] text-[11px] text-[#a19e97] flex items-center justify-between select-none">
                   <div className="flex items-center gap-1.5">
@@ -652,7 +648,6 @@ export const CodePreviewModal: React.FC<CodePreviewModalProps> = ({
                 </div>
               </div>
 
-              {/* Live Preview on Right */}
               <div className="flex-1 flex flex-col bg-[#0e0e10] p-2 sm:p-3 overflow-hidden">
                 <div
                   className={`w-full h-full rounded-2xl overflow-hidden border border-[#2b2b2a] shadow-xl bg-white transition-all ${
@@ -672,7 +667,7 @@ export const CodePreviewModal: React.FC<CodePreviewModalProps> = ({
             </div>
           )}
 
-          {/* TAB 3: CODE (Full Code Editor) */}
+          {/* TAB 3: CODE */}
           {activeTab === 'code' && selectedFile && (
             <div className="w-full h-full flex flex-col bg-[#111111] overflow-hidden">
               <div className="px-4 py-2 bg-[#151515] border-b border-[#2b2b2a] flex items-center justify-between text-xs text-[#a19e97] select-none">
@@ -716,10 +711,9 @@ export const CodePreviewModal: React.FC<CodePreviewModalProps> = ({
             </div>
           )}
 
-          {/* TAB 4: ALL FILES (Full Project File Preview) */}
+          {/* TAB 4: ALL FILES */}
           {activeTab === 'all-files' && (
             <div className="w-full h-full flex flex-col bg-[#111111] overflow-hidden">
-              {/* All Files Action Toolbar */}
               <div className="px-4 py-2.5 bg-[#151515] border-b border-[#2b2b2a] flex flex-wrap items-center justify-between gap-2.5 text-xs shrink-0 select-none">
                 <div className="flex items-center gap-2">
                   <Folder className="w-4 h-4 text-[#d97757]" />
@@ -729,7 +723,6 @@ export const CodePreviewModal: React.FC<CodePreviewModalProps> = ({
                   </span>
                 </div>
 
-                {/* Sub-mode Toggle: Live Preview Dashboard vs Raw Source Code */}
                 <div className="flex items-center bg-[#20201f] p-0.5 rounded-xl border border-[#2b2b2a] text-xs">
                   <button
                     type="button"
@@ -776,7 +769,6 @@ export const CodePreviewModal: React.FC<CodePreviewModalProps> = ({
               </div>
 
               {allFilesMode === 'preview' ? (
-                /* Live Interactive All-Files Dashboard Frame */
                 <div className="flex-1 w-full h-full bg-[#0d0d0f] overflow-hidden">
                   <iframe
                     key={`all-files-frame-${refreshKey}`}
@@ -788,13 +780,11 @@ export const CodePreviewModal: React.FC<CodePreviewModalProps> = ({
                   />
                 </div>
               ) : (
-                /* Scrollable list of every file with code view */
                 <div className="flex-1 overflow-y-auto p-4 space-y-6">
                 {projectFiles.map((item) => {
                   const lines = (item.content || '').split('\n');
                   return (
                     <div key={item.id} className="rounded-2xl border border-[#2b2b2a] bg-[#151515] overflow-hidden shadow-lg">
-                      {/* Header */}
                       <div className="px-4 py-2 bg-[#191919] border-b border-[#2b2b2a] flex items-center justify-between gap-2 select-none">
                         <div className="flex items-center gap-2">
                           <FileCode className="w-4 h-4 text-[#d97757]" />
@@ -813,7 +803,6 @@ export const CodePreviewModal: React.FC<CodePreviewModalProps> = ({
                               navigator.clipboard.writeText(item.content);
                             }}
                             className="px-2.5 py-1 rounded-lg bg-[#20201f] hover:bg-[#282724] border border-[#2b2b2a] text-[#ede8e1] text-xs flex items-center gap-1 transition-colors cursor-pointer"
-                            title="Copy this file's code"
                           >
                             <Copy className="w-3 h-3 text-[#a19e97]" />
                             <span>Copy</span>
@@ -825,7 +814,6 @@ export const CodePreviewModal: React.FC<CodePreviewModalProps> = ({
                               setActiveTab('code');
                             }}
                             className="px-2.5 py-1 rounded-lg bg-[#20201f] hover:bg-[#282724] border border-[#2b2b2a] text-[#ede8e1] text-xs flex items-center gap-1 transition-colors cursor-pointer"
-                            title="Edit this file"
                           >
                             <Code2 className="w-3 h-3 text-[#d97757]" />
                             <span>Edit</span>
@@ -833,7 +821,6 @@ export const CodePreviewModal: React.FC<CodePreviewModalProps> = ({
                         </div>
                       </div>
 
-                      {/* Code Content */}
                       <div className="p-3 bg-[#0d0d0f] font-mono text-xs text-[#f1f1f1] overflow-x-auto leading-relaxed max-h-[500px] overflow-y-auto">
                         <pre className="flex">
                           <div className="select-none pr-4 text-right text-[#555] font-mono shrink-0">
@@ -855,7 +842,7 @@ export const CodePreviewModal: React.FC<CodePreviewModalProps> = ({
           )}
         </div>
 
-        {/* Footer info bar */}
+        {/* Footer */}
         <footer className="px-4 py-2 bg-[#111111] border-t border-[#2b2b2a] flex items-center justify-between text-[11px] text-[#a19e97] select-none">
           <div className="flex items-center gap-2">
             <span>Active: <strong className="text-white font-mono">{selectedFile?.name || 'File'}</strong></span>

@@ -79,6 +79,11 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
   const bgCard = isMoon ? 'bg-[#20201f]' : 'bg-[#f5f1ea]';
   const bgSubtle = isMoon ? 'bg-[#1a1a1a]' : 'bg-white';
 
+  // Highlight theme classes (reusable)
+  const highlightClasses = isMoon
+    ? 'bg-[#d97757]/30 text-[#f5d0bd] border-[#d97757]/60'
+    : 'bg-[#d97757]/20 text-[#7a2e0f] border-[#d97757]/50';
+
   return (
     <div className={`prose max-w-none ${textPrimary} leading-relaxed text-sm selection:bg-[#d97757]/30`}>
       <ReactMarkdown
@@ -114,11 +119,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
                         },
                         mark({ children }) {
                           return (
-                            <mark className={`font-semibold px-1.5 py-0.5 rounded-lg border-b shadow-xs inline-block my-0.5 ${
-                              isMoon
-                                ? 'bg-[#d97757]/25 text-[#f5d0bd] border-[#d97757]/50'
-                                : 'bg-[#d97757]/15 text-[#8a3f22] border-[#d97757]/40'
-                            }`}>
+                            <mark className={`font-semibold px-1.5 py-0.5 rounded-lg border-b shadow-xs inline-block my-0.5 ${highlightClasses}`}>
                               {children}
                             </mark>
                           );
@@ -164,11 +165,7 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
           },
           mark({ children }) {
             return (
-              <mark className={`font-semibold px-1.5 py-0.5 rounded-lg border-b shadow-xs inline-block my-0.5 ${
-                isMoon
-                  ? 'bg-[#d97757]/25 text-[#f5d0bd] border-[#d97757]/50'
-                  : 'bg-[#d97757]/15 text-[#8a3f22] border-[#d97757]/40'
-              }`}>
+              <mark className={`font-semibold px-1.5 py-0.5 rounded-lg border-b shadow-xs inline-block my-0.5 ${highlightClasses}`}>
                 {children}
               </mark>
             );
