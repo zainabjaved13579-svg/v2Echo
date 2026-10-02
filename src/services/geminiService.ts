@@ -1,5 +1,6 @@
 import { ChatMessage } from '../types';
 import { generateEchoFallbackResponse, generateThinkingTrace } from './echoEngine';
+import { getAiKeyHeaders } from './aiKeysService';
 
 export interface HealthCheckResult {
   status: string;
@@ -320,25 +321,41 @@ export async function streamEchoChat({
       (msg) =>
         (msg.text && msg.text.trim().length > 0) ||
         (msg.image && msg.image.base64) ||
+        (msg.images && msg.images.length > 0) ||
         (msg.attachedFile && msg.attachedFile.base64)
     )
     .map((msg) => {
       const parts: any[] = [];
 
-      if (msg.image && msg.image.base64) {
-        parts.push({
-          inlineData: {
-            mimeType: msg.image.mimeType || 'image/jpeg',
-            data: msg.image.base64
+      // Multi-image / screenshot support
+      const allImgs = (msg.images && msg.images.length > 0)
+        ? msg.images
+        : (msg.image ? [msg.image] : []);
+
+      for (const img of allImgs) {
+        if (img && img.base64) {
+          let cleanBase64 = img.base64;
+          if (cleanBase64.includes(',')) {
+            cleanBase64 = cleanBase64.split(',')[1];
           }
-        });
+          parts.push({
+            inlineData: {
+              mimeType: img.mimeType || 'image/png',
+              data: cleanBase64.trim()
+            }
+          });
+        }
       }
 
       if (msg.attachedFile && msg.attachedFile.base64) {
+        let cleanBase64 = msg.attachedFile.base64;
+        if (cleanBase64.includes(',')) {
+          cleanBase64 = cleanBase64.split(',')[1];
+        }
         parts.push({
           inlineData: {
             mimeType: msg.attachedFile.type || 'application/pdf',
-            data: msg.attachedFile.base64
+            data: cleanBase64.trim()
           }
         });
       }
@@ -388,7 +405,8 @@ export async function streamEchoChat({
   };	
 
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json'
+    'Content-Type': 'application/json',
+    ...getAiKeyHeaders()
   };
   if (activeApiKey) {
     headers['x-gemini-api-key'] = activeApiKey;

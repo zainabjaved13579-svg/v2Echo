@@ -962,20 +962,77 @@ export function downloadWorkspaceFile(file: WorkspaceFile): void {
   URL.revokeObjectURL(url);
 }
 
-// Export all files as ZIP package
-export async function exportAllFilesAsZip(filesInput?: WorkspaceFile[]): Promise<void> {
+// Export all files as ZIP package (with InfinityFree & cPanel web hosting compatibility)
+export async function exportAllFilesAsZip(filesInput?: WorkspaceFile[], customZipName?: string): Promise<void> {
   const files = filesInput && filesInput.length > 0 ? filesInput : loadWorkspaceFiles();
   const zip = new JSZip();
+
+  const hasHtml = files.some((f) => f.name.endsWith('.html'));
+  const cssFile = files.find((f) => f.name.endsWith('.css'));
+  const jsFile = files.find((f) => f.name.endsWith('.js'));
 
   for (const file of files) {
     // Remove leading slash for ZIP directory structure
     const cleanPath = file.path.replace(/^\/+/, '') || file.name;
-    if (file.content.startsWith('data:') && file.content.includes(';base64,')) {
-      const base64Data = file.content.split(';base64,')[1];
+    let content = file.content;
+
+    // Reconcile and fix relative file linking inside HTML files
+    if (file.name.endsWith('.html')) {
+      if (cssFile) {
+        // Fix styles.css -> style.css, /style.css -> style.css
+        content = content.replace(/href=["'](?:\/|\.\/)?styles?\.css["']/gi, `href="${cssFile.name}"`);
+        if (!content.includes(cssFile.name) && !content.includes('<style')) {
+          content = content.includes('</head>')
+            ? content.replace('</head>', `  <link rel="stylesheet" href="${cssFile.name}">\n</head>`)
+            : `<link rel="stylesheet" href="${cssFile.name}">\n${content}`;
+        }
+      }
+      if (jsFile) {
+        content = content.replace(/src=["'](?:\/|\.\/)?(?:app|main|script)\.js["']/gi, `src="${jsFile.name}"`);
+        if (!content.includes(jsFile.name) && !content.includes('<script')) {
+          content = content.includes('</body>')
+            ? content.replace('</body>', `  <script src="${jsFile.name}" defer></script>\n</body>`)
+            : `${content}\n<script src="${jsFile.name}" defer></script>`;
+        }
+      }
+    }
+
+    if (content.startsWith('data:') && content.includes(';base64,')) {
+      const base64Data = content.split(';base64,')[1];
       zip.file(cleanPath, base64Data, { base64: true });
     } else {
-      zip.file(cleanPath, file.content);
+      zip.file(cleanPath, content);
     }
+  }
+
+  // If this is a web project, provide .htaccess for InfinityFree / Apache web servers
+  if (hasHtml) {
+    const htaccessContent = `# Apache Server Configuration for InfinityFree and Shared Hosting
+DirectoryIndex index.html index.htm
+AddDefaultCharset UTF-8
+AddType text/css .css
+AddType application/javascript .js
+AddType image/svg+xml .svg
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css application/javascript
+</IfModule>
+<IfModule mod_headers.c>
+  Header set Access-Control-Allow-Origin "*"
+</IfModule>`;
+    zip.file('.htaccess', htaccessContent);
+
+    const infinityFreeGuide = `=== INFINITYFREE & CPANEL HOSTING GUIDE ===
+
+Follow these simple steps to deploy your website:
+1. Log into your InfinityFree account (https://dash.infinityfree.com) or cPanel.
+2. Go to "Control Panel" -> "Online File Manager" (or connect via FTP).
+3. Open the "htdocs" folder (this is where public website files belong).
+4. Upload all files from this ZIP (index.html, style.css, script.js, .htaccess) inside "htdocs/".
+5. Open your website domain in any browser!
+Your website will load with complete colors, responsive CSS, and interactive JavaScript.
+
+TIP: If you prefer uploading just 1 file, use the "InfinityFree HTML" export button in the workspace to get a 100% self-contained single index.html file!`;
+    zip.file('INFINITYFREE_INSTRUCTIONS.txt', infinityFreeGuide);
   }
 
   // Add a manifest file
@@ -998,7 +1055,7 @@ export async function exportAllFilesAsZip(filesInput?: WorkspaceFile[]): Promise
   const url = URL.createObjectURL(content);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `sapphire_workspace_export_${new Date().toISOString().slice(0, 10)}.zip`;
+  a.download = customZipName || `sapphire_project_${new Date().toISOString().slice(0, 10)}.zip`;
   a.click();
   URL.revokeObjectURL(url);
 }

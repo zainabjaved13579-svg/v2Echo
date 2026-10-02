@@ -67,11 +67,11 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   const [attachedFiles, setAttachedFiles] = useState<{ name: string; size: number }[]>([]);
 
   const modelChoices = [
-    { id: 'openai-gpt-4o-mini', name: 'OpenAI GPT-4o Mini', sub: 'Ultra-fast OpenAI engine' },
-    { id: 'openai-gpt-4o', name: 'OpenAI GPT-4o', sub: 'OpenAI flagship multimodal' },
-    { id: 'sapphire-3.7-flash', name: 'Sapphire 3.7 Flash', sub: 'Recommended low latency' },
-    { id: 'sapphire-flash-latest', name: 'Sapphire Studio', sub: 'Interactive live app builder' },
-    { id: 'sapphire-3.1-pro', name: 'Sapphire Ultra', sub: 'Deep algorithmic reasoning' }
+    { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', sub: 'Ultra-fast multimodal speed' },
+    { id: 'deepseek-reasoner', name: 'DeepSeek Reasoner (R1)', sub: 'Deep architectural logic' },
+    { id: 'claude-3-7-sonnet', name: 'Claude 3.7 Sonnet', sub: 'Pristine code development' },
+    { id: 'grok-2', name: 'Grok 2 Engine', sub: 'High throughput coding' },
+    { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro', sub: 'Massive context & vision' }
   ];
 
   const currentChoice = modelChoices.find((m) => m.id === currentModel) || modelChoices[0];

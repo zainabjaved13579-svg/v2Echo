@@ -604,7 +604,7 @@ app.get('/api/visual/search', async (req, res) => {
 app.post('/api/chat/stream', async (req, res) => {
   const bodyApiKey = req.body?.apiKey || req.body?.customApiKey || req.body?.gemniApiKey || req.body?.geminiApiKey;
   const customApiKey = (req.headers['x-gemini-api-key'] as string) || (req.headers['x-gemni-api-key'] as string) || (req.headers['x-gemini-key'] as string) || (req.headers['x-gemni-key'] as string) || bodyApiKey || '';
-  const apiKey = customApiKey || process.env.GEMNI_API_KEY || process.env.GEMINI_API_KEY || process.env.VITE_GEMNI_API_KEY || process.env.VITE_GEMINI_API_KEY;
+  const apiKey = customApiKey || process.env.GEMNI_API_KEY || process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || process.env.VITE_GEMNI_API_KEY || process.env.VITE_GEMINI_API_KEY;
   const deepSeekKey =
     (req.headers['x-deepseek-api-key'] as string) ||
     req.body?.deepseekApiKey ||
@@ -654,6 +654,26 @@ app.post('/api/chat/stream', async (req, res) => {
   // Sanitize and strictly enforce alternating contents for GoogleGenAI SDK
   const sanitizedContents = sanitizeAndAlternateContents(contents);
 
+  // Clean and sanitize any inlineData base64 (e.g. screenshots)
+  for (const turn of sanitizedContents) {
+    for (const part of turn.parts || []) {
+      if (part.inlineData && part.inlineData.data) {
+        let raw = String(part.inlineData.data).trim();
+        if (raw.includes(',')) {
+          raw = raw.split(',')[1].trim();
+        }
+        part.inlineData.data = raw;
+        if (!part.inlineData.mimeType) {
+          part.inlineData.mimeType = 'image/png';
+        }
+      }
+    }
+  }
+
+  const hasImage = sanitizedContents.some((c: any) =>
+    (c.parts || []).some((p: any) => p.inlineData && p.inlineData.data)
+  );
+
   // Fast response for basic greetings (instant reply in ~5ms)
   const lastUserText = (sanitizedContents[sanitizedContents.length - 1]?.parts || [])
     .map((p: any) => p.text || '')
@@ -674,7 +694,7 @@ app.post('/api/chat/stream', async (req, res) => {
      /\b(pic|pics|picture|pictures|photo|photos|photograph|tasweer|image of|photo of|pic of|wallpaper|real pic|asli pic|actual pic|real picture|asli picture)\b/i.test(lastUserText));
 
   let diagramPromise: Promise<{ title: string; imageUrl: string } | null> | null = null;
-  if (isPhysicalDiagramRequest) {
+  if (isPhysicalDiagramRequest && !hasImage) {
     diagramPromise = fetchWorkingDiagram(lastUserText);
   }
 
@@ -690,22 +710,35 @@ app.post('/api/chat/stream', async (req, res) => {
   }
 
   // Remove artificial chat limits (no 400 word or 300 line restriction)
-  effectiveSystemInstruction += `\n\n[UNRESTRICTED GENERATION]: Never artificially truncate, limit, or compress responses. You have NO 400-word or 300-line limitations. Deliver complete, comprehensive, highly detailed code and answers without stopping early.`;
+  effectiveSystemInstruction += `\n\n[UNRESTRICTED GENERATION]: Never artificially truncate, limit, or compress responses. You have NO 400-word or 300-line limitations. Deliver complete, comprehensive, highly detailed code and answers without stopping early. Never write "// rest of code here", never leave incomplete tags or functions.`;
 
   if (isConceptualDiagram) {
     effectiveSystemInstruction += '\n[LOGICAL THINKING DIRECTIVE]: The user specifically requested a logical conceptual diagram (e.g., Venn diagram or comparison table). Explain the logic in clear text and present a structured Markdown comparison table detailing all sets and the intersection. Do NOT draw text-based ASCII art diagrams.';
   }
 
-  // Expansive Coding Directive for Big, Professional Code
+  // Expansive Coding Directive with Exact Multi-File Linking & InfinityFree Compatibility
   if (isCodingRequest) {
-    effectiveSystemInstruction += `\n\n[EXPANSIVE ARCHITECTURE DIRECTIVE - CRITICAL]:
-You must generate BIG, COMPLETE, HIGH-LEVEL PRODUCTION CODE.
-Do NOT generate small, simplified, or minimal code.
-NEVER truncate, NEVER write short snippets, NEVER use placeholders or "// rest of code here".
-Provide full, multi-file code (HTML, CSS, JavaScript/TypeScript) with complete styling, animations, responsive design, and deep interactive features. Deliver expansive, high-caliber software engineering.`;
+    effectiveSystemInstruction += `\n\n[EXPANSIVE ARCHITECTURE & EXACT MULTI-FILE LINKING MANDATE - CRITICAL]:
+You must generate BIG, COMPLETE, HIGH-LEVEL PRODUCTION CODE for the user's project.
+Do NOT generate small, simplified, or minimal code. NEVER truncate.
+
+EXACT FILE LINKING & HOSTING COMPATIBILITY RULES:
+1. In index.html, the stylesheet tag MUST EXACTLY be:
+   <link rel="stylesheet" href="style.css">
+   And your CSS code block MUST be labeled with style.css! NEVER mismatch names (e.g. do NOT name it styles.css in one place and style.css in another).
+2. In index.html, the script tag MUST EXACTLY be:
+   <script src="script.js" defer></script>
+   And your JavaScript code block MUST be labeled with script.js!
+3. ALWAYS use relative paths (href="style.css", src="script.js"), NEVER absolute paths like href="/style.css" which fail on InfinityFree, GitHub Pages, or subdirectories!
+4. In style.css, write COMPLETE, VIBRANT, MODERN STYLING: complete CSS variables, CSS reset, typography, modern card layouts, buttons with hover/active states, responsive media queries, and smooth transitions. Never let the page display unstyled black and white text!
+5. The code MUST be 100% complete and self-contained so when uploaded to InfinityFree, cPanel, or opened in any browser, it renders full colors, modern design, and interactive features without broken dependencies.
+6. Provide full multi-file code blocks with explicit names:
+   \`\`\`html index.html
+   \`\`\`css style.css
+   \`\`\`javascript script.js`;
   }
 
-  // Model routing based on request: Support every engine (DeepSeek, Gemini, OpenAI, Claude, and Grok)
+  // Model routing based on request: Support every engine (DeepSeek, Gemini, Claude, and Grok)
   const isClaudeRequested = typeof model === 'string' && (model.includes('claude') || model.includes('anthropic') || model.includes('sonnet') || model.includes('opus'));
   const isGrokRequested = typeof model === 'string' && (model.includes('grok') || model.includes('xai'));
   const isDeepSeekRequested = typeof model === 'string' && (model.includes('deepseek') || model.includes('reasoner'));
@@ -713,8 +746,66 @@ Provide full, multi-file code (HTML, CSS, JavaScript/TypeScript) with complete s
   const isOpenAiRequested = typeof model === 'string' && (model.includes('openai') || model.includes('gpt'));
   const isEnsemble = !isClaudeRequested && !isGrokRequested && !isDeepSeekRequested && !isGeminiRequested && !isOpenAiRequested;
 
+  // CRITICAL: If an image/screenshot is present, we MUST route to a Vision-capable model (Gemini)!
+  // DeepSeek is text-only and rejects/strips images.
+  if (hasImage && apiKey) {
+    try {
+      const ai = new GoogleGenAI({
+        apiKey,
+        httpOptions: {
+          headers: {
+            'User-Agent': 'aistudio-build'
+          }
+        }
+      });
+
+      const visionInstruction = `You are an elite multimodal AI and Senior Developer.
+Analyze the user's uploaded image/screenshot with extreme detail, high precision, and visual accuracy.
+If the screenshot shows a UI, design, or bug, generate the complete, pixel-perfect, fully working multi-file code to replicate or fix it.
+${effectiveSystemInstruction}`;
+
+      const config: Record<string, any> = {
+        temperature: Number(temperature) || 0.4,
+        maxOutputTokens: 65536,
+        systemInstruction: visionInstruction
+      };
+
+      const visionModels = ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-3.8-flash', 'gemini-flash-latest'];
+      let streamedAny = false;
+
+      for (const currModel of visionModels) {
+        if (streamedAny) break;
+        try {
+          const responseStream = await ai.models.generateContentStream({
+            model: currModel,
+            contents: sanitizedContents,
+            config
+          });
+
+          for await (const chunk of responseStream) {
+            const text = chunk.text || '';
+            if (text) {
+              streamedAny = true;
+              res.write(`data: ${JSON.stringify({ text, isThinking: false })}\n\n`);
+              (res as any).flush?.();
+            }
+          }
+
+          if (streamedAny) {
+            res.write(`data: [DONE]\n\n`);
+            (res as any).flush?.();
+            res.end();
+            return;
+          }
+        } catch (streamErr: any) {
+          if (streamedAny) break;
+        }
+      }
+    } catch {}
+  }
+
   // 1. If Claude is requested and key exists, stream Claude
-  if ((isClaudeRequested || (isEnsemble && !deepSeekKey && !apiKey)) && claudeKey) {
+  if (isClaudeRequested && claudeKey) {
     try {
       const claudeMessages = sanitizedContents.map((c: any) => ({
         role: c.role === 'model' ? 'assistant' : 'user',
@@ -736,7 +827,7 @@ Provide full, multi-file code (HTML, CSS, JavaScript/TypeScript) with complete s
   }
 
   // 2. If Grok is requested and key exists, stream Grok
-  if ((isGrokRequested || (isEnsemble && !deepSeekKey && !apiKey && !claudeKey)) && grokKey) {
+  if (isGrokRequested && grokKey) {
     try {
       const grokMessages = sanitizedContents.map((c: any) => ({
         role: c.role === 'model' ? 'assistant' : 'user',
@@ -759,8 +850,8 @@ Provide full, multi-file code (HTML, CSS, JavaScript/TypeScript) with complete s
     } catch {}
   }
 
-  // 3. If DeepSeek is requested and key exists, stream DeepSeek
-  if ((isDeepSeekRequested || isEnsemble) && deepSeekKey) {
+  // 3. If DeepSeek is explicitly requested and key exists, stream DeepSeek (text-only)
+  if (isDeepSeekRequested && deepSeekKey && !hasImage) {
     try {
       const dsMessages = sanitizedContents.map((c: any) => ({
         role: c.role === 'model' ? 'assistant' : 'user',
@@ -783,10 +874,8 @@ Provide full, multi-file code (HTML, CSS, JavaScript/TypeScript) with complete s
     } catch {}
   }
 
-  // 2. If Gemini is requested or in ensemble/default, stream Google Gemini with 65k token capacity
-  const effectiveOpenAiKey = openaiKey || process.env.OPENAI_API_KEY || (process.env as any).OPEN_AI_API_KEY;
-
-  if ((isGeminiRequested || isEnsemble || !effectiveOpenAiKey) && apiKey) {
+  // 4. Default & Ensemble: Primary engine is Google Gemini with 65,536 output tokens
+  if (apiKey) {
     try {
       const ai = new GoogleGenAI({
         apiKey,
@@ -845,6 +934,19 @@ Be fast, clear, and articulate. Do NOT include unnecessary internal monologue or
           }
 
           if (streamedAny) {
+            if (diagramPromise) {
+              try {
+                const diag = await Promise.race([
+                  diagramPromise,
+                  new Promise<null>((r) => setTimeout(() => r(null), 1200))
+                ]);
+                if (diag && diag.imageUrl) {
+                  const diagMd = `\n\n![${diag.title}](${diag.imageUrl})\n*${diag.title}*\n\n`;
+                  res.write(`data: ${JSON.stringify({ text: diagMd, isThinking: false })}\n\n`);
+                }
+              } catch {}
+            }
+
             res.write(`data: [DONE]\n\n`);
             (res as any).flush?.();
             res.end();
@@ -858,7 +960,7 @@ Be fast, clear, and articulate. Do NOT include unnecessary internal monologue or
   }
 
   // 3. If OpenAI is requested or fallback, stream OpenAI GPT-4o
-  if (effectiveOpenAiKey) {
+  if (openaiKey) {
     try {
       const openAiMessages = sanitizedContents.map((c: any) => ({
         role: c.role === 'model' ? 'assistant' : 'user',
@@ -872,7 +974,7 @@ Be fast, clear, and articulate. Do NOT include unnecessary internal monologue or
         : 'gpt-4o-mini';
 
       const streamed = await streamOpenAIChatToClient(openAiMessages, {
-        apiKey: effectiveOpenAiKey,
+        apiKey: openaiKey,
         model: targetOpenAiModel,
         temperature: Number(temperature) || 0.4
       }, res);

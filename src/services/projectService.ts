@@ -60,7 +60,7 @@ const DEFAULT_PROJECT_FILES: WorkspaceFile[] = [
           Codex Master Program
           <span class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">Live</span>
         </h1>
-        <p class="text-[11px] text-[#8e8e93]">Built collectively by DeepSeek + Gemini + Google AI Studio + OpenAI</p>
+        <p class="text-[11px] text-[#8e8e93]">Built collectively by DeepSeek + Gemini + Google AI Studio + Claude</p>
       </div>
     </div>
     <div class="flex items-center gap-3">
@@ -81,7 +81,7 @@ const DEFAULT_PROJECT_FILES: WorkspaceFile[] = [
     </div>
     
     <h2 class="text-4xl sm:text-5xl font-extrabold tracking-tight text-white max-w-3xl leading-tight mb-4">
-      Engineered with DeepSeek, Gemini, AI Studio & OpenAI
+      Engineered with DeepSeek, Gemini, AI Studio & Claude
     </h2>
     <p class="text-base text-[#a3a3a8] max-w-2xl leading-relaxed mb-8">
       Your master program is live and connected. Chat on the side to write full-stack features, integrate databases, add animations, and deploy instant changes.
@@ -254,7 +254,7 @@ export function getStoredProjects(): CodexProject[] {
   const initialProject: CodexProject = {
     id: 'proj_default_master',
     name: 'Master Web Program',
-    description: 'Autonomous full-stack application synthesized by DeepSeek, Gemini, Google AI Studio & OpenAI',
+    description: 'Autonomous full-stack application synthesized by DeepSeek, Gemini, Google AI Studio & Claude',
     engine: 'ensemble',
     createdAt: Date.now() - 3600000,
     updatedAt: Date.now(),
@@ -263,7 +263,7 @@ export function getStoredProjects(): CodexProject[] {
       {
         id: 'msg_welcome',
         role: 'model',
-        text: 'Welcome to Codex Master Studio. DeepSeek Coder, Gemini 2.5 Flash, Google AI Studio, and OpenAI GPT-4o are connected and working together. What would you like to build, update, or refactor today?',
+        text: 'Welcome to Codex Master Studio. DeepSeek Coder, Gemini 2.5 Flash, Google AI Studio, and Anthropic Claude are connected and working together. What would you like to build, update, or refactor today?',
         timestamp: Date.now() - 3600000,
         engine: 'ensemble'
       }
@@ -318,7 +318,7 @@ export function createNewProject(
       {
         id: `msg_init_${Date.now()}`,
         role: 'model',
-        text: `New project "${name || 'Untitled'}" initialized with DeepSeek, Gemini, AI Studio, and OpenAI. Ready to write code!`,
+        text: `New project "${name || 'Untitled'}" initialized with DeepSeek, Gemini, AI Studio, and Claude. Ready to write code!`,
         timestamp: Date.now(),
         engine
       }

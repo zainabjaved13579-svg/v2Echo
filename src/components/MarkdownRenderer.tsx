@@ -7,6 +7,7 @@ import rehypeRaw from 'rehype-raw';
 import 'katex/dist/katex.min.css';
 import hljs from 'highlight.js';
 import 'highlight.js/styles/atom-one-dark.css';
+import { highlightCode, normalizeLanguage } from '../services/codeHighlighter';
 import {
   Check,
   Copy,
@@ -664,26 +665,13 @@ const CodeBlock: React.FC<CodeBlockProps> = ({ language, meta, value, onPreview,
 
       {/* Code Content */}
       {(() => {
-        let highlightedHtml = '';
-        try {
-          const validLanguage = hljs.getLanguage(rawLang) ? rawLang : null;
-          if (validLanguage) {
-            highlightedHtml = hljs.highlight(currentCode, { language: validLanguage, ignoreIllegals: true }).value;
-          } else {
-            highlightedHtml = hljs.highlightAuto(currentCode).value;
-          }
-        } catch {
-          highlightedHtml = currentCode
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;');
-        }
+        const highlightedHtml = highlightCode(currentCode, rawLang);
 
         return (
           <div className="p-4 overflow-x-auto text-slate-100 font-['JetBrains_Mono',monospace] text-xs sm:text-sm leading-relaxed bg-[#0e131f] border-t border-slate-800">
             <pre className="!bg-transparent !p-0 !m-0 font-mono">
               <code
-                className={`hljs ${rawLang ? `language-${rawLang}` : ''}`}
+                className={`prism-code hljs ${rawLang ? `language-${rawLang}` : ''}`}
                 dangerouslySetInnerHTML={{ __html: highlightedHtml }}
               />
             </pre>

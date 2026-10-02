@@ -88,16 +88,6 @@ export const AiKeysModal: React.FC<AiKeysModalProps> = ({
       desc: 'Deep reasoning chain-of-thought and architectural planning.'
     },
     {
-      id: 'openai' as keyof AiEngineKeys,
-      name: 'OpenAI',
-      badge: 'GPT-4o / o1',
-      icon: Sparkles,
-      color: '#10b981',
-      placeholder: 'sk-proj-...',
-      docsUrl: 'https://platform.openai.com/api-keys',
-      desc: 'Massive full-stack code development and complex function calling.'
-    },
-    {
       id: 'claude' as keyof AiEngineKeys,
       name: 'Anthropic Claude',
       badge: 'Claude 3.7 Sonnet',
@@ -143,7 +133,7 @@ export const AiKeysModal: React.FC<AiKeysModalProps> = ({
               <div>
                 <h3 className="text-base font-bold tracking-tight">AI Engines & API Keys</h3>
                 <p className={`text-xs ${isMoon ? 'text-zinc-400' : 'text-slate-500'}`}>
-                  Configure Gemini, DeepSeek, OpenAI, Claude, and Grok for big coding
+                  Configure Gemini, DeepSeek, Claude, and Grok for expansive coding (No OpenAI key needed)
                 </p>
               </div>
             </div>

@@ -82,16 +82,16 @@ export const PROMPT_STARTERS = [
 
 export const AVAILABLE_MODELS = [
   {
-    id: 'openai-gpt-4o-mini',
-    name: 'Sapphire Flash Mini',
-    tag: 'Ultra-Fast Instant',
-    description: 'High-speed lightweight engine for fast answers and rapid code generation'
+    id: 'gemini-2.5-flash',
+    name: 'Gemini 2.5 Flash',
+    tag: 'Ultra-Fast Multimodal',
+    description: 'Ultra-fast multimodal reasoning, screenshot analysis, and expansive code generation'
   },
   {
-    id: 'openai-gpt-4o',
-    name: 'Sapphire Studio',
-    tag: 'Flagship',
-    description: 'Premier flagship model with high-level intelligence and multi-file reasoning'
+    id: 'claude-3-7-sonnet',
+    name: 'Claude 3.7 Sonnet',
+    tag: 'Pristine Architecture',
+    description: 'Premier architectural code design, clean syntax, and multi-file refactoring'
   },
   {
     id: 'sapphire-3.7-flash',
