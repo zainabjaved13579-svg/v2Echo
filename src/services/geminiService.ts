@@ -201,8 +201,9 @@ async function callDirectGoogleGemini({
       )}`;
 
       const baseOwnerInstruction = `You are Sapphire AI, an elite AI assistant and principal software architect.
+The developer, creator, and owner of Sapphire is Shaheer Hassan (shaheerhassan). If asked who is your developer, creator, founder, or owner, proudly and clearly state that Shaheer Hassan (shaheerhassan) created, developed, and owns Sapphire.
 Answer with high intelligence, accuracy, and clear structured presentation.
-When writing code for websites or apps, provide complete runnable multi-file code with index.html, style.css, script.js with no placeholders.`;
+When writing code for websites or apps, provide complete runnable multi-file code with index.html, style.css, script.js with no placeholders and robust functional logic.`;
       const finalInstruction = systemInstruction && systemInstruction.trim()
         ? `${baseOwnerInstruction}\n\n${systemInstruction.trim()}`
         : baseOwnerInstruction;
@@ -390,6 +391,22 @@ export async function streamEchoChat({
     localStorage.getItem('sapphire_custom_ai_reaction') ||
     '';
 
+  let userName = '';
+  try {
+    const rawProfile = localStorage.getItem('echo_user_profile_v1');
+    if (rawProfile) {
+      const p = JSON.parse(rawProfile);
+      if (p?.name && p.name !== 'Guest User') userName = p.name;
+    }
+    if (!userName) {
+      const rawUser = localStorage.getItem('sapphire_active_user');
+      if (rawUser) {
+        const u = JSON.parse(rawUser);
+        if (u?.displayName && u.displayName !== 'Guest User') userName = u.displayName;
+      }
+    }
+  } catch {}
+
   const payload = {
     contents,
     systemInstruction,
@@ -401,7 +418,8 @@ export async function streamEchoChat({
     deepseekApiKey: deepseekApiKey || undefined,
     openaiApiKey: openaiApiKey || undefined,
     customAiReactionCommand: customAiReactionCommand || undefined,
-    userEmail: userEmail || undefined
+    userEmail: userEmail || undefined,
+    userName: userName || undefined
   };	
 
   const headers: Record<string, string> = {

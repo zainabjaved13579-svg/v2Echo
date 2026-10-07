@@ -15,7 +15,9 @@ import {
   Smartphone,
   Info,
   MessageSquare,
-  PanelRightOpen
+  PanelRightOpen,
+  User,
+  Wrench
 } from 'lucide-react';
 import { ChatSession, UserProfile } from '../types';
 import { SAPPHIRE_LOGO_URL } from '../data/constants';
@@ -40,6 +42,7 @@ interface ChatSidebarProps {
   onOpenFileWorkspace?: () => void;
   onOpenGetApp?: () => void;
   onOpenCodex?: () => void;
+  onOpenTools?: () => void;
   onOpenProjects?: () => void;
   onOpenArtifacts?: () => void;
   onOpenCustomize?: () => void;
@@ -62,6 +65,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
   onOpenSettings,
   onOpenGetApp,
   onOpenCodex,
+  onOpenTools,
   onOpenCustomize,
   activeNavTab = 'chat'
 }) => {
@@ -173,6 +177,29 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
 
       {/* ===== Top Nav Items ===== */}
       <nav className="px-3 pb-3 space-y-0.5">
+        {/* Tools Studio (File Manager & Url to App) */}
+        <button
+          id="sidebar-tools-btn"
+          onClick={() => {
+            if (onOpenTools) onOpenTools();
+            if (window.innerWidth < 1024) onClose();
+          }}
+          className={`w-full py-2 px-3 rounded-lg text-[13px] font-medium flex items-center justify-between transition-colors cursor-pointer ${
+            activeNavTab === 'tools'
+              ? `${bgCard} ${text} shadow-sm font-semibold`
+              : `${textSub} ${bgHover} hover:${text}`
+          }`}
+          title="Sapphire Tools Suite (File Manager & Url to App)"
+        >
+          <div className="flex items-center gap-2.5">
+            <Wrench className="w-4 h-4 text-[#d97757]" />
+            <span>Tools</span>
+          </div>
+          <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#d97757]/20 text-[#d97757] font-bold tracking-wider">
+            2 READY
+          </span>
+        </button>
+
         {/* Codex Studio */}
         <button
           id="sidebar-codex-btn"
@@ -407,7 +434,9 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
           <div
             className={`w-7 h-7 rounded-full ${bgCard} border ${border} flex items-center justify-center shrink-0 overflow-hidden`}
           >
-            {userProfile?.avatar ? (
+            {userName === 'Guest' || userName === 'Guest User' ? (
+              <User className={`w-3.5 h-3.5 ${textMuted}`} />
+            ) : userProfile?.avatar ? (
               <img
                 src={userProfile.avatar}
                 alt={userName}
@@ -417,7 +446,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
               <span className={`text-[11px] font-bold ${text}`}>{initial}</span>
             )}
           </div>
-          <div className="min-w-0 flex items-center gap-1 text-[13px] truncate">
+          <div className="min-w-0 flex items-center gap-1.5 text-[13px] truncate">
             <span className={`truncate font-semibold ${text}`}>{userName}</span>
             <ChevronDown
               className={`w-3.5 h-3.5 shrink-0 ${textMuted}`}

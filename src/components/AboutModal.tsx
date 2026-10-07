@@ -220,6 +220,25 @@ export const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
             </div>
           </div>
 
+          {/* Creator & Developer Card */}
+          <div className={`p-4 rounded-2xl ${bgCard} border border-[#d97757]/40 shadow-sm space-y-2 relative overflow-hidden`}>
+            <div className="flex items-center justify-between">
+              <h4 className={`text-xs font-bold uppercase tracking-wider text-[#d97757] flex items-center gap-2`}>
+                <Sparkles className="w-3.5 h-3.5 text-[#d97757]" />
+                <span>Developer, Creator & Owner</span>
+              </h4>
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-[#d97757]/20 text-[#d97757] border border-[#d97757]/40">
+                Lead Architect
+              </span>
+            </div>
+            <p className={`text-sm font-bold ${textBright}`}>
+              Shaheer Hassan (<span className="text-[#d97757]">shaheerhassan</span>)
+            </p>
+            <p className={`text-xs ${textPrimary} leading-relaxed`}>
+              Engineered and created Sapphire AI from the ground up to deliver unconstrained intelligence, autonomous full-stack multi-file code generation, live previews, and natural voice interaction.
+            </p>
+          </div>
+
           {/* Mission */}
           <div className={`p-4 rounded-2xl ${bgCard} border ${border} space-y-2`}>
             <h4 className={`text-xs font-bold uppercase tracking-wider ${textSub} flex items-center gap-2`}>

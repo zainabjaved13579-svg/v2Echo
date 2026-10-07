@@ -7,62 +7,54 @@ const HAS_COMPLETED_SETUP_KEY = 'echo_user_has_completed_setup_v1';
 export interface AvatarPreset {
   id: string;
   name: string;
-  type: 'boy' | 'girl';
+  category: 'executive' | 'modern' | 'tech';
   url: string;
 }
 
-export const ANIMATED_AVATARS: AvatarPreset[] = [
+export const DEFAULT_PREADDED_PROFILE_PHOTO =
+  'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><defs><linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="%23d97757"/><stop offset="100%" stop-color="%238a2b0e"/></linearGradient></defs><rect width="100" height="100" rx="28" fill="url(%23g)"/><circle cx="50" cy="40" r="16" fill="white" fill-opacity="0.95"/><path d="M26 80 C26 62 38 58 50 58 C62 58 74 62 74 80 Z" fill="white" fill-opacity="0.95"/></svg>';
+
+export const PROFESSIONAL_AVATARS: AvatarPreset[] = [
   {
-    id: 'boy-cool',
-    name: 'Cool Boy',
-    type: 'boy',
-    url: 'https://api.dicebear.com/7.x/adventurer/svg?seed=Felix&hair=short01,short02&backgroundColor=b6e3f4'
+    id: 'pro-sapphire',
+    name: 'Sapphire Pro',
+    category: 'executive',
+    url: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><defs><linearGradient id="g1" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="%23d97757"/><stop offset="100%" stop-color="%238a2b0e"/></linearGradient></defs><rect width="100" height="100" rx="28" fill="url(%23g1)"/><path d="M50 25 L75 40 L75 68 L50 82 L25 68 L25 40 Z" fill="none" stroke="white" stroke-width="4" stroke-linejoin="round"/><circle cx="50" cy="54" r="8" fill="white"/></svg>'
   },
   {
-    id: 'girl-anime',
-    name: 'Anime Girl',
-    type: 'girl',
-    url: 'https://api.dicebear.com/7.x/adventurer/svg?seed=Zoe&hair=long01,long02&backgroundColor=ffd5dc'
+    id: 'pro-indigo',
+    name: 'Executive Indigo',
+    category: 'executive',
+    url: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><defs><linearGradient id="g2" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="%234f46e5"/><stop offset="100%" stop-color="%231e1b4b"/></linearGradient></defs><rect width="100" height="100" rx="28" fill="url(%23g2)"/><circle cx="50" cy="40" r="16" fill="%23ffffff" fill-opacity="0.95"/><path d="M28 78 C28 62 40 58 50 58 C60 58 72 62 72 78 Z" fill="%23ffffff" fill-opacity="0.95"/></svg>'
   },
   {
-    id: 'boy-cyber',
-    name: 'Cyber Boy',
-    type: 'boy',
-    url: 'https://api.dicebear.com/7.x/adventurer/svg?seed=Max&hair=short03,short04&backgroundColor=c0aede'
+    id: 'pro-emerald',
+    name: 'Emerald Lead',
+    category: 'modern',
+    url: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><defs><linearGradient id="g3" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="%23059669"/><stop offset="100%" stop-color="%23064e3b"/></linearGradient></defs><rect width="100" height="100" rx="28" fill="url(%23g3)"/><polygon points="50,22 80,72 20,72" fill="none" stroke="white" stroke-width="4" stroke-linejoin="round"/><circle cx="50" cy="56" r="6" fill="white"/></svg>'
   },
   {
-    id: 'girl-cute',
-    name: 'Cute Girl',
-    type: 'girl',
-    url: 'https://api.dicebear.com/7.x/adventurer/svg?seed=Luna&hair=long03,long04&backgroundColor=ffdfbf'
+    id: 'pro-obsidian',
+    name: 'Obsidian Minimal',
+    category: 'tech',
+    url: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><defs><linearGradient id="g4" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="%2327272a"/><stop offset="100%" stop-color="%2309090b"/></linearGradient></defs><rect width="100" height="100" rx="28" fill="url(%23g4)" stroke="%233f3f46" stroke-width="2"/><circle cx="50" cy="42" r="15" fill="%23e4e4e7"/><path d="M28 78 C28 63 39 59 50 59 C61 59 72 63 72 78 Z" fill="%23e4e4e7"/></svg>'
   },
   {
-    id: 'boy-hoodie',
-    name: 'Tech Boy',
-    type: 'boy',
-    url: 'https://api.dicebear.com/7.x/adventurer/svg?seed=Leo&hair=short05&backgroundColor=d1d4f9'
+    id: 'pro-cyan',
+    name: 'Cyber Cyan',
+    category: 'tech',
+    url: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><defs><linearGradient id="g5" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="%230891b2"/><stop offset="100%" stop-color="%23164e63"/></linearGradient></defs><rect width="100" height="100" rx="28" fill="url(%23g5)"/><rect x="30" y="30" width="40" height="40" rx="10" fill="none" stroke="white" stroke-width="4"/><circle cx="50" cy="50" r="6" fill="white"/></svg>'
   },
   {
-    id: 'girl-artist',
-    name: 'Artist Girl',
-    type: 'girl',
-    url: 'https://api.dicebear.com/7.x/adventurer/svg?seed=Maya&hair=long05&backgroundColor=d2e7d6'
-  },
-  {
-    id: 'boy-scholar',
-    name: 'Smart Boy',
-    type: 'boy',
-    url: 'https://api.dicebear.com/7.x/adventurer/svg?seed=Sam&hair=short02&backgroundColor=ffe2d1'
-  },
-  {
-    id: 'girl-chibi',
-    name: 'Sweet Girl',
-    type: 'girl',
-    url: 'https://api.dicebear.com/7.x/adventurer/svg?seed=Chloe&hair=long02&backgroundColor=e8ddff'
+    id: 'pro-violet',
+    name: 'Aurora Violet',
+    category: 'modern',
+    url: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><defs><linearGradient id="g6" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="%238b5cf6"/><stop offset="100%" stop-color="%234c1d95"/></linearGradient></defs><rect width="100" height="100" rx="28" fill="url(%23g6)"/><circle cx="50" cy="50" r="22" fill="none" stroke="white" stroke-width="4"/><circle cx="50" cy="50" r="10" fill="white"/></svg>'
   }
 ];
 
-export const DEFAULT_AVATARS = ANIMATED_AVATARS.map((a) => a.url);
+export const ANIMATED_AVATARS = PROFESSIONAL_AVATARS;
+export const DEFAULT_AVATARS = PROFESSIONAL_AVATARS.map((a) => a.url);
 
 /**
  * Generates an SVG data avatar with initials if image not present

@@ -23,6 +23,7 @@ import { FileWorkspaceModal } from './components/FileWorkspaceModal';
 import { FileManagerModal } from './components/FileManagerModal';
 import { CodePreviewModal } from './components/CodePreviewModal';
 import { CodexWorkspaceView } from './components/CodexWorkspaceView';
+import { ToolsStudioView } from './components/tools/ToolsStudioView';
 import { GenerateImageModal } from './components/GenerateImageModal';
 import { LanguageSelectorModal } from './components/LanguageSelectorModal';
 import { DownloadModal } from './components/DownloadModal';
@@ -165,17 +166,18 @@ export default function App() {
   const [isAboutModalOpen, setIsAboutModalOpen] = useState(false);
   const [isStartingScreen, setIsStartingScreen] = useState<boolean>(true);
   const [showSidebarPulse, setShowSidebarPulse] = useState<boolean>(true);
-  const [sidebarBtnRipples, setSidebarBtnRipples] = useState<{ id: number; x: number; y: number }[]>([]);
+  const [sidebarBtnRipples, setSidebarBtnRipples] = useState<{ id: number; x: number; y: number; size: number }[]>([]);
 
   const handleSidebarToggleWithRipple = (e: React.MouseEvent<HTMLButtonElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
+    const size = Math.max(rect.width, rect.height) * 3.2;
     const id = Date.now();
-    setSidebarBtnRipples((prev) => [...prev, { id, x, y }]);
+    setSidebarBtnRipples((prev) => [...prev, { id, x, y, size }]);
     setTimeout(() => {
       setSidebarBtnRipples((prev) => prev.filter((r) => r.id !== id));
-    }, 650);
+    }, 380);
     setIsSidebarOpen(true);
     setShowSidebarPulse(false);
   };
@@ -233,18 +235,6 @@ export default function App() {
 
   const [currentUserProfile, setCurrentUserProfile] = useState(loadUserProfile);
   const [isUserProfileModalOpen, setIsUserProfileModalOpen] = useState(false);
-
-  useEffect(() => {
-    const hasSeenOnboarding = localStorage.getItem('echo_profile_onboarding_shown');
-    const isCompleted = hasUserCompletedSetup();
-    if (!hasSeenOnboarding && !isCompleted && !isGuestMode) {
-      const timer = setTimeout(() => {
-        setIsUserProfileModalOpen(true);
-        localStorage.setItem('echo_profile_onboarding_shown', 'true');
-      }, 1500);
-      return () => clearTimeout(timer);
-    }
-  }, [isGuestMode]);
 
   useEffect(() => {
     if (isGuestMode) return;
@@ -975,7 +965,7 @@ ${promptText || 'Please analyze, remake, or update these files cleanly according
     } overflow-hidden select-none sm:select-auto font-['Plus_Jakarta_Sans',sans-serif]`}>
       {/* Sidebar */}
       <AnimatePresence>
-        {(!isStartingScreen || isSidebarOpen) && activeNavTab !== 'codex' && (
+        {(!isStartingScreen || isSidebarOpen) && activeNavTab !== 'codex' && activeNavTab !== 'tools' && (
           <ChatSidebar
             isOpen={isSidebarOpen}
             onClose={() => setIsSidebarOpen(false)}
@@ -1003,6 +993,10 @@ ${promptText || 'Please analyze, remake, or update these files cleanly according
               setActiveNavTab('codex');
               setIsStartingScreen(false);
             }}
+            onOpenTools={() => {
+              setActiveNavTab('tools');
+              setIsStartingScreen(false);
+            }}
             activeNavTab={activeNavTab}
           />
         )}
@@ -1012,14 +1006,24 @@ ${promptText || 'Please analyze, remake, or update these files cleanly according
       <main className={`flex-1 flex flex-col h-full min-w-0 relative ${
         theme === 'moon' ? 'bg-[#151515]' : 'bg-white'
       } overflow-hidden`}>
-        {/* Floating Menu Button */}
-        {!isSidebarOpen && activeNavTab !== 'codex' && (
+        {/* Floating Menu Button with Spring Transition and Pronounced Tactile Ripple */}
+        {!isSidebarOpen && (
           <div className="lg:hidden absolute top-2.5 left-2.5 sm:top-3.5 sm:left-3.5 z-30">
-            <button
+            <motion.button
               type="button"
               id="floating-sidebar-toggle-btn"
               onClick={handleSidebarToggleWithRipple}
-              className={`relative overflow-hidden min-w-[46px] min-h-[46px] sm:min-w-[42px] sm:min-h-[42px] p-3 sm:p-2.5 rounded-2xl border shadow-xl transition-transform duration-150 ease-out active:scale-95 cursor-pointer flex items-center justify-center touch-manipulation group select-none ${
+              initial={{ scale: 0.7, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.7, opacity: 0 }}
+              transition={{
+                type: 'spring',
+                stiffness: 680,
+                damping: 22,
+                mass: 0.35
+              }}
+              whileTap={{ scale: 0.88, transition: { type: 'spring', stiffness: 900, damping: 15 } }}
+              className={`relative overflow-hidden min-w-[46px] min-h-[46px] sm:min-w-[42px] sm:min-h-[42px] p-3 sm:p-2.5 rounded-2xl border shadow-xl cursor-pointer flex items-center justify-center touch-manipulation group select-none ${
                 theme === 'moon'
                   ? 'bg-[#20201f] hover:bg-[#282724] border-[#2b2b2a] text-white shadow-black/50'
                   : 'bg-white hover:bg-slate-100 border-slate-200 text-slate-700 shadow-slate-200/80'
@@ -1029,20 +1033,28 @@ ${promptText || 'Please analyze, remake, or update these files cleanly according
             >
               <span className="absolute -inset-3 sm:-inset-1.5 rounded-2xl pointer-events-auto" aria-hidden="true" />
 
-              {/* Dynamic Ripple Wave on Click */}
-              {sidebarBtnRipples.map((ripple) => (
-                <span
-                  key={ripple.id}
-                  className="absolute rounded-full bg-[#d97757]/35 pointer-events-none animate-ping"
-                  style={{
-                    left: Math.max(0, ripple.x - 20),
-                    top: Math.max(0, ripple.y - 20),
-                    width: 40,
-                    height: 40,
-                    animationDuration: '650ms'
-                  }}
-                />
-              ))}
+              {/* Pronounced Tactile Cursor-Centered Ripple */}
+              <AnimatePresence>
+                {sidebarBtnRipples.map((ripple) => (
+                  <motion.span
+                    key={ripple.id}
+                    initial={{ scale: 0, opacity: 0.95 }}
+                    animate={{ scale: 1, opacity: 0 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.36, ease: [0.16, 1, 0.3, 1] }}
+                    className="absolute rounded-full pointer-events-none"
+                    style={{
+                      left: ripple.x - ripple.size / 2,
+                      top: ripple.y - ripple.size / 2,
+                      width: ripple.size,
+                      height: ripple.size,
+                      background: 'radial-gradient(circle, rgba(255,255,255,0.92) 0%, rgba(217,119,87,0.85) 35%, rgba(234,140,109,0.45) 70%, transparent 100%)',
+                      boxShadow: '0 0 24px rgba(217, 119, 87, 0.85), inset 0 0 10px rgba(255, 255, 255, 0.7)',
+                      border: '1.5px solid rgba(255, 255, 255, 0.75)'
+                    }}
+                  />
+                ))}
+              </AnimatePresence>
 
               {showSidebarPulse && (
                 <>
@@ -1052,12 +1064,30 @@ ${promptText || 'Please analyze, remake, or update these files cleanly according
               )}
 
               <Menu className="w-5 h-5 sm:w-4 sm:h-4 text-[#d97757] sm:text-inherit group-hover:scale-110 transition-transform" />
-            </button>
+            </motion.button>
           </div>
         )}
 
         <AnimatePresence mode="wait" initial={false}>
-          {activeNavTab === 'codex' ? (
+          {activeNavTab === 'tools' ? (
+            <motion.div
+              key="tools-studio-view"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="flex-1 h-full w-full overflow-hidden"
+            >
+              <ToolsStudioView
+                settings={settings}
+                userProfile={currentUserProfile}
+                onClose={() => {
+                  setActiveNavTab('chat');
+                  setIsStartingScreen(false);
+                }}
+              />
+            </motion.div>
+          ) : activeNavTab === 'codex' ? (
             <motion.div
               key="codex-engine-view"
               initial={{ opacity: 0 }}
@@ -1316,7 +1346,7 @@ ${promptText || 'Please analyze, remake, or update these files cleanly according
         }}
         sessions={sessions}
         files={loadWorkspaceFiles()}
-        isFirstTimeSetup={!hasUserCompletedSetup()}
+        isFirstTimeSetup={false}
         onSignOut={handleSignOut}
         isGuestMode={isGuestMode}
       />

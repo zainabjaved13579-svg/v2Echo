@@ -23,6 +23,7 @@ interface SidebarProps {
   onOpenProjects?: () => void;
   onOpenArtifacts?: () => void;
   onOpenCustomize?: () => void;
+  onOpenTools?: () => void;
   activeNavTab?: string;
 }
 

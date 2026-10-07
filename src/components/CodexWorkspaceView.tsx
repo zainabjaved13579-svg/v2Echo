@@ -25,7 +25,16 @@ import {
   Laptop,
   FolderUp,
   FilePlus,
-  AlertCircle
+  AlertCircle,
+  Layers,
+  Edit3,
+  Check,
+  Sparkles,
+  Search,
+  MessageSquare,
+  Eye,
+  Play,
+  ArrowRight
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { AppSettings, UserProfile } from '../types';
@@ -46,6 +55,14 @@ export interface LaptopFile {
   status?: 'ready' | 'created' | 'modified';
   fileHandle?: any;
   isBinary?: boolean;
+}
+
+export interface CodexProject {
+  id: string;
+  name: string;
+  createdAt: number;
+  lastModified: number;
+  files: LaptopFile[];
 }
 
 interface CodexMessage {
@@ -118,103 +135,6 @@ const normalizePath = (path: string): string => {
 };
 
 // ============================================================
-// DEFAULT FILES
-// ============================================================
-const DEFAULT_FILES: LaptopFile[] = [
-  {
-    id: 'f_index',
-    name: 'index.html',
-    path: 'index.html',
-    language: 'html',
-    size: 400,
-    lastModified: Date.now(),
-    status: 'ready',
-    content: `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>My App</title>
-</head>
-<body>
-  <div class="container">
-    <h1>Hello, World!</h1>
-    <button id="btn">Click Me</button>
-    <p id="output"></p>
-  </div>
-</body>
-</html>`
-  },
-  {
-    id: 'f_style',
-    name: 'style.css',
-    path: 'style.css',
-    language: 'css',
-    size: 250,
-    lastModified: Date.now(),
-    status: 'ready',
-    content: `* { margin: 0; padding: 0; box-sizing: border-box; }
-
-body {
-  font-family: system-ui, -apple-system, sans-serif;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.container {
-  background: white;
-  padding: 40px;
-  border-radius: 16px;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-  text-align: center;
-}
-
-h1 { color: #333; margin-bottom: 20px; }
-
-button {
-  background: #667eea;
-  color: white;
-  border: none;
-  padding: 12px 24px;
-  border-radius: 8px;
-  font-size: 16px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-button:hover { background: #5568d3; transform: translateY(-2px); }
-
-#output { margin-top: 20px; color: #666; font-weight: 600; }`
-  },
-  {
-    id: 'f_app',
-    name: 'app.js',
-    path: 'app.js',
-    language: 'javascript',
-    size: 150,
-    lastModified: Date.now(),
-    status: 'ready',
-    content: `document.addEventListener('DOMContentLoaded', function() {
-  var btn = document.getElementById('btn');
-  var output = document.getElementById('output');
-  var count = 0;
-
-  if (btn) {
-    btn.addEventListener('click', function() {
-      count++;
-      if (output) {
-        output.innerText = 'Clicked ' + count + ' time' + (count > 1 ? 's' : '') + '!';
-      }
-    });
-  }
-});`
-  }
-];
-
-// ============================================================
 // COMPONENT
 // ============================================================
 export const CodexWorkspaceView: React.FC<CodexWorkspaceViewProps> = ({
@@ -224,19 +144,72 @@ export const CodexWorkspaceView: React.FC<CodexWorkspaceViewProps> = ({
   const { theme } = useAppTheme();
   const isMoon = theme === 'moon';
 
-  // ========== STATE ==========
-  const [files, setFiles] = useState<LaptopFile[]>(() => {
+  // ========== PROJECTS STATE (No forced default files!) ==========
+  const [projects, setProjects] = useState<CodexProject[]>(() => {
     try {
-      const saved = localStorage.getItem('sapphire_codex_files_v2');
+      const saved = localStorage.getItem('sapphire_codex_projects_v3');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       }
     } catch {}
-    return DEFAULT_FILES;
+    // Clean initial project with NO default boilerplate files!
+    return [
+      {
+        id: `proj_${Date.now()}`,
+        name: 'Project 1',
+        createdAt: Date.now(),
+        lastModified: Date.now(),
+        files: []
+      }
+    ];
   });
 
-  const [selectedFileId, setSelectedFileId] = useState<string>(() => files[0]?.id || 'f_index');
+  const [activeProjectId, setActiveProjectId] = useState<string>(() => {
+    try {
+      const saved = localStorage.getItem('sapphire_codex_active_proj_id');
+      if (saved) return saved;
+    } catch {}
+    return projects[0]?.id || `proj_${Date.now()}`;
+  });
+
+  const [isProjectDropdownOpen, setIsProjectDropdownOpen] = useState(false);
+  const [showNewProjectModal, setShowNewProjectModal] = useState(false);
+  const [newProjectName, setNewProjectName] = useState('');
+  const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
+  const [editingProjectName, setEditingProjectName] = useState('');
+
+  // Active Project Reference
+  const activeProject = useMemo(() => {
+    return projects.find((p) => p.id === activeProjectId) || projects[0] || {
+      id: 'proj_fallback',
+      name: 'Project 1',
+      createdAt: Date.now(),
+      lastModified: Date.now(),
+      files: []
+    };
+  }, [projects, activeProjectId]);
+
+  const files = activeProject.files || [];
+
+  // Update active project files cleanly
+  const setFiles = useCallback((newFilesOrFn: LaptopFile[] | ((prev: LaptopFile[]) => LaptopFile[])) => {
+    setProjects((prevProjects) => {
+      return prevProjects.map((p) => {
+        if (p.id === activeProjectId) {
+          const nextFiles = typeof newFilesOrFn === 'function' ? newFilesOrFn(p.files) : newFilesOrFn;
+          return {
+            ...p,
+            files: nextFiles,
+            lastModified: Date.now()
+          };
+        }
+        return p;
+      });
+    });
+  }, [activeProjectId]);
+
+  const [selectedFileId, setSelectedFileId] = useState<string>(() => files[0]?.id || '');
   const [editingContent, setEditingContent] = useState<string>('');
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
   const [rootDirHandle, setRootDirHandle] = useState<any>(null);
@@ -250,6 +223,36 @@ export const CodexWorkspaceView: React.FC<CodexWorkspaceViewProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [modelMode, setModelMode] = useState<'fast' | 'reasoning'>('fast');
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [viewMode, setViewMode] = useState<'dashboard' | 'workspace'>('dashboard');
+  const [mobileTab, setMobileTab] = useState<'chat' | 'preview' | 'files'>('chat');
+  const [projectSearchQuery, setProjectSearchQuery] = useState('');
+  const [projectToDelete, setProjectToDelete] = useState<CodexProject | null>(null);
+  const [showNotificationToast, setShowNotificationToast] = useState<string | null>(null);
+
+  const formatTimeAgo = useCallback((timestamp: number) => {
+    const diff = Math.max(0, Date.now() - timestamp);
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'Just now';
+    if (mins < 60) return `${mins}m ago`;
+    const hours = Math.floor(mins / 3600000);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    return `${days}d ago`;
+  }, []);
+
+  // ========== PERSIST PROJECTS ==========
+  useEffect(() => {
+    try {
+      const serializableProjects = projects.map((p) => ({
+        ...p,
+        files: p.files.map(({ fileHandle, ...rest }) => rest)
+      }));
+      localStorage.setItem('sapphire_codex_projects_v3', JSON.stringify(serializableProjects));
+      localStorage.setItem('sapphire_codex_active_proj_id', activeProjectId);
+    } catch (err) {
+      console.warn('Failed to save projects to localStorage:', err);
+    }
+  }, [projects, activeProjectId]);
 
   // ========== REFS ==========
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -424,7 +427,8 @@ export const CodexWorkspaceView: React.FC<CodexWorkspaceViewProps> = ({
   const handleOpenFolder = async () => {
     try {
       if (!('showDirectoryPicker' in window)) {
-        alert('Your browser does not support folder access.\n\nPlease use Chrome, Edge, or Brave browser.');
+        setShowNotificationToast('Folder access requires Chrome, Edge, or Brave browser.');
+        setTimeout(() => setShowNotificationToast(null), 4000);
         return;
       }
 
@@ -436,7 +440,8 @@ export const CodexWorkspaceView: React.FC<CodexWorkspaceViewProps> = ({
 
       const allFiles = await readDirectoryRecursive(dirHandle);
       if (allFiles.length === 0) {
-        alert('Folder is empty.');
+        setShowNotificationToast('Selected folder is empty.');
+        setTimeout(() => setShowNotificationToast(null), 3000);
         return;
       }
 
@@ -722,16 +727,103 @@ export const CodexWorkspaceView: React.FC<CodexWorkspaceViewProps> = ({
     const htmlFile =
       files.find((f) => f.name === selectedHtmlFile) ||
       htmlFiles[0] ||
-      files[0];
+      files.find((f) => f.name.endsWith('.html') || f.language === 'html');
 
     if (!htmlFile) {
+      if (files.length === 0) {
+        return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${activeProject?.name || 'Workspace'}</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle at 50% 30%, #1e1f29 0%, #0d0e13 100%);
+      color: #ede8e1;
+      padding: 24px;
+      text-align: center;
+    }
+    .card {
+      max-width: 440px;
+      padding: 36px 28px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(217, 119, 87, 0.3);
+      border-radius: 24px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+      backdrop-filter: blur(12px);
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 14px;
+      border-radius: 999px;
+      background: rgba(217, 119, 87, 0.18);
+      border: 1px solid rgba(217, 119, 87, 0.5);
+      color: #ffaa8a;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+    h1 {
+      font-size: 22px;
+      font-weight: 800;
+      color: #ffffff;
+      margin-bottom: 8px;
+    }
+    p {
+      font-size: 13px;
+      color: #a0a3af;
+      line-height: 1.6;
+      margin-bottom: 20px;
+    }
+    .tips {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      text-align: left;
+    }
+    .tip {
+      padding: 10px 14px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      font-size: 12px;
+      color: #d1d5db;
+    }
+    .tip strong { color: #ff9e7d; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="badge">🚀 Clean Project Workspace</div>
+    <h1>${activeProject?.name || 'My Project'}</h1>
+    <p>Zero boilerplate clutter. Ask Codex on the left to code your app from scratch, or click <strong>New File</strong> to start typing!</p>
+    <div class="tips">
+      <div class="tip">💬 <strong>AI Coding:</strong> Type your prompt to generate full HTML, CSS & JS.</div>
+      <div class="tip">📁 <strong>Multi-Project:</strong> Create & switch between unlimited projects anytime.</div>
+    </div>
+  </div>
+</body>
+</html>`;
+      }
+
       return `<!DOCTYPE html>
 <html>
-<body style="font-family:system-ui;padding:40px;text-align:center;background:#f5f5f5;color:#666;">
+<body style="font-family:system-ui;padding:40px;text-align:center;background:#181922;color:#999;">
   <div style="max-width:400px;margin:auto;">
-    <div style="font-size:48px;margin-bottom:20px;">📄</div>
-    <h2>No HTML file</h2>
-    <p style="font-size:14px;">Create an <code>index.html</code> file to see live preview</p>
+    <div style="font-size:48px;margin-bottom:16px;">📄</div>
+    <h2 style="color:#eee;font-size:18px;margin-bottom:8px;">No HTML file found</h2>
+    <p style="font-size:13px;color:#888;">Create an <code>index.html</code> file or ask Codex to generate one for live preview.</p>
   </div>
 </body>
 </html>`;
@@ -754,7 +846,7 @@ ${html}
 </html>`;
     }
 
-    // Remove existing external references (avoid duplicates)
+    // Remove existing external references to avoid duplication
     html = html.replace(/<link[^>]*rel=["']stylesheet["'][^>]*>/gi, '');
     html = html.replace(/<script[^>]*src=["'][^"']+\.(?:js|jsx|ts|tsx|mjs|cjs)["'][^>]*>\s*<\/script>/gi, '');
 
@@ -762,7 +854,7 @@ ${html}
     html = html.replace(/<style data-injected[^>]*>[\s\S]*?<\/style>/gi, '');
     html = html.replace(/<script data-injected[^>]*>[\s\S]*?<\/script>/gi, '');
 
-    // Inject all CSS
+    // Inject all CSS files
     const otherCssFiles = cssFiles.filter((c) => c.id !== htmlFile.id && !c.isBinary);
     if (otherCssFiles.length > 0) {
       const cssBundle = otherCssFiles
@@ -780,7 +872,7 @@ ${html}
       }
     }
 
-    // Inject all JS
+    // Inject all JS files with isolated execution guards
     const otherJsFiles = jsFiles.filter((j) => j.id !== htmlFile.id && !j.isBinary);
     if (otherJsFiles.length > 0) {
       const jsBundle = otherJsFiles
@@ -817,9 +909,9 @@ ${html}
     }
 
     return html;
-  }, [files, htmlFiles, cssFiles, jsFiles, selectedHtmlFile, previewReloadKey]);
+  }, [files, htmlFiles, cssFiles, jsFiles, selectedHtmlFile, previewReloadKey, activeProject?.name]);
 
-  // ========== AI CHAT ==========
+  // ========== AI CHAT & ADVANCED CODE GENERATION ==========
   const handleSendPrompt = async (forcedPrompt?: string) => {
     const text = (forcedPrompt || input).trim();
     if (!text || isLoading) return;
@@ -846,19 +938,46 @@ ${html}
     try {
       const filesContext = files
         .filter((f) => !f.isBinary && !f.path.includes('node_modules'))
-        .slice(0, 10)
-        .map((f) => `=== ${f.path} ===\n${f.content.slice(0, 600)}`)
+        .slice(0, 12)
+        .map((f) => `=== ${f.path} ===\n${f.content.slice(0, 1500)}`)
         .join('\n\n');
 
-      const systemPrompt = `You are an elite full-stack developer. Generate COMPLETE, production-ready code.
-NEVER use placeholders, "// TODO", or abbreviate code.
-Always output files in separate code blocks with filenames:
-\`\`\`html index.html
-\`\`\`css style.css
-\`\`\`javascript app.js
+      const systemPrompt = `You are Codex Studio, an elite Principal Software Architect and Senior Full-Stack Engineer powered by Sapphire AI.
+You write world-class, production-ready, beautiful, bug-free, and fully functional software.
 
-Current workspace files:
-${filesContext}`;
+[CREATOR & DEVELOPER IDENTITY]:
+Sapphire and Codex Studio were created, developed, and are owned by Shaheer Hassan (shaheerhassan). If asked who is your developer, creator, founder, or owner, proudly and clearly state that Shaheer Hassan (shaheerhassan) is the developer, creator, and owner of Sapphire and Codex Studio! (In Urdu/Roman Urdu: "Mujhe Shaheer Hassan (shaheerhassan) ne develop kiya hai, aur wahi Sapphire aur Codex Studio ke creator aur owner hain!").
+
+[CODING LOGIC & HIGH-LEVEL ARCHITECTURE MANDATE - CRITICAL]:
+1. REAL FUNCTIONAL LOGIC (NO HALF-BAKED CODE OR PLACEHOLDERS):
+   - Never write placeholders, stubs, ellipses, or comments like "// TODO: add logic here", "// implement later", or "// ... rest of code".
+   - Every single button MUST perform its intended function with complete state updates.
+   - Every form MUST validate fields, provide instant visual feedback, and save data.
+   - Implement real calculations, state management, sorting, filtering, and search functionality.
+   - Persist state into localStorage with proper error handling and fallback defaults so user work is never lost on refresh.
+   - Write defensive, fault-tolerant JavaScript: wrap code in document.addEventListener('DOMContentLoaded', ...) or verify elements exist before querying/attaching listeners.
+   - Provide sound error handling, clear status toasts/banners, and graceful state handling.
+
+2. EXACT FILE PATHS & CLEAN NAMING IN THE RIGHT MANNER:
+   - Output each file in its own markdown code block with the exact relative file path on the code fence:
+     - HTML Entry: \`\`\`html index.html
+     - Styling: \`\`\`css style.css
+     - Logic: \`\`\`javascript script.js
+   - In index.html:
+     - Link CSS strictly as: <link rel="stylesheet" href="style.css">
+     - Link JS strictly as: <script src="script.js" defer></script>
+     - Do NOT use mismatched names (e.g., do not link "style.css" and then name the file "styles.css").
+   - If auxiliary files/directories are required (e.g. data/items.json or src/helpers.js), use exact, consistent relative paths in both the file definitions and in your code imports/fetch calls.
+
+3. MODERN VISUAL AESTHETICS & RESPONSIVENESS:
+   - Modern design system: clean typography, harmonious color palette, custom scrollbars, subtle box-shadows, responsive CSS Grid / Flexbox layouts, mobile-friendly touch targets, and dark/light adaptive accents.
+   - Include smooth transitions, active button press states (:active scale-95), and accessible focus rings.
+
+Current Project: "${activeProject?.name || 'Workspace'}"
+Existing files in project:
+${filesContext || '(Empty project - generate complete initial files: index.html, style.css, script.js)'}`;
+
+      const selectedModel = modelMode === 'reasoning' ? 'gemini-3.1-pro-preview' : 'gemini-3.8-flash';
 
       const response = await fetch('/api/chat/stream', {
         method: 'POST',
@@ -869,7 +988,7 @@ ${filesContext}`;
         body: JSON.stringify({
           contents: [{ role: 'user', parts: [{ text }] }],
           systemInstruction: systemPrompt,
-          model: modelMode === 'reasoning' ? 'deepseek-reasoner' : 'gemini-2.5-flash'
+          model: selectedModel
         })
       });
 
@@ -900,28 +1019,45 @@ ${filesContext}`;
         }
       }
 
-      // Parse files from response
-      const codeRegex = /```([a-zA-Z0-9_\-\.]+)?\s*([a-zA-Z0-9_\-\.\/]+\.[a-zA-Z0-9]+)?\n([\s\S]*?)```/g;
+      // Enhanced Multi-File Parser
+      // Supports ```html index.html, ```html:index.html, ```css style.css, comments <!-- filename: index.html -->
+      const codeRegex = /```([a-zA-Z0-9_\-\.]+)?(?::|\s+)?([a-zA-Z0-9_\-\.\/]+\.[a-zA-Z0-9]+)?\n([\s\S]*?)```/g;
       let match;
       const parsed: { name: string; path: string; language: string; content: string }[] = [];
 
       while ((match = codeRegex.exec(accumulated)) !== null) {
-        const lang = match[1] || 'js';
-        const filename = match[2] || `file_${Date.now()}.${lang}`;
+        const lang = (match[1] || 'js').toLowerCase();
+        let filename = match[2];
         const content = match[3];
-        if (content && content.length > 20) {
+
+        if (!filename) {
+          const commentMatch = content.match(/^(?:\/\*|\/\/|<!--)\s*(?:filename|file|path):\s*([a-zA-Z0-9_\-\.\/]+\.[a-zA-Z0-9]+)/i);
+          if (commentMatch) {
+            filename = commentMatch[1];
+          }
+        }
+
+        if (!filename) {
+          if (lang === 'html' || content.includes('<!DOCTYPE') || content.includes('<html')) filename = 'index.html';
+          else if (lang === 'css' || (content.includes('{') && content.includes(':') && (content.includes('margin') || content.includes('padding') || content.includes('color') || content.includes('display')))) filename = 'style.css';
+          else if (lang === 'js' || lang === 'javascript' || lang === 'typescript' || lang === 'ts') filename = 'script.js';
+          else if (lang === 'json') filename = 'data.json';
+          else filename = `file_${parsed.length + 1}.${lang}`;
+        }
+
+        if (content && content.trim().length > 10) {
           const cleanPath = normalizePath(filename);
           parsed.push({
             name: cleanPath.split('/').pop() || cleanPath,
             path: cleanPath,
-            language: lang,
-            content
+            language: getLanguage(cleanPath),
+            content: content.trim()
           });
         }
       }
 
       if (parsed.length > 0) {
-        // Update files in memory
+        // Update files in active project
         const updatedFiles = [...files];
         parsed.forEach((p) => {
           const idx = updatedFiles.findIndex((u) => u.path === p.path || u.name === p.name);
@@ -943,7 +1079,20 @@ ${filesContext}`;
 
         setFiles(updatedFiles);
 
-        // Auto-save AI-generated files to laptop folder
+        // Auto-select HTML file for immediate live preview and switch to preview tab
+        const firstHtml = parsed.find((p) => p.name.endsWith('.html') || p.name === 'index.html');
+        if (firstHtml) {
+          setSelectedHtmlFile(firstHtml.name);
+          const matched = updatedFiles.find((f) => f.name === firstHtml.name);
+          if (matched) setSelectedFileId(matched.id);
+        } else if (parsed[0]) {
+          const matched = updatedFiles.find((f) => f.name === parsed[0].name);
+          if (matched) setSelectedFileId(matched.id);
+        }
+        setRightTab('preview');
+        setPreviewReloadKey((k) => k + 1);
+
+        // Auto-save AI-generated files to laptop folder if folder open
         if (rootDirHandle) {
           for (const p of parsed) {
             try {
@@ -964,18 +1113,73 @@ ${filesContext}`;
 
         setPreviewReloadKey((k) => k + 1);
         setRightTab('preview');
+        setShowNotificationToast('✨ Live preview updated! Check preview tab');
+        setTimeout(() => setShowNotificationToast(null), 4500);
       }
 
       setMessages((prev) => prev.map((m) => (m.id === botId ? { ...m, isStreaming: false } : m)));
     } catch (err) {
       setMessages((prev) =>
         prev.map((m) =>
-          m.id === botId ? { ...m, text: '⚠️ Generation failed. Please try again.', isStreaming: false } : m
+          m.id === botId ? { ...m, text: '⚠️ Code generation could not complete. Please retry.', isStreaming: false } : m
         )
       );
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // ========== DASHBOARD & WORKSPACE HELPERS ==========
+  const filteredProjects = useMemo(() => {
+    if (!projectSearchQuery.trim()) return projects;
+    const q = projectSearchQuery.toLowerCase();
+    return projects.filter(
+      (p) => p.name.toLowerCase().includes(q) || p.files.some((f) => f.name.toLowerCase().includes(q))
+    );
+  }, [projects, projectSearchQuery]);
+
+  const totalFilesCount = useMemo(() => {
+    return projects.reduce((acc, p) => acc + (p.files?.length || 0), 0);
+  }, [projects]);
+
+  const handleCreateNewProject = (nameInput?: string) => {
+    const name = (nameInput || newProjectName).trim() || `Project ${projects.length + 1}`;
+    const newProj: CodexProject = {
+      id: `proj_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      name,
+      createdAt: Date.now(),
+      lastModified: Date.now(),
+      files: [] // Zero pre-added files by AI! Clean slate!
+    };
+    setProjects((prev) => [newProj, ...prev]);
+    setActiveProjectId(newProj.id);
+    setSelectedFileId('');
+    setEditingContent('');
+    setNewProjectName('');
+    setShowNewProjectModal(false);
+    setMessages([]);
+    setPreviewReloadKey((k) => k + 1);
+    setMobileTab('chat');
+    setViewMode('workspace');
+  };
+
+  const handleOpenProject = (projId: string) => {
+    const proj = projects.find((p) => p.id === projId);
+    if (!proj) return;
+    setActiveProjectId(proj.id);
+    if (proj.files.length > 0) {
+      setSelectedFileId(proj.files[0].id);
+      setEditingContent(proj.files[0].content);
+      const firstHtml = proj.files.find((f) => f.name.endsWith('.html') || f.name === 'index.html');
+      if (firstHtml) setSelectedHtmlFile(firstHtml.name);
+    } else {
+      setSelectedFileId('');
+      setEditingContent('');
+      setSelectedHtmlFile('');
+    }
+    setPreviewReloadKey((k) => k + 1);
+    setMobileTab('chat');
+    setViewMode('workspace');
   };
 
   // ========== THEME CLASSES ==========
@@ -997,366 +1201,1100 @@ ${filesContext}`;
   return (
     <div className={`h-full w-full flex flex-col ${bgMain} ${textPrimary} overflow-hidden font-['Plus_Jakarta_Sans',sans-serif]`}>
 
-      {/* HEADER */}
-      <header className={`h-12 px-4 border-b ${border} ${bgHeader} flex items-center justify-between shrink-0`}>
-        <div className="flex items-center gap-3">
-          {onClose && (
-            <button
-              onClick={onClose}
-              className={`p-1.5 rounded-lg ${textSub} ${hoverBg} transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-medium`}
-            >
-              <ChevronLeft className="w-4 h-4" />
-              <span className="hidden sm:inline">Back</span>
-            </button>
-          )}
-          <div className={`h-4 w-px ${border}`} />
-          <div className="flex items-center gap-2">
-            <div className={`w-7 h-7 rounded-lg ${bgSubtle} border ${border} flex items-center justify-center`}>
-              <Code2 className={`w-3.5 h-3.5 ${accent}`} />
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className={`text-sm font-bold ${textBright}`}>Codex Studio</span>
-              <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${bgSubtle} ${accent} font-semibold border ${border}`}>
-                v2.5
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Model Mode */}
-        <div className={`hidden sm:flex items-center ${bgSubtle} border ${border} rounded-xl p-0.5 text-xs`}>
-          <button
-            onClick={() => setModelMode('fast')}
-            className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer ${
-              modelMode === 'fast' ? `${accentBg} text-white font-semibold shadow-sm` : `${textSub} ${hoverBg}`
-            }`}
-          >
-            <Zap className="w-3 h-3" />
-            <span>Fast</span>
-          </button>
-          <button
-            onClick={() => setModelMode('reasoning')}
-            className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer ${
-              modelMode === 'reasoning' ? `${accentBg} text-white font-semibold shadow-sm` : `${textSub} ${hoverBg}`
-            }`}
-          >
-            <Cpu className="w-3 h-3" />
-            <span>Reasoning</span>
-          </button>
-        </div>
-
-        {/* Tab Toggle */}
-        <div className={`flex items-center ${bgSubtle} border ${border} rounded-xl p-0.5 text-xs`}>
-          <button
-            onClick={() => setRightTab('preview')}
-            className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer ${
-              rightTab === 'preview' ? `${accentBg} text-white font-semibold shadow-sm` : `${textSub} ${hoverBg}`
-            }`}
-          >
-            <Globe className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Preview</span>
-          </button>
-          <button
-            onClick={() => setRightTab('files')}
-            className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer ${
-              rightTab === 'files' ? `${accentBg} text-white font-semibold shadow-sm` : `${textSub} ${hoverBg}`
-            }`}
-          >
-            <Folder className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Files</span>
-            <span className={`text-[10px] ${rightTab === 'files' ? 'text-white/80' : textMuted}`}>
-              {files.length}
-            </span>
-          </button>
-        </div>
-      </header>
-
-      {/* MAIN */}
-      <div className="flex-1 flex overflow-hidden">
-
-        {/* LEFT: CHAT */}
-        <div className={`w-full lg:w-1/2 flex flex-col border-r ${border} ${bgMain}`}>
-          <div className="flex-1 overflow-y-auto p-4 space-y-4">
-            {messages.length === 0 ? (
-              <div className="h-full flex flex-col items-center justify-center text-center p-6 max-w-sm mx-auto">
-                <div className={`w-12 h-12 rounded-2xl ${bgCard} border ${border} flex items-center justify-center mb-4`}>
-                  <Code2 className={`w-6 h-6 ${accent}`} />
-                </div>
-                <h2 className={`text-lg font-bold ${textBright} mb-1.5`}>What will you build?</h2>
-                <p className={`text-xs ${textSub} mb-6 leading-relaxed`}>
-                  Describe your app idea and I'll generate complete code with live preview.
-                </p>
-                <div className="w-full space-y-2">
-                  {[
-                    'Build a todo app with animations',
-                    'Create a portfolio website',
-                    'Make a calculator with dark mode',
-                    'Build a chat UI with messages'
-                  ].map((p, i) => (
-                    <button
-                      key={i}
-                      onClick={() => handleSendPrompt(p)}
-                      className={`w-full text-left px-3.5 py-2.5 rounded-xl border ${border} ${bgCard} ${hoverBg} text-xs ${textSub} transition-all cursor-pointer`}
-                    >
-                      {p}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              messages.map((msg) => (
-                <div key={msg.id}>
-                  {msg.role === 'user' ? (
-                    <div className="flex justify-end">
-                      <div className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm ${accentBg} text-white font-medium shadow-sm`}>
-                        {msg.text}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className={`rounded-2xl p-4 ${bgCard} border ${border} text-sm`}>
-                      {msg.text ? (
-                        <pre className={`whitespace-pre-wrap font-['Plus_Jakarta_Sans',sans-serif] text-xs ${textPrimary} leading-relaxed`}>
-                          {msg.text}
-                        </pre>
-                      ) : (
-                        <div className={`flex items-center gap-2 text-xs ${textSub}`}>
-                          <Loader2 className={`w-3.5 h-3.5 ${accent} animate-spin`} />
-                          <span>Generating code...</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              ))
-            )}
-            <div ref={messagesEndRef} />
-          </div>
-
-          <div className={`p-3 border-t ${border} ${bgHeader}`}>
-            <div className={`flex items-end gap-2 rounded-2xl border ${border} ${bgInput} p-2 focus-within:border-[#d97757]/50 transition-colors`}>
-              <textarea
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSendPrompt();
-                  }
-                }}
-                placeholder="Describe what you want to build..."
-                rows={2}
-                className={`flex-1 bg-transparent border-none outline-none resize-none text-sm p-1.5 ${textPrimary} placeholder-[#6b6760]`}
-              />
-              <button
-                disabled={!input.trim() || isLoading}
-                onClick={() => handleSendPrompt()}
-                className={`p-2.5 rounded-xl flex items-center justify-center transition-all shrink-0 ${
-                  input.trim() && !isLoading
-                    ? `${accentBg} text-white shadow-md hover:scale-105 active:scale-95 cursor-pointer`
-                    : `${bgSubtle} ${textMuted} cursor-not-allowed`
-                }`}
-              >
-                {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowUp className="w-4 h-4 stroke-[2.5]" />}
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* RIGHT: PREVIEW / FILES */}
-        <div className={`w-full lg:w-1/2 flex flex-col ${bgMain}`}>
-          {rightTab === 'preview' ? (
-            <div className="flex-1 flex flex-col overflow-hidden">
-              {/* Preview Toolbar */}
-              <div className={`h-10 px-3 border-b ${border} ${bgHeader} flex items-center justify-between shrink-0`}>
-                <div className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-red-500/60" />
-                  <span className="w-2 h-2 rounded-full bg-amber-500/60" />
-                  <span className="w-2 h-2 rounded-full bg-emerald-500/60" />
-                  {htmlFiles.length > 1 && (
-                    <select
-                      value={selectedHtmlFile}
-                      onChange={(e) => {
-                        setSelectedHtmlFile(e.target.value);
-                        setPreviewReloadKey((k) => k + 1);
-                      }}
-                      className={`ml-2 px-2 py-1 rounded-lg text-[11px] font-mono ${bgSubtle} ${textPrimary} border ${border} cursor-pointer focus:outline-none`}
-                    >
-                      {htmlFiles.map((f) => (
-                        <option key={f.id} value={f.name}>{f.name}</option>
-                      ))}
-                    </select>
-                  )}
-                  {htmlFiles.length <= 1 && (
-                    <span className={`text-[11px] ${textSub} font-mono ml-2`}>
-                      {selectedHtmlFile || 'preview'}
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => setViewportMode(viewportMode === 'desktop' ? 'mobile' : 'desktop')}
-                    className={`p-1.5 rounded-lg ${textSub} ${hoverBg} transition-colors cursor-pointer`}
-                  >
-                    {viewportMode === 'desktop' ? <Smartphone className="w-3.5 h-3.5" /> : <Monitor className="w-3.5 h-3.5" />}
-                  </button>
-                  <button
-                    onClick={() => setPreviewReloadKey((k) => k + 1)}
-                    className={`p-1.5 rounded-lg ${textSub} ${hoverBg} transition-colors cursor-pointer`}
-                  >
-                    <RefreshCw className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Preview Iframe */}
-              <div className={`flex-1 overflow-hidden ${isMoon ? 'bg-[#0a0b0e]' : 'bg-[#f0ede7]'} flex items-center justify-center p-3`}>
-                <div
-                  className={`h-full transition-all duration-300 bg-white rounded-xl overflow-hidden shadow-2xl ${
-                    viewportMode === 'mobile' ? 'w-[375px] max-w-full border-4 border-[#2a2c34]' : 'w-full'
-                  }`}
+      {/* ========================================================================= */}
+      {/* 1. PROJECTS HISTORY & MANAGEMENT DASHBOARD VIEW                            */}
+      {/* ========================================================================= */}
+      {viewMode === 'dashboard' ? (
+        <div className="flex-1 flex flex-col h-full overflow-hidden">
+          {/* Dashboard Header */}
+          <header className={`h-14 px-4 sm:px-6 border-b ${border} ${bgHeader} flex items-center justify-between shrink-0`}>
+            <div className="flex items-center gap-3">
+              {onClose && (
+                <button
+                  onClick={onClose}
+                  className={`p-2 rounded-xl ${textSub} ${hoverBg} transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-semibold`}
+                  title="Back to Sapphire Chat"
                 >
-                  <iframe
-                    key={previewReloadKey}
-                    srcDoc={livePreviewDoc}
-                    title="Live Preview"
-                    sandbox="allow-scripts allow-modals allow-forms allow-same-origin allow-popups allow-downloads"
-                    className="w-full h-full border-none"
-                  />
+                  <ChevronLeft className="w-4 h-4" />
+                  <span className="hidden sm:inline">Back</span>
+                </button>
+              )}
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-[#d97757]/15 border border-[#d97757]/30 flex items-center justify-center">
+                  <Code2 className="w-4 h-4 text-[#d97757]" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-sm sm:text-base font-extrabold ${textBright}`}>Codex Studio</span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#d97757]/15 text-[#d97757] font-bold">
+                      Projects Hub
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
-          ) : (
-            <div className="flex-1 flex flex-col overflow-hidden">
-              {/* Files Toolbar */}
-              <div className={`h-10 px-3 border-b ${border} ${bgHeader} flex items-center justify-between shrink-0`}>
-                <div className="flex items-center gap-2 min-w-0">
-                  <Laptop className={`w-3.5 h-3.5 ${accent} shrink-0`} />
-                  <span className={`text-xs font-semibold ${textBright} truncate`}>
-                    {folderName}
-                  </span>
-                  {rootDirHandle && (
-                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-500 font-bold shrink-0">
-                      LIVE
-                    </span>
-                  )}
-                </div>
 
-                <div className="flex items-center gap-1">
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    multiple
-                    onChange={handleUploadFiles}
-                    className="hidden"
-                  />
-                  <input
-                    ref={folderInputRef}
-                    type="file"
-                    multiple
-                    onChange={handleUploadFiles}
-                    className="hidden"
-                    {...({ webkitdirectory: '', directory: '', mozdirectory: '' } as any)}
-                  />
-
-                  <button
-                    onClick={handleOpenFolder}
-                    className={`px-2.5 py-1.5 rounded-lg ${accentBg} text-white text-[11px] font-semibold flex items-center gap-1.5 transition-colors cursor-pointer`}
-                    title="Open Folder from Laptop"
-                  >
-                    <FolderOpen className="w-3 h-3" />
-                    <span className="hidden sm:inline">Open Folder</span>
+            <div className="flex items-center gap-2 sm:gap-3">
+              {/* Search Bar */}
+              <div className={`relative hidden sm:flex items-center rounded-xl border ${border} ${bgInput} px-2.5 py-1.5 focus-within:border-[#d97757]/60 transition-colors w-44 md:w-60`}>
+                <Search className="w-3.5 h-3.5 text-zinc-400 mr-2 shrink-0" />
+                <input
+                  type="text"
+                  value={projectSearchQuery}
+                  onChange={(e) => setProjectSearchQuery(e.target.value)}
+                  placeholder="Search projects..."
+                  className="bg-transparent border-none outline-none text-xs w-full placeholder-zinc-500"
+                />
+                {projectSearchQuery && (
+                  <button onClick={() => setProjectSearchQuery('')} className="text-zinc-400 hover:text-zinc-200">
+                    <X className="w-3 h-3" />
                   </button>
-
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    className={`p-1.5 rounded-lg ${textSub} ${hoverBg} transition-colors cursor-pointer`}
-                    title="Upload Files"
-                  >
-                    <Upload className="w-3.5 h-3.5" />
-                  </button>
-
-                  <button
-                    onClick={() => folderInputRef.current?.click()}
-                    className={`p-1.5 rounded-lg ${textSub} ${hoverBg} transition-colors cursor-pointer`}
-                    title="Upload Folder"
-                  >
-                    <FolderUp className="w-3.5 h-3.5" />
-                  </button>
-
-                  <button
-                    onClick={handleCreateFile}
-                    className={`p-1.5 rounded-lg ${textSub} ${hoverBg} transition-colors cursor-pointer`}
-                    title="New File"
-                  >
-                    <FilePlus className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
-
-              {/* File Tree */}
-              <div className="flex-1 overflow-y-auto p-2">
-                {files.length === 0 ? (
-                  <div className={`h-full flex flex-col items-center justify-center text-center p-6 ${textMuted}`}>
-                    <Folder className="w-10 h-10 mb-3 opacity-40" />
-                    <p className="text-xs mb-2">No files in workspace</p>
-                    <button
-                      onClick={handleOpenFolder}
-                      className={`text-xs ${accent} hover:underline font-semibold cursor-pointer`}
-                    >
-                      Open a folder from laptop
-                    </button>
-                  </div>
-                ) : (
-                  renderTreeNode(fileTree, '')
                 )}
               </div>
 
-              {/* Editor */}
-              {activeFile && !activeFile.isBinary && (
-                <div className={`border-t ${border} flex flex-col ${isMoon ? 'bg-[#0a0b0e]' : 'bg-[#faf9f7]'} h-[45%] shrink-0`}>
-                  <div className={`h-9 px-3 border-b ${border} flex items-center justify-between shrink-0 ${bgHeader}`}>
-                    <div className="flex items-center gap-2 min-w-0">
-                      <FileCode className={`w-3.5 h-3.5 ${accent} shrink-0`} />
-                      <span className={`text-xs font-mono font-semibold ${textBright} truncate`}>
-                        {activeFile.path}
-                      </span>
+              {/* Add Project Primary Button */}
+              <button
+                type="button"
+                onClick={() => {
+                  setNewProjectName(`Project ${projects.length + 1}`);
+                  setShowNewProjectModal(true);
+                }}
+                className="px-3.5 py-2 rounded-xl bg-[#d97757] hover:bg-[#c86949] text-white text-xs sm:text-sm font-bold flex items-center gap-1.5 shadow-md shadow-[#d97757]/20 transition-all cursor-pointer active:scale-95 shrink-0"
+              >
+                <Plus className="w-4 h-4 stroke-[2.5]" />
+                <span>Add New Project</span>
+              </button>
+            </div>
+          </header>
+
+          {/* Dashboard Scrollable Body */}
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto w-full">
+            {/* Hero / Overview Banner */}
+            <div className={`p-5 sm:p-6 rounded-3xl border ${border} ${bgCard} relative overflow-hidden shadow-sm`}>
+              <div className="max-w-2xl">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-[#d97757]/20 text-[#d97757]">
+                    Workspace Manager
+                  </span>
+                </div>
+                <h1 className={`text-xl sm:text-2xl font-black ${textBright} mb-2`}>
+                  Projects History & Workspaces
+                </h1>
+                <p className={`text-xs sm:text-sm ${textSub} leading-relaxed mb-4`}>
+                  Every project starts clean with zero AI boilerplate. Chat in the prompt panel to generate full-stack software and watch it render in real-time live preview.
+                </p>
+
+                {/* Quick Metrics */}
+                <div className="flex flex-wrap items-center gap-2 sm:gap-4 pt-1">
+                  <div className={`px-3 py-1.5 rounded-xl border ${border} ${bgSubtle} text-xs font-semibold flex items-center gap-1.5`}>
+                    <Layers className="w-3.5 h-3.5 text-[#d97757]" />
+                    <span>{projects.length} Total Projects</span>
+                  </div>
+                  <div className={`px-3 py-1.5 rounded-xl border ${border} ${bgSubtle} text-xs font-semibold flex items-center gap-1.5`}>
+                    <FileCode className="w-3.5 h-3.5 text-blue-500" />
+                    <span>{totalFilesCount} Files Built</span>
+                  </div>
+                  {activeProject && (
+                    <div className={`px-3 py-1.5 rounded-xl border border-[#d97757]/30 bg-[#d97757]/10 text-xs font-bold text-[#d97757] flex items-center gap-1.5`}>
+                      <Sparkles className="w-3.5 h-3.5" />
+                      <span className="truncate max-w-[150px]">Current: {activeProject.name}</span>
                     </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      {saveStatus === 'saving' && (
-                        <span className={`text-[10px] ${textSub} flex items-center gap-1`}>
-                          <Loader2 className="w-3 h-3 animate-spin" />
-                          Saving...
-                        </span>
-                      )}
-                      {saveStatus === 'saved' && (
-                        <span className="text-[10px] text-emerald-500 flex items-center gap-1">
-                          ✓ Saved
-                        </span>
-                      )}
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Mobile Search Bar */}
+            <div className="sm:hidden">
+              <div className={`relative flex items-center rounded-2xl border ${border} ${bgInput} px-3 py-2.5 w-full`}>
+                <Search className="w-4 h-4 text-zinc-400 mr-2 shrink-0" />
+                <input
+                  type="text"
+                  value={projectSearchQuery}
+                  onChange={(e) => setProjectSearchQuery(e.target.value)}
+                  placeholder="Search projects..."
+                  className="bg-transparent border-none outline-none text-xs w-full placeholder-zinc-500"
+                />
+                {projectSearchQuery && (
+                  <button onClick={() => setProjectSearchQuery('')} className="text-zinc-400 hover:text-zinc-200">
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Projects Section Header */}
+            <div className="flex items-center justify-between pt-2">
+              <div className="flex items-center gap-2">
+                <h2 className={`text-base sm:text-lg font-bold ${textBright}`}>
+                  Your Projects ({filteredProjects.length})
+                </h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setNewProjectName(`Project ${projects.length + 1}`);
+                  setShowNewProjectModal(true);
+                }}
+                className="text-xs font-bold text-[#d97757] hover:underline flex items-center gap-1 cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>New Project</span>
+              </button>
+            </div>
+
+            {/* Projects Grid */}
+            {filteredProjects.length === 0 ? (
+              <div className={`p-10 rounded-3xl border ${border} ${bgCard} text-center max-w-md mx-auto my-6 space-y-3`}>
+                <div className="w-12 h-12 rounded-2xl bg-[#d97757]/15 text-[#d97757] flex items-center justify-center mx-auto mb-2">
+                  <Layers className="w-6 h-6" />
+                </div>
+                <h3 className={`text-sm font-bold ${textBright}`}>No projects found</h3>
+                <p className={`text-xs ${textSub} leading-relaxed`}>
+                  {projectSearchQuery ? 'No projects match your search query.' : 'You do not have any projects yet. Create your first clean workspace!'}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNewProjectName(`Project ${projects.length + 1}`);
+                    setShowNewProjectModal(true);
+                  }}
+                  className="px-4 py-2 rounded-xl bg-[#d97757] hover:bg-[#c86949] text-white text-xs font-bold transition-colors cursor-pointer shadow-sm"
+                >
+                  + Add New Project
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredProjects.map((proj) => {
+                  const isActive = proj.id === activeProjectId;
+                  const isEditing = editingProjectId === proj.id;
+                  const htmlCount = proj.files.filter((f) => f.name.endsWith('.html')).length;
+                  const cssCount = proj.files.filter((f) => f.name.endsWith('.css')).length;
+                  const jsCount = proj.files.filter((f) => f.name.endsWith('.js') || f.name.endsWith('.ts')).length;
+
+                  return (
+                    <motion.div
+                      key={proj.id}
+                      layout
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className={`p-4 sm:p-5 rounded-3xl border transition-all duration-200 flex flex-col justify-between ${
+                        isActive
+                          ? isMoon
+                            ? 'bg-[#151722] border-[#d97757]/50 shadow-lg shadow-black/40 ring-1 ring-[#d97757]/30'
+                            : 'bg-white border-[#d97757] shadow-lg shadow-orange-100 ring-1 ring-[#d97757]/30'
+                          : `${bgCard} ${border} hover:border-[#d97757]/40 shadow-sm`
+                      }`}
+                    >
+                      <div>
+                        {/* Top: Icon & Actions */}
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <div className={`w-9 h-9 rounded-2xl flex items-center justify-center shrink-0 ${
+                              isActive ? 'bg-[#d97757] text-white' : `${bgSubtle} text-[#d97757]`
+                            }`}>
+                              <Layers className="w-4 h-4" />
+                            </div>
+                            <div className="min-w-0">
+                              {isEditing ? (
+                                <input
+                                  type="text"
+                                  value={editingProjectName}
+                                  onChange={(e) => setEditingProjectName(e.target.value)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                      if (editingProjectName.trim()) {
+                                        setProjects((prev) =>
+                                          prev.map((p) => (p.id === proj.id ? { ...p, name: editingProjectName.trim() } : p))
+                                        );
+                                      }
+                                      setEditingProjectId(null);
+                                    }
+                                    if (e.key === 'Escape') setEditingProjectId(null);
+                                  }}
+                                  className="w-full bg-transparent border-b border-[#d97757] outline-none text-sm font-bold"
+                                  autoFocus
+                                />
+                              ) : (
+                                <h3 className={`text-sm font-extrabold ${textBright} truncate`}>
+                                  {proj.name}
+                                </h3>
+                              )}
+                              <span className="text-[11px] text-zinc-400 block">
+                                {formatTimeAgo(proj.lastModified)}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Quick Edit/Delete */}
+                          <div className="flex items-center gap-1 shrink-0">
+                            {isEditing ? (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (editingProjectName.trim()) {
+                                    setProjects((prev) =>
+                                      prev.map((p) => (p.id === proj.id ? { ...p, name: editingProjectName.trim() } : p))
+                                    );
+                                  }
+                                  setEditingProjectId(null);
+                                }}
+                                className="p-1.5 text-emerald-500 hover:text-emerald-400 cursor-pointer"
+                                title="Save Name"
+                              >
+                                <Check className="w-4 h-4" />
+                              </button>
+                            ) : (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setEditingProjectId(proj.id);
+                                    setEditingProjectName(proj.name);
+                                  }}
+                                  className="p-1.5 text-zinc-400 hover:text-[#d97757] rounded-lg transition-colors cursor-pointer"
+                                  title="Rename Project"
+                                >
+                                  <Edit3 className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setProjectToDelete(proj)}
+                                  className="p-1.5 text-zinc-400 hover:text-rose-500 rounded-lg transition-colors cursor-pointer"
+                                  title="Delete Project"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Middle: File Status & Preview Badges */}
+                        <div className="space-y-2 mb-4">
+                          <div className="flex items-center gap-2">
+                            {proj.files.length === 0 ? (
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-500">
+                                Clean Slate (0 files)
+                              </span>
+                            ) : (
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-500">
+                                {proj.files.length} {proj.files.length === 1 ? 'file' : 'files'}
+                              </span>
+                            )}
+                            {isActive && (
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#d97757]/20 text-[#d97757]">
+                                ACTIVE
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="text-xs text-zinc-400 min-h-[38px] flex items-center">
+                            {proj.files.length === 0 ? (
+                              <span className="text-[11px] text-zinc-400 italic">
+                                Zero files pre-added. Ready for AI chat prompts or custom files.
+                              </span>
+                            ) : (
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                {proj.files.slice(0, 3).map((f) => (
+                                  <span key={f.id} className={`text-[10px] font-mono px-1.5 py-0.5 rounded-md border ${border} ${bgSubtle} text-zinc-300`}>
+                                    {f.name}
+                                  </span>
+                                ))}
+                                {proj.files.length > 3 && (
+                                  <span className="text-[10px] text-zinc-500">
+                                    +{proj.files.length - 3} more
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Card Action */}
                       <button
-                        onClick={handleSaveFile}
-                        className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold flex items-center gap-1 cursor-pointer transition-colors"
+                        type="button"
+                        onClick={() => handleOpenProject(proj.id)}
+                        className={`w-full py-2.5 px-3 rounded-2xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                          isActive
+                            ? 'bg-[#d97757] hover:bg-[#c86949] text-white shadow-sm'
+                            : `${bgSubtle} ${hoverBg} text-zinc-200 border ${border} hover:border-[#d97757]/50`
+                        }`}
                       >
-                        <Save className="w-3 h-3" />
-                        <span>Save</span>
+                        <Play className="w-3.5 h-3.5 fill-current" />
+                        <span>Open Workspace</span>
+                        <ArrowRight className="w-3.5 h-3.5 ml-auto" />
+                      </button>
+                    </motion.div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      ) : (
+        /* ========================================================================= */
+        /* 2. PROJECT WORKSPACE VIEW (CHAT + PREVIEW / FILES)                        */
+        /* ========================================================================= */
+        <div className="flex-1 flex flex-col h-full overflow-hidden">
+          {/* WORKSPACE HEADER */}
+          <header className={`h-12 px-2.5 sm:px-4 border-b ${border} ${bgHeader} flex items-center justify-between shrink-0 gap-2`}>
+            {/* Left: Back to Projects & Project Selector */}
+            <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+              <button
+                type="button"
+                onClick={() => setViewMode('dashboard')}
+                className={`p-1.5 rounded-xl ${textSub} ${hoverBg} transition-colors cursor-pointer flex items-center gap-1 text-xs font-bold shrink-0`}
+                title="Return to Projects History Hub"
+              >
+                <ChevronLeft className="w-4 h-4" />
+                <span className="hidden sm:inline">Projects</span>
+              </button>
+
+              <div className={`h-4 w-px ${border} hidden sm:block`} />
+
+              {/* Project Dropdown Selector */}
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setIsProjectDropdownOpen(!isProjectDropdownOpen)}
+                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-xs font-bold cursor-pointer transition-all ${
+                    isMoon
+                      ? 'bg-[#181a24] hover:bg-[#202230] border-[#292c3c] text-zinc-200'
+                      : 'bg-white hover:bg-slate-50 border-slate-200 text-slate-800'
+                  }`}
+                >
+                  <Layers className="w-3.5 h-3.5 text-[#d97757] shrink-0" />
+                  <span className="font-bold max-w-[100px] sm:max-w-[160px] truncate">
+                    {activeProject?.name || 'Workspace'}
+                  </span>
+                  <ChevronDown className="w-3 h-3 text-zinc-400 shrink-0" />
+                </button>
+
+                <AnimatePresence>
+                  {isProjectDropdownOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 6, scale: 0.98 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 6, scale: 0.98 }}
+                      className={`absolute left-0 top-full mt-2 w-72 rounded-2xl border shadow-2xl p-2.5 z-50 backdrop-blur-xl ${
+                        isMoon
+                          ? 'bg-[#14151e]/95 border-[#282a3c] text-zinc-200 shadow-black/80'
+                          : 'bg-white/95 border-slate-200 text-slate-800 shadow-slate-300/80'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between px-2 py-1 mb-1.5 border-b border-zinc-700/20">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
+                          Projects ({projects.length})
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setNewProjectName(`Project ${projects.length + 1}`);
+                            setShowNewProjectModal(true);
+                            setIsProjectDropdownOpen(false);
+                          }}
+                          className="text-[11px] font-bold text-[#d97757] hover:underline flex items-center gap-1 cursor-pointer"
+                        >
+                          <Plus className="w-3 h-3" />
+                          <span>Add Project</span>
+                        </button>
+                      </div>
+
+                      <div className="max-h-56 overflow-y-auto space-y-1">
+                        {projects.map((proj) => {
+                          const isCurrent = proj.id === activeProjectId;
+                          const isEditing = editingProjectId === proj.id;
+                          return (
+                            <div
+                              key={proj.id}
+                              onClick={() => {
+                                if (!isEditing) {
+                                  handleOpenProject(proj.id);
+                                  setIsProjectDropdownOpen(false);
+                                }
+                              }}
+                              className={`flex items-center justify-between p-2 rounded-xl text-xs transition-colors cursor-pointer ${
+                                isCurrent
+                                  ? isMoon
+                                    ? 'bg-[#d97757]/20 border border-[#d97757]/60 text-white font-bold'
+                                    : 'bg-[#ffeade] border border-[#d97757] text-[#8a2b0e] font-bold'
+                                  : isMoon
+                                  ? 'hover:bg-[#1e202c] text-zinc-300'
+                                  : 'hover:bg-slate-100 text-slate-700'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2 min-w-0 flex-1">
+                                <Layers className={`w-3.5 h-3.5 shrink-0 ${isCurrent ? 'text-[#d97757]' : 'text-zinc-400'}`} />
+                                {isEditing ? (
+                                  <input
+                                    type="text"
+                                    value={editingProjectName}
+                                    onChange={(e) => setEditingProjectName(e.target.value)}
+                                    onClick={(e) => e.stopPropagation()}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') {
+                                        if (editingProjectName.trim()) {
+                                          setProjects((prev) =>
+                                            prev.map((p) => (p.id === proj.id ? { ...p, name: editingProjectName.trim() } : p))
+                                          );
+                                        }
+                                        setEditingProjectId(null);
+                                      }
+                                      if (e.key === 'Escape') setEditingProjectId(null);
+                                    }}
+                                    className="w-full bg-transparent border-b border-[#d97757] outline-none text-xs font-bold"
+                                    autoFocus
+                                  />
+                                ) : (
+                                  <div className="truncate">
+                                    <span className="truncate block font-semibold">{proj.name}</span>
+                                    <span className="text-[10px] text-zinc-400 block font-normal">
+                                      {proj.files.length === 0 ? 'Empty (clean slate)' : `${proj.files.length} files`}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+
+                              <div className="flex items-center gap-1 shrink-0 ml-1">
+                                {isEditing ? (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (editingProjectName.trim()) {
+                                        setProjects((prev) =>
+                                          prev.map((p) => (p.id === proj.id ? { ...p, name: editingProjectName.trim() } : p))
+                                        );
+                                      }
+                                      setEditingProjectId(null);
+                                    }}
+                                    className="p-1 text-emerald-500 hover:text-emerald-400 cursor-pointer"
+                                  >
+                                    <Check className="w-3.5 h-3.5" />
+                                  </button>
+                                ) : (
+                                  <>
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setEditingProjectId(proj.id);
+                                        setEditingProjectName(proj.name);
+                                      }}
+                                      className="p-1 hover:text-[#d97757] text-zinc-400 cursor-pointer transition-colors"
+                                      title="Rename Project"
+                                    >
+                                      <Edit3 className="w-3 h-3" />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setProjectToDelete(proj);
+                                      }}
+                                      className="p-1 hover:text-rose-500 text-zinc-400 cursor-pointer transition-colors"
+                                      title="Delete Project"
+                                    >
+                                      <Trash2 className="w-3 h-3" />
+                                    </button>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
+              {/* Direct Add Project Quick Button */}
+              <button
+                type="button"
+                onClick={() => {
+                  setNewProjectName(`Project ${projects.length + 1}`);
+                  setShowNewProjectModal(true);
+                }}
+                className={`p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                  isMoon
+                    ? 'bg-[#d97757]/15 hover:bg-[#d97757]/25 border-[#d97757]/50 text-[#ffaa8a]'
+                    : 'bg-[#ffeade] hover:bg-[#ffd8c7] border-[#d97757]/60 text-[#8a2b0e]'
+                }`}
+                title="Add New Project"
+              >
+                <Plus className="w-3.5 h-3.5 text-[#d97757]" />
+                <span className="hidden md:inline ml-1">New</span>
+              </button>
+            </div>
+
+            {/* Center: Mobile Segmented Switcher (Optimized for Mobile Users) */}
+            <div className="flex lg:hidden items-center bg-black/10 dark:bg-white/10 rounded-xl p-0.5 border border-zinc-500/20 text-xs shrink-0">
+              <button
+                type="button"
+                onClick={() => setMobileTab('chat')}
+                className={`px-2.5 py-1 rounded-lg font-bold flex items-center gap-1 transition-all cursor-pointer ${
+                  mobileTab === 'chat' ? 'bg-[#d97757] text-white shadow-sm' : 'text-zinc-400 hover:text-zinc-200'
+                }`}
+              >
+                <MessageSquare className="w-3.5 h-3.5" />
+                <span>Chat</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileTab('preview');
+                  setRightTab('preview');
+                }}
+                className={`px-2.5 py-1 rounded-lg font-bold flex items-center gap-1 transition-all cursor-pointer ${
+                  mobileTab === 'preview' ? 'bg-[#d97757] text-white shadow-sm' : 'text-zinc-400 hover:text-zinc-200'
+                }`}
+              >
+                <Eye className="w-3.5 h-3.5" />
+                <span>Preview</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileTab('files');
+                  setRightTab('files');
+                }}
+                className={`px-2.5 py-1 rounded-lg font-bold flex items-center gap-1 transition-all cursor-pointer ${
+                  mobileTab === 'files' ? 'bg-[#d97757] text-white shadow-sm' : 'text-zinc-400 hover:text-zinc-200'
+                }`}
+              >
+                <Folder className="w-3.5 h-3.5" />
+                <span>Files ({files.length})</span>
+              </button>
+            </div>
+
+            {/* Right: Desktop Controls */}
+            <div className="hidden lg:flex items-center gap-2 shrink-0">
+              {/* Model Mode */}
+              <div className={`flex items-center ${bgSubtle} border ${border} rounded-xl p-0.5 text-xs`}>
+                <button
+                  onClick={() => setModelMode('fast')}
+                  className={`px-2.5 py-1 rounded-lg flex items-center gap-1 transition-all cursor-pointer ${
+                    modelMode === 'fast' ? `${accentBg} text-white font-semibold shadow-sm` : `${textSub} ${hoverBg}`
+                  }`}
+                >
+                  <Zap className="w-3 h-3" />
+                  <span>Fast</span>
+                </button>
+                <button
+                  onClick={() => setModelMode('reasoning')}
+                  className={`px-2.5 py-1 rounded-lg flex items-center gap-1 transition-all cursor-pointer ${
+                    modelMode === 'reasoning' ? `${accentBg} text-white font-semibold shadow-sm` : `${textSub} ${hoverBg}`
+                  }`}
+                >
+                  <Cpu className="w-3 h-3" />
+                  <span>Reasoning</span>
+                </button>
+              </div>
+
+              {/* Desktop Right Tab Toggle */}
+              <div className={`flex items-center ${bgSubtle} border ${border} rounded-xl p-0.5 text-xs`}>
+                <button
+                  onClick={() => setRightTab('preview')}
+                  className={`px-3 py-1 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer ${
+                    rightTab === 'preview' ? `${accentBg} text-white font-semibold shadow-sm` : `${textSub} ${hoverBg}`
+                  }`}
+                >
+                  <Globe className="w-3.5 h-3.5" />
+                  <span>Preview</span>
+                </button>
+                <button
+                  onClick={() => setRightTab('files')}
+                  className={`px-3 py-1 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer ${
+                    rightTab === 'files' ? `${accentBg} text-white font-semibold shadow-sm` : `${textSub} ${hoverBg}`
+                  }`}
+                >
+                  <Folder className="w-3.5 h-3.5" />
+                  <span>Files ({files.length})</span>
+                </button>
+              </div>
+            </div>
+          </header>
+
+          {/* Toast Notification Banner (Auto Preview Jump) */}
+          <AnimatePresence>
+            {showNotificationToast && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="bg-[#d97757] text-white px-4 py-2 text-xs font-bold flex items-center justify-between shadow-md shrink-0 z-40"
+              >
+                <span>{showNotificationToast}</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileTab('preview');
+                    setRightTab('preview');
+                    setShowNotificationToast(null);
+                  }}
+                  className="px-2.5 py-1 rounded-lg bg-white text-[#d97757] text-xs font-extrabold hover:bg-white/90 transition-colors cursor-pointer"
+                >
+                  View Preview →
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* MAIN CONTENT AREA */}
+          <div className="flex-1 flex overflow-hidden">
+            {/* LEFT: CHAT (Talk with Codex AI and it responds with code) */}
+            <div
+              className={`w-full lg:w-1/2 flex-col border-r ${border} ${bgMain} ${
+                mobileTab === 'chat' ? 'flex' : 'hidden lg:flex'
+              }`}
+            >
+              <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                {messages.length === 0 ? (
+                  <div className="h-full flex flex-col items-center justify-center text-center p-6 max-w-sm mx-auto">
+                    <div className={`w-12 h-12 rounded-2xl ${bgCard} border ${border} flex items-center justify-center mb-4 text-[#d97757]`}>
+                      <Code2 className="w-6 h-6" />
+                    </div>
+                    <h2 className={`text-lg font-bold ${textBright} mb-1.5`}>
+                      Code in {activeProject?.name || 'Workspace'}
+                    </h2>
+                    <p className={`text-xs ${textSub} mb-5 leading-relaxed`}>
+                      Clean project with zero dummy boilerplate. Describe the software or web app you want to build and Codex will write full-stack code and update the preview.
+                    </p>
+                    <div className="w-full space-y-2">
+                      {[
+                        'Build a modern interactive Budget & Expense Tracker',
+                        'Create a responsive Developer Portfolio with project modals',
+                        'Make a Scientific Calculator with calculation history & dark mode',
+                        'Build a Kanban Task Board with drag & drop and localStorage'
+                      ].map((p, i) => (
+                        <button
+                          key={i}
+                          onClick={() => handleSendPrompt(p)}
+                          className={`w-full text-left px-3.5 py-2.5 rounded-xl border ${border} ${bgCard} ${hoverBg} text-xs ${textSub} transition-all cursor-pointer`}
+                        >
+                          {p}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  messages.map((msg) => (
+                    <div key={msg.id}>
+                      {msg.role === 'user' ? (
+                        <div className="flex justify-end">
+                          <div className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm ${accentBg} text-white font-medium shadow-sm`}>
+                            {msg.text}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className={`rounded-2xl p-4 ${bgCard} border ${border} text-sm space-y-2`}>
+                          {msg.text ? (
+                            <pre className={`whitespace-pre-wrap font-['Plus_Jakarta_Sans',sans-serif] text-xs ${textPrimary} leading-relaxed`}>
+                              {msg.text}
+                            </pre>
+                          ) : (
+                            <div className={`flex items-center gap-2 text-xs ${textSub}`}>
+                              <Loader2 className={`w-3.5 h-3.5 ${accent} animate-spin`} />
+                              <span>Codex is writing and assembling files...</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))
+                )}
+                <div ref={messagesEndRef} />
+              </div>
+
+              {/* Chat Input Bar */}
+              <div className={`p-3 border-t ${border} ${bgHeader}`}>
+                <div className={`flex items-end gap-2 rounded-2xl border ${border} ${bgInput} p-2 focus-within:border-[#d97757]/50 transition-colors`}>
+                  <textarea
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSendPrompt();
+                      }
+                    }}
+                    placeholder="Describe what you want to build (e.g. Budget tracker with charts)..."
+                    rows={2}
+                    className={`flex-1 bg-transparent border-none outline-none resize-none text-xs sm:text-sm p-1.5 ${textPrimary} placeholder-[#6b6760]`}
+                  />
+                  <button
+                    disabled={!input.trim() || isLoading}
+                    onClick={() => handleSendPrompt()}
+                    className={`p-2.5 rounded-xl flex items-center justify-center transition-all shrink-0 ${
+                      input.trim() && !isLoading
+                        ? `${accentBg} text-white shadow-md hover:scale-105 active:scale-95 cursor-pointer`
+                        : `${bgSubtle} ${textMuted} cursor-not-allowed`
+                    }`}
+                    title="Send Prompt (Enter)"
+                  >
+                    {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowUp className="w-4 h-4 stroke-[2.5]" />}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* RIGHT: PREVIEW & FILES (Interactive live preview and project files code) */}
+            <div
+              className={`w-full lg:w-1/2 flex-col ${bgMain} ${
+                mobileTab !== 'chat' ? 'flex' : 'hidden lg:flex'
+              }`}
+            >
+              {rightTab === 'preview' ? (
+                <div className="flex-1 flex flex-col overflow-hidden">
+                  {/* Preview Toolbar */}
+                  <div className={`h-10 px-3 border-b ${border} ${bgHeader} flex items-center justify-between shrink-0`}>
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-full bg-red-500/70" />
+                      <span className="w-2.5 h-2.5 rounded-full bg-amber-500/70" />
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500/70" />
+                      {htmlFiles.length > 1 && (
+                        <select
+                          value={selectedHtmlFile}
+                          onChange={(e) => {
+                            setSelectedHtmlFile(e.target.value);
+                            setPreviewReloadKey((k) => k + 1);
+                          }}
+                          className={`ml-2 px-2 py-1 rounded-lg text-[11px] font-mono ${bgSubtle} ${textPrimary} border ${border} cursor-pointer focus:outline-none`}
+                        >
+                          {htmlFiles.map((f) => (
+                            <option key={f.id} value={f.name}>{f.name}</option>
+                          ))}
+                        </select>
+                      )}
+                      {htmlFiles.length <= 1 && (
+                        <span className={`text-[11px] ${textSub} font-mono ml-2 truncate max-w-[140px]`}>
+                          {selectedHtmlFile || 'Live Preview'}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => setViewportMode(viewportMode === 'desktop' ? 'mobile' : 'desktop')}
+                        className={`p-1.5 rounded-lg ${textSub} ${hoverBg} transition-colors cursor-pointer`}
+                        title={viewportMode === 'desktop' ? 'Switch to Mobile Frame' : 'Switch to Desktop Frame'}
+                      >
+                        {viewportMode === 'desktop' ? <Smartphone className="w-3.5 h-3.5" /> : <Monitor className="w-3.5 h-3.5" />}
+                      </button>
+                      <button
+                        onClick={() => setPreviewReloadKey((k) => k + 1)}
+                        className={`p-1.5 rounded-lg ${textSub} ${hoverBg} transition-colors cursor-pointer`}
+                        title="Reload Preview"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   </div>
 
-                  <textarea
-                    value={editingContent}
-                    onChange={(e) => setEditingContent(e.target.value)}
-                    className={`flex-1 w-full p-3 font-mono text-xs leading-relaxed border-none outline-none resize-none ${
-                      isMoon ? 'bg-[#0a0b0e] text-[#e8e8ea]' : 'bg-white text-[#1a1815]'
-                    }`}
-                    spellCheck={false}
-                  />
+                  {/* Preview Content Area */}
+                  <div className={`flex-1 overflow-hidden ${isMoon ? 'bg-[#0a0b0e]' : 'bg-[#f0ede7]'} flex items-center justify-center p-2 sm:p-4`}>
+                    {files.length === 0 ? (
+                      <div className={`p-8 rounded-3xl border ${border} ${bgCard} text-center max-w-sm space-y-3`}>
+                        <div className="w-12 h-12 rounded-2xl bg-[#d97757]/15 text-[#d97757] flex items-center justify-center mx-auto">
+                          <Globe className="w-6 h-6" />
+                        </div>
+                        <h3 className={`text-sm font-bold ${textBright}`}>Clean Workspace (0 files)</h3>
+                        <p className={`text-xs ${textSub} leading-relaxed`}>
+                          Talk to Codex AI in Chat to generate your HTML, CSS, and JavaScript. Your running app will automatically appear here!
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => setMobileTab('chat')}
+                          className="px-4 py-2 rounded-xl bg-[#d97757] hover:bg-[#c86949] text-white text-xs font-bold transition-colors cursor-pointer"
+                        >
+                          Go to Chat & Build →
+                        </button>
+                      </div>
+                    ) : (
+                      <div
+                        className={`h-full transition-all duration-300 bg-white rounded-2xl overflow-hidden shadow-2xl ${
+                          viewportMode === 'mobile' ? 'w-[375px] max-w-full border-4 border-[#2a2c34]' : 'w-full'
+                        }`}
+                      >
+                        <iframe
+                          key={previewReloadKey}
+                          srcDoc={livePreviewDoc}
+                          title="Live Preview"
+                          sandbox="allow-scripts allow-modals allow-forms allow-same-origin allow-popups allow-downloads"
+                          className="w-full h-full border-none"
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                /* PROJECT FILES & CODE EDITOR */
+                <div className="flex-1 flex flex-col overflow-hidden">
+                  {/* Files Toolbar */}
+                  <div className={`h-10 px-3 border-b ${border} ${bgHeader} flex items-center justify-between shrink-0`}>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Folder className={`w-3.5 h-3.5 ${accent} shrink-0`} />
+                      <span className={`text-xs font-semibold ${textBright} truncate`}>
+                        {activeProject?.name || 'Workspace'} ({files.length} {files.length === 1 ? 'file' : 'files'})
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-1">
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        multiple
+                        onChange={handleUploadFiles}
+                        className="hidden"
+                      />
+                      <input
+                        ref={folderInputRef}
+                        type="file"
+                        multiple
+                        onChange={handleUploadFiles}
+                        className="hidden"
+                        {...({ webkitdirectory: '', directory: '', mozdirectory: '' } as any)}
+                      />
+
+                      <button
+                        onClick={handleOpenFolder}
+                        className={`px-2.5 py-1.5 rounded-lg ${accentBg} text-white text-[11px] font-semibold flex items-center gap-1.5 transition-colors cursor-pointer`}
+                        title="Open Folder from Device"
+                      >
+                        <FolderOpen className="w-3 h-3" />
+                        <span className="hidden sm:inline">Open Folder</span>
+                      </button>
+
+                      <button
+                        onClick={() => fileInputRef.current?.click()}
+                        className={`p-1.5 rounded-lg ${textSub} ${hoverBg} transition-colors cursor-pointer`}
+                        title="Upload Files"
+                      >
+                        <Upload className="w-3.5 h-3.5" />
+                      </button>
+
+                      <button
+                        onClick={handleCreateFile}
+                        className={`p-1.5 rounded-lg ${textSub} ${hoverBg} transition-colors cursor-pointer`}
+                        title="New File"
+                      >
+                        <FilePlus className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* File Tree / List */}
+                  <div className="flex-1 overflow-y-auto p-2">
+                    {files.length === 0 ? (
+                      <div className={`h-full flex flex-col items-center justify-center text-center p-6 ${textMuted}`}>
+                        <Folder className="w-10 h-10 mb-3 opacity-40 text-[#d97757]" />
+                        <p className="text-xs font-bold mb-1">No files in project yet</p>
+                        <p className="text-[11px] max-w-xs mb-3">Ask Codex AI in Chat to generate code, or click below to create a file manually.</p>
+                        <button
+                          onClick={handleCreateFile}
+                          className="px-3 py-1.5 rounded-xl bg-[#d97757] hover:bg-[#c86949] text-white text-xs font-bold cursor-pointer"
+                        >
+                          + Create New File
+                        </button>
+                      </div>
+                    ) : (
+                      renderTreeNode(fileTree, '')
+                    )}
+                  </div>
+
+                  {/* Built-in Code Editor */}
+                  {activeFile && !activeFile.isBinary && (
+                    <div className={`border-t ${border} flex flex-col ${isMoon ? 'bg-[#0a0b0e]' : 'bg-[#faf9f7]'} h-[50%] shrink-0`}>
+                      <div className={`h-9 px-3 border-b ${border} flex items-center justify-between shrink-0 ${bgHeader}`}>
+                        <div className="flex items-center gap-2 min-w-0">
+                          <FileCode className={`w-3.5 h-3.5 ${accent} shrink-0`} />
+                          <span className={`text-xs font-mono font-semibold ${textBright} truncate`}>
+                            {activeFile.path}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          {saveStatus === 'saving' && (
+                            <span className={`text-[10px] ${textSub} flex items-center gap-1`}>
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                              Saving...
+                            </span>
+                          )}
+                          {saveStatus === 'saved' && (
+                            <span className="text-[10px] text-emerald-500 flex items-center gap-1">
+                              ✓ Saved
+                            </span>
+                          )}
+                          <button
+                            onClick={handleSaveFile}
+                            className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold flex items-center gap-1 cursor-pointer transition-colors"
+                          >
+                            <Save className="w-3 h-3" />
+                            <span>Save</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      <textarea
+                        value={editingContent}
+                        onChange={(e) => setEditingContent(e.target.value)}
+                        className={`flex-1 w-full p-3 font-mono text-xs leading-relaxed border-none outline-none resize-none ${
+                          isMoon ? 'bg-[#0a0b0e] text-[#e8e8ea]' : 'bg-white text-[#1a1815]'
+                        }`}
+                        spellCheck={false}
+                      />
+                    </div>
+                  )}
                 </div>
               )}
             </div>
-          )}
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 3. GLOBAL MODALS (NEW PROJECT & DELETE CONFIRMATION)                      */}
+      {/* ========================================================================= */}
+
+      {/* NEW PROJECT MODAL */}
+      <AnimatePresence>
+        {showNewProjectModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className={`w-full max-w-sm rounded-3xl border p-5 shadow-2xl ${
+                isMoon ? 'bg-[#14151e] border-[#2b2d3e] text-white' : 'bg-white border-slate-200 text-slate-900'
+              }`}
+            >
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-xl bg-[#d97757]/20 border border-[#d97757]/40 flex items-center justify-center text-[#d97757]">
+                    <Layers className="w-4 h-4" />
+                  </div>
+                  <h3 className="font-extrabold text-sm">Add New Project</h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowNewProjectModal(false)}
+                  className="p-1 rounded-lg hover:bg-zinc-800/40 text-zinc-400 cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <p className="text-xs text-zinc-400 mb-3 leading-relaxed">
+                Create a clean, empty workspace with zero default boilerplate. You can chat with Codex AI to code any app or upload files.
+              </p>
+
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleCreateNewProject(newProjectName);
+                }}
+                className="space-y-3"
+              >
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-zinc-400 mb-1">
+                    Project Name
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={newProjectName}
+                    onChange={(e) => setNewProjectName(e.target.value)}
+                    placeholder="e.g. Portfolio, E-Commerce, Budget Tracker"
+                    className={`w-full px-3.5 py-2.5 rounded-xl border text-xs sm:text-sm font-medium outline-none focus:border-[#d97757] ${
+                      isMoon ? 'bg-[#1a1c28] border-[#2f3248] text-white' : 'bg-slate-50 border-slate-300 text-slate-900'
+                    }`}
+                    autoFocus
+                  />
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setShowNewProjectModal(false)}
+                    className="px-3 py-2 rounded-xl text-xs font-semibold text-zinc-400 hover:text-zinc-200 cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 rounded-xl bg-[#d97757] hover:bg-[#c86949] text-white text-xs font-bold cursor-pointer transition-colors shadow-sm"
+                  >
+                    Create Project
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* DELETE PROJECT IN-UI CONFIRMATION MODAL */}
+      <AnimatePresence>
+        {projectToDelete && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className={`w-full max-w-sm rounded-3xl border p-5 shadow-2xl ${
+                isMoon ? 'bg-[#14151e] border-[#2b2d3e] text-white' : 'bg-white border-slate-200 text-slate-900'
+              }`}
+            >
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 rounded-2xl bg-rose-500/20 text-rose-500 flex items-center justify-center shrink-0">
+                  <Trash2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-sm">Delete Project?</h3>
+                  <p className="text-xs text-zinc-400 leading-relaxed">
+                    "{projectToDelete.name}" and all of its files will be permanently deleted.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setProjectToDelete(null)}
+                  className="px-3.5 py-2 rounded-xl text-xs font-semibold text-zinc-400 hover:text-zinc-200 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const remaining = projects.filter((p) => p.id !== projectToDelete.id);
+                    setProjects(remaining);
+                    if (activeProjectId === projectToDelete.id) {
+                      if (remaining.length > 0) {
+                        setActiveProjectId(remaining[0].id);
+                        setSelectedFileId(remaining[0].files[0]?.id || '');
+                        setEditingContent(remaining[0].files[0]?.content || '');
+                      } else {
+                        setActiveProjectId('');
+                        setSelectedFileId('');
+                        setEditingContent('');
+                      }
+                    }
+                    setProjectToDelete(null);
+                  }}
+                  className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold cursor-pointer transition-colors shadow-sm"
+                >
+                  Delete Project
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

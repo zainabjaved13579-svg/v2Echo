@@ -142,26 +142,72 @@ export function generateEchoFallbackResponse(
     userText.includes('मालिक कौन')
   ) {
     if (isUrduScript || isRomanUrdu) {
-      return `### 💎 Sapphire AI کے خالق اور ڈویلپر (Creator & Developer)
+      return `### 💎 Sapphire AI کے خالق، ڈویلپر اور مالک (Creator & Owner)
 
-اس اے آئی (**Sapphire AI**) کو **زینب جاوید (Zainab Javed)** نے ڈیزائن، بنایا اور ڈویلپ کیا ہے۔
+اس اے آئی (**Sapphire AI**) کے خالق، ڈویلپر اور مالک **شاہیر حسن (Shaheer Hassan - shaheerhassan)** ہیں۔
 
-**زینب جاوید** نے مجھے جدید ترین مصنوعی ذہانت، خودکار کوڈنگ، اور اردو سمیت متعدد زبانوں میں روانی سے گفتگو کرنے کی صلاحیت کے ساتھ تیار کیا ہے۔`;
+**شاہیر حسن (shaheerhassan)** نے Sapphire AI کو جدید ترین مصنوعی ذہانت، خودکار کوڈنگ، اور ہر زبان میں ذہین گفتگو کی صلاحیتوں کے ساتھ فخر سے تیار کیا ہے!`;
     }
 
     if (isHindiScript || isHinglish) {
-      return `### 💎 Sapphire AI के निर्माता और डेवलपर (Creator & Developer)
+      return `### 💎 Sapphire AI के निर्माता, डेवलپر और मालिक (Creator & Owner)
 
-इस एआई (**Sapphire AI**) को **ज़ैनब जावेद (Zainab Javed)** ने विकसित, डिज़ाइन और तैयार किया है।
+इस एआई (**Sapphire AI**) के निर्माता, डेवलपर और मालिक **शाहीर हसन (Shaheer Hassan - shaheerhassan)** हैं।
 
-**ज़ैनब जावेद** ने मुझे उन्नत कोडिंग, बहुभाषी संवाद और शैक्षणिक बुद्धिमत्ता के साथ बनाया है।`;
+**शाहीर हसन (shaheerhassan)** ने Sapphire AI को उन्नत कोडिंग, बहुभाषी संवाद और आधुनिक क्षमताओं के साथ तैयार किया है।`;
     }
 
-    return `### 💎 AI Creator & Developer
+    return `### 💎 Creator, Developer & Owner
 
-**Sapphire AI** was created and developed by **Zainab Javed**.
+**Sapphire AI** was proudly created, developed, and is owned by **Shaheer Hassan** (\`shaheerhassan\`).
 
-**Zainab Javed** designed, developed, and engineered Sapphire AI to deliver elite autonomous intelligence, multi-file code generation, interactive live previews, natural human-like voice communication, and full-stack software development without artificial limits.`;
+**Shaheer Hassan** (\`shaheerhassan\`) engineered and built Sapphire AI to deliver elite autonomous intelligence, multi-file code generation, interactive live previews, natural human-like voice communication, and full-stack software development without artificial limits!`;
+  }
+
+  // User Name & Identity Query Recognition
+  if (
+    lower.includes('my name') ||
+    lower.includes('who am i') ||
+    lower.includes('what is my name') ||
+    lower.includes('do you know my name') ||
+    lower.includes('tell me my name') ||
+    lower.includes('mera naam') ||
+    lower.includes('mera name') ||
+    lower.includes('mera nam') ||
+    lower.includes('kya aap mera naam') ||
+    lower.includes('mujhe jante ho') ||
+    lower.includes('mujhe pehchante ho')
+  ) {
+    let currentUserName = '';
+    try {
+      const savedProfile = localStorage.getItem('echo_user_profile_v1');
+      if (savedProfile) {
+        const parsed = JSON.parse(savedProfile);
+        if (parsed?.name && parsed.name !== 'Guest User') {
+          currentUserName = parsed.name;
+        }
+      }
+      if (!currentUserName) {
+        const activeUserStr = localStorage.getItem('sapphire_active_user');
+        if (activeUserStr) {
+          const parsed = JSON.parse(activeUserStr);
+          if (parsed?.displayName && parsed.displayName !== 'Guest User') {
+            currentUserName = parsed.displayName;
+          }
+        }
+      }
+    } catch {}
+
+    if (currentUserName) {
+      if (isUrduScript || isRomanUrdu) {
+        return `### 👤 آپ کا نام (Your Name)
+
+جی ہاں! آپ کا نام **${currentUserName}** ہے۔ میں آپ کو اچھی طرح جانتا ہوں۔ فرمائیے ${currentUserName}، میں آج آپ کے لیے کیا کر سکتا ہوں؟`;
+      }
+      return `### 👤 Your Name
+
+Yes! Your name is **${currentUserName}**. How can I assist you today, ${currentUserName}?`;
+    }
   }
 
   // Urdu Language Response (Human-like, respectful, warm)
