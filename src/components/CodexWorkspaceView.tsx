@@ -73,6 +73,67 @@ interface CodexMessage {
   isStreaming?: boolean;
 }
 
+export type CodexEngineId = 'ultra-reasoning' | 'deep-omni' | 'heavy-turbo' | 'code-auditor';
+
+export interface CodexEngineConfig {
+  id: CodexEngineId;
+  name: string;
+  badge: string;
+  model: string;
+  description: string;
+  speed: string;
+  strength: string;
+  thinking: boolean;
+  color: string;
+}
+
+export const CODEX_ENGINES: Record<CodexEngineId, CodexEngineConfig> = {
+  'ultra-reasoning': {
+    id: 'ultra-reasoning',
+    name: 'Heavy Ultra Reasoning',
+    badge: 'Pro 3.1 Thinking',
+    model: 'gemini-3.1-pro-preview',
+    description: 'Deepest architectural planning, complex state machines & full-stack applications with 64K reasoning budget.',
+    speed: 'High Intelligence',
+    strength: 'Architecture & Full Apps',
+    thinking: true,
+    color: 'from-purple-600 to-indigo-600'
+  },
+  'deep-omni': {
+    id: 'deep-omni',
+    name: 'Heavy System Architect',
+    badge: 'Omni Synthesis',
+    model: 'gemini-3.1-pro-preview',
+    description: 'Multi-file cohesion, reactive states, beautiful CSS Grid layouts, and seamless logic flow.',
+    speed: 'Deep Multi-File',
+    strength: 'Production Aesthetics',
+    thinking: false,
+    color: 'from-blue-600 to-cyan-600'
+  },
+  'heavy-turbo': {
+    id: 'heavy-turbo',
+    name: 'Heavy Speed Turbo',
+    badge: 'Flash 3.8',
+    model: 'gemini-3.8-flash',
+    description: 'Instantaneous response times (~120 tokens/sec), rapid UI tweaking, and rapid code prototyping.',
+    speed: '120 tok/sec Ultra-Fast',
+    strength: 'Rapid Coding & UI',
+    thinking: false,
+    color: 'from-amber-600 to-[#d97757]'
+  },
+  'code-auditor': {
+    id: 'code-auditor',
+    name: 'Heavy Code Auditor',
+    badge: 'Shield Auditor',
+    model: 'gemini-3.8-flash',
+    description: 'Defensive code auditing, syntax repair, null-safety checks, and robust DOM event handling.',
+    speed: 'Real-time Guard',
+    strength: 'Bug-Free Verification',
+    thinking: true,
+    color: 'from-emerald-600 to-teal-600'
+  }
+};
+
 export interface CodexWorkspaceViewProps {
   settings: AppSettings;
   onUpdateSettings?: (settings: AppSettings) => void;

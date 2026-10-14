@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { ChatSession, UserProfile } from '../types';
 import { SAPPHIRE_LOGO_URL } from '../data/constants';
+import { SapphireBrandLogo } from './SapphireBrandLogo';
 import { useAppTheme } from '../context/ThemeContext';
 
 interface ChatSidebarProps {
@@ -126,11 +127,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
       <div className="px-4 pt-4 pb-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <img
-              src={SAPPHIRE_LOGO_URL}
-              alt="Sapphire AI"
-              className="w-7 h-7 rounded-lg object-contain p-0.5 border border-[#e8e2d8] bg-white"
-            />
+            <SapphireBrandLogo size={28} animated />
             <div className="flex items-center gap-1.5">
               <span className={`font-bold text-[15px] ${textBright} tracking-tight`}>
                 Sapphire
