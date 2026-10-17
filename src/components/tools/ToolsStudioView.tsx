@@ -13,31 +13,37 @@ import {
   Cpu,
   Layers,
   CheckCircle2,
-  PackageCheck
+  PackageCheck,
+  Zap,
+  FolderDown
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAppTheme } from '../../context/ThemeContext';
 import { AppSettings, UserProfile } from '../../types';
 import FileManagerTool from './FileManagerTool';
 import WebToNativeTool from './WebToNativeTool';
+import WebClonerTool from './WebClonerTool';
+import { SAPPHIRE_LEAD_DEVELOPER } from '../../data/constants';
 
 interface ToolsStudioViewProps {
   onClose?: () => void;
   settings?: AppSettings;
   userProfile?: UserProfile | null;
-  initialTool?: 'overview' | 'file-manager' | 'url-to-app';
+  initialTool?: 'overview' | 'file-manager' | 'url-to-app' | 'web-cloner';
+  onOpenInCodex?: (files: Record<string, string>) => void;
 }
 
 export const ToolsStudioView: React.FC<ToolsStudioViewProps> = ({
   onClose,
   settings,
   userProfile,
-  initialTool = 'overview'
+  initialTool = 'overview',
+  onOpenInCodex
 }) => {
   const { theme } = useAppTheme();
   const isMoon = theme === 'moon';
 
-  const [activeTool, setActiveTool] = useState<'overview' | 'file-manager' | 'url-to-app'>(initialTool);
+  const [activeTool, setActiveTool] = useState<'overview' | 'file-manager' | 'url-to-app' | 'web-cloner'>(initialTool);
 
   const bgMain = isMoon ? 'bg-[#0a0b0e]' : 'bg-[#faf9f7]';
   const bgHeader = isMoon ? 'bg-[#0e0f13]' : 'bg-white';
@@ -51,8 +57,8 @@ export const ToolsStudioView: React.FC<ToolsStudioViewProps> = ({
   return (
     <div className={`h-full w-full flex flex-col ${bgMain} ${isMoon ? 'text-zinc-100' : 'text-slate-800'} overflow-hidden font-['Plus_Jakarta_Sans',sans-serif]`}>
       {/* Top Header */}
-      <header className={`h-14 px-4 sm:px-6 border-b ${border} ${bgHeader} flex items-center justify-between shrink-0`}>
-        <div className="flex items-center gap-3">
+      <header className={`h-14 px-3 sm:px-6 border-b ${border} ${bgHeader} flex items-center justify-between shrink-0`}>
+        <div className="flex items-center gap-2 sm:gap-3">
           {onClose && (
             <button
               onClick={onClose}
@@ -64,15 +70,15 @@ export const ToolsStudioView: React.FC<ToolsStudioViewProps> = ({
             </button>
           )}
 
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-[#d97757]/15 border border-[#d97757]/30 flex items-center justify-center">
-              <Wrench className="w-4 h-4 text-[#d97757]" />
+          <div className="flex items-center gap-2 sm:gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center text-white shadow-sm">
+              <Wrench className="w-4 h-4" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className={`text-sm sm:text-base font-extrabold ${textBright}`}>Sapphire Tools Suite</span>
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#d97757]/15 text-[#d97757] font-bold">
-                  2 READY
+                <span className={`text-xs sm:text-base font-extrabold ${textBright}`}>Sapphire Tools Suite</span>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-400 border border-cyan-500/30 font-bold hidden xs:inline">
+                  3 ACTIVE
                 </span>
               </div>
             </div>
@@ -80,35 +86,45 @@ export const ToolsStudioView: React.FC<ToolsStudioViewProps> = ({
         </div>
 
         {/* Tab Switcher */}
-        <div className="flex items-center bg-black/10 dark:bg-white/10 rounded-xl p-0.5 border border-zinc-500/20 text-xs">
+        <div className="flex items-center bg-black/10 dark:bg-white/10 rounded-xl p-0.5 border border-zinc-500/20 text-xs overflow-x-auto max-w-[60%] sm:max-w-none">
           <button
             type="button"
             onClick={() => setActiveTool('overview')}
-            className={`px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer ${
+            className={`px-2.5 sm:px-3 py-1.5 rounded-lg font-bold transition-all cursor-pointer shrink-0 ${
               activeTool === 'overview' ? 'bg-[#d97757] text-white shadow-sm' : 'text-zinc-400 hover:text-zinc-200'
             }`}
           >
-            All Tools
+            All
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTool('web-cloner')}
+            className={`px-2.5 sm:px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition-all cursor-pointer shrink-0 ${
+              activeTool === 'web-cloner' ? 'bg-cyan-600 text-white shadow-sm' : 'text-zinc-400 hover:text-zinc-200'
+            }`}
+          >
+            <Zap className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Web Cloner</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTool('url-to-app')}
+            className={`px-2.5 sm:px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition-all cursor-pointer shrink-0 ${
+              activeTool === 'url-to-app' ? 'bg-blue-600 text-white shadow-sm' : 'text-zinc-400 hover:text-zinc-200'
+            }`}
+          >
+            <Globe className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Url to App (.exe)</span>
           </button>
           <button
             type="button"
             onClick={() => setActiveTool('file-manager')}
-            className={`px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+            className={`px-2.5 sm:px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition-all cursor-pointer shrink-0 ${
               activeTool === 'file-manager' ? 'bg-[#d97757] text-white shadow-sm' : 'text-zinc-400 hover:text-zinc-200'
             }`}
           >
             <HardDrive className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">File Manager</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTool('url-to-app')}
-            className={`px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
-              activeTool === 'url-to-app' ? 'bg-[#d97757] text-white shadow-sm' : 'text-zinc-400 hover:text-zinc-200'
-            }`}
-          >
-            <Globe className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Url to App</span>
           </button>
         </div>
       </header>
@@ -120,21 +136,128 @@ export const ToolsStudioView: React.FC<ToolsStudioViewProps> = ({
             {/* Hero Card */}
             <div className={`p-6 sm:p-8 rounded-3xl border ${border} ${bgCard} shadow-sm relative overflow-hidden`}>
               <div className="max-w-2xl space-y-2">
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-[#d97757]/20 text-[#d97757]">
-                  Developer & Productivity Suite
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-gradient-to-r from-sky-500/20 to-indigo-500/20 text-sky-400 border border-sky-500/30">
+                  Senior Architect Suite · Lead Developer: {SAPPHIRE_LEAD_DEVELOPER}
                 </span>
                 <h1 className={`text-2xl sm:text-3xl font-black ${textBright}`}>
-                  Professional Tools & Native Compilers
+                  Professional Engineering & Native Compilers
                 </h1>
                 <p className={`text-xs sm:text-sm ${textSub} leading-relaxed pt-1`}>
-                  Integrated utility suite built directly into Sapphire. Manage laptop files with AI refactoring and live disk synchronization, or convert any web application into native Windows (.exe) and Android (.apk) packages.
+                  Integrated utility suite built directly into Sapphire. Clone any website with deep asset harvesting, convert web applications into standalone Windows (.exe) binaries with 0% antivirus warnings, or command your local user directories with disk synchronization.
                 </p>
               </div>
             </div>
 
-            {/* Ready Tools Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Tool 1 Card: Sapphire File Commander */}
+            {/* Ready Tools Grid (3 Columns) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {/* Tool 1 Card: Ultra Web Cloner */}
+              <motion.div
+                whileHover={{ y: -3 }}
+                className={`p-6 rounded-3xl border ${border} ${bgCard} shadow-sm flex flex-col justify-between space-y-5 hover:border-cyan-500/50 transition-all`}
+              >
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="w-12 h-12 rounded-2xl bg-cyan-500/15 text-cyan-400 flex items-center justify-center">
+                      <Zap className="w-6 h-6" />
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-cyan-500/15 text-cyan-400 border border-cyan-500/30">
+                        ULTRA FIDELITY
+                      </span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className={`text-lg font-extrabold ${textBright} mb-1`}>
+                      Ultra Web Cloner
+                    </h3>
+                    <p className={`text-xs ${textSub} leading-relaxed`}>
+                      Clone any website URL into clean, modern, tracker-free code. Extracts HTML, bundles external stylesheets into <code className="font-mono text-cyan-400">style.css</code>, purges tracking telemetry, and provides multi-device live preview and instant ZIP export.
+                    </p>
+                  </div>
+
+                  <div className="space-y-1 text-xs text-zinc-400 pt-1">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-cyan-400" />
+                      <span>Deep CSS & asset harvesting with resolved relative URLs</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-cyan-400" />
+                      <span>Live responsive simulator: Desktop, Laptop, Tablet, Mobile</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-cyan-400" />
+                      <span>1-click Standalone ZIP Export + Direct Codex Import</span>
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveTool('web-cloner')}
+                  className="w-full py-3 px-4 rounded-2xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs sm:text-sm font-bold flex items-center justify-center gap-2 shadow-md shadow-cyan-600/20 transition-all cursor-pointer active:scale-95"
+                >
+                  <span>Launch Web Cloner</span>
+                  <ArrowRight className="w-4 h-4 ml-1" />
+                </button>
+              </motion.div>
+
+              {/* Tool 2 Card: WebToNative Studio (Url to App .exe) */}
+              <motion.div
+                whileHover={{ y: -3 }}
+                className={`p-6 rounded-3xl border ${border} ${bgCard} shadow-sm flex flex-col justify-between space-y-5 hover:border-blue-500/50 transition-all`}
+              >
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="w-12 h-12 rounded-2xl bg-blue-500/15 text-blue-400 flex items-center justify-center">
+                      <Globe className="w-6 h-6" />
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/15 text-blue-400 border border-blue-500/30">
+                        INSTANT .EXE
+                      </span>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                        0% VIRUS WARNING
+                      </span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h3 className={`text-lg font-extrabold ${textBright} mb-1`}>
+                      WebToNative Studio (Url to App)
+                    </h3>
+                    <p className={`text-xs ${textSub} leading-relaxed`}>
+                      Generate real standalone Windows executables (<code className="font-mono text-blue-400">.exe</code>) in under 1 second! Includes embedded site favicon, WebView2 runtime isolation, and authentic Win32 headers.
+                    </p>
+                  </div>
+
+                  <div className="space-y-1 text-xs text-zinc-400 pt-1">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-blue-400" />
+                      <span>Direct Standalone .EXE download + Safe Bundle (.zip)</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-blue-400" />
+                      <span>Zero SmartScreen false positives guarantee with unlock guide</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-blue-400" />
+                      <span>Ultra-fast generation engine with sub-second packaging</span>
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveTool('url-to-app')}
+                  className="w-full py-3 px-4 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white text-xs sm:text-sm font-bold flex items-center justify-center gap-2 shadow-md shadow-blue-600/20 transition-all cursor-pointer active:scale-95"
+                >
+                  <span>Launch Url to App (.exe)</span>
+                  <ArrowRight className="w-4 h-4 ml-1" />
+                </button>
+              </motion.div>
+
+              {/* Tool 3 Card: Sapphire File Commander */}
               <motion.div
                 whileHover={{ y: -3 }}
                 className={`p-6 rounded-3xl border ${border} ${bgCard} shadow-sm flex flex-col justify-between space-y-5 hover:border-[#d97757]/50 transition-all`}
@@ -146,35 +269,32 @@ export const ToolsStudioView: React.FC<ToolsStudioViewProps> = ({
                     </div>
                     <div className="flex items-center gap-1.5">
                       <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-500">
-                        LIVE DISK
-                      </span>
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/15 text-purple-400">
-                        AI MODIFIER
+                        C:\USERS READY
                       </span>
                     </div>
                   </div>
 
                   <div>
                     <h3 className={`text-lg font-extrabold ${textBright} mb-1`}>
-                      Sapphire File Commander (File Manager)
+                      Sapphire File Commander
                     </h3>
                     <p className={`text-xs ${textSub} leading-relaxed`}>
-                      Connect to your laptop directory (Desktop, Documents, Downloads, or code projects). Edit files directly on your disk, rename, change formats (CSV to JSON, Markdown to HTML), or command AI to rewrite and refactor files with live hard-drive writes.
+                      Mount your laptop directory (Desktop, Documents, Downloads, or user folders). Open entire directories recursively and set them as default workspace with direct hard-drive read/writes.
                     </p>
                   </div>
 
                   <div className="space-y-1 text-xs text-zinc-400 pt-1">
                     <div className="flex items-center gap-2">
                       <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-                      <span>Direct read/write access via File System Access API</span>
+                      <span>Open entire folders (Infinite - Personal / C:\Users)</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-                      <span>AI-powered format converter, refactorer, and renamer</span>
+                      <span>Set as Default Workspace with persistent memory</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-                      <span>Live file explorer with instant disk synchronization</span>
+                      <span>Senior AI refactoring & multi-format conversion</span>
                     </div>
                   </div>
                 </div>
@@ -188,73 +308,23 @@ export const ToolsStudioView: React.FC<ToolsStudioViewProps> = ({
                   <ArrowRight className="w-4 h-4 ml-1" />
                 </button>
               </motion.div>
-
-              {/* Tool 2 Card: WebToNative Studio */}
-              <motion.div
-                whileHover={{ y: -3 }}
-                className={`p-6 rounded-3xl border ${border} ${bgCard} shadow-sm flex flex-col justify-between space-y-5 hover:border-blue-500/50 transition-all`}
-              >
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="w-12 h-12 rounded-2xl bg-blue-500/15 text-blue-400 flex items-center justify-center">
-                      <Globe className="w-6 h-6" />
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/15 text-blue-400">
-                        WEBVIEW2 EXE
-                      </span>
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-400">
-                        ANDROID APK
-                      </span>
-                    </div>
-                  </div>
-
-                  <div>
-                    <h3 className={`text-lg font-extrabold ${textBright} mb-1`}>
-                      WebToNative Studio (Url to App)
-                    </h3>
-                    <p className={`text-xs ${textSub} leading-relaxed`}>
-                      Convert any website URL into a standalone, native Windows executable (<code className="font-mono text-amber-400">.exe</code>) with WebView2 runtime, AppUserModelID taskbar isolation, and binary byte patching, or assemble a valid signed Android package (<code className="font-mono text-emerald-400">.apk</code>).
-                    </p>
-                  </div>
-
-                  <div className="space-y-1 text-xs text-zinc-400 pt-1">
-                    <div className="flex items-center gap-2">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-blue-400" />
-                      <span>Native Win32 desktop window (no browser flags / --app=)</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-blue-400" />
-                      <span>Isolated Taskbar process identity & zero registry touches</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-blue-400" />
-                      <span>Android APK with Dalvik DEX bytecode & signed archive</span>
-                    </div>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => setActiveTool('url-to-app')}
-                  className="w-full py-3 px-4 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white text-xs sm:text-sm font-bold flex items-center justify-center gap-2 shadow-md shadow-blue-600/20 transition-all cursor-pointer active:scale-95"
-                >
-                  <span>Launch WebToNative Studio</span>
-                  <ArrowRight className="w-4 h-4 ml-1" />
-                </button>
-              </motion.div>
             </div>
           </div>
         )}
 
-        {/* Tool 1 Active View */}
-        {activeTool === 'file-manager' && (
-          <FileManagerTool settings={settings} userProfile={userProfile} />
+        {/* Tool 1 Active View: Web Cloner */}
+        {activeTool === 'web-cloner' && (
+          <WebClonerTool onOpenInCodex={onOpenInCodex} />
         )}
 
-        {/* Tool 2 Active View */}
+        {/* Tool 2 Active View: Url to App */}
         {activeTool === 'url-to-app' && (
           <WebToNativeTool />
+        )}
+
+        {/* Tool 3 Active View: File Manager */}
+        {activeTool === 'file-manager' && (
+          <FileManagerTool settings={settings} userProfile={userProfile} />
         )}
       </div>
     </div>

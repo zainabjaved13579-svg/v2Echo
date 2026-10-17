@@ -175,6 +175,27 @@ export const FileManagerTool: React.FC<FileManagerToolProps> = () => {
     }
   }, [selectedFileId]);
 
+  // Auto-restore default workspace on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('sapphire_default_workspace_v2');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed?.name && Array.isArray(parsed?.files) && parsed.files.length > 0) {
+          setRootFolderName(parsed.name);
+          setFiles(parsed.files);
+          setSelectedFileId(parsed.files[0].id);
+          setOpenFileIds(parsed.files.slice(0, 5).map((f: any) => f.id));
+          if (!parsed.files[0].isBinary) {
+            setEditingContent(parsed.files[0].content);
+          }
+          return;
+        }
+      }
+    } catch {}
+    handleLoadInfinitePersonalWorkspace(false);
+  }, []);
+
   // Build recursive directory tree
   const fileTree = useMemo(() => {
     const root: TreeNode = { name: rootFolderName || 'Laptop', path: '', isFolder: true, children: {} };
@@ -394,17 +415,40 @@ export const FileManagerTool: React.FC<FileManagerToolProps> = () => {
     if (scanned.length > 0) {
       setRootDirHandle({ name: detectedRoot } as any);
       setRootFolderName(detectedRoot);
-      setFiles((prev) => {
-        const existingPaths = new Set(prev.map((p) => p.path));
-        const filteredNew = scanned.filter((s) => !existingPaths.has(s.path));
-        return [...prev, ...filteredNew];
-      });
-      setSelectedFileId(scanned[0].id);
-      setOpenFileIds((prev) => Array.from(new Set([...prev, scanned[0].id])));
-      if (!scanned[0].isBinary) {
-        setEditingContent(scanned[0].content);
+      setFiles(scanned);
+
+      // Expand ALL folders so the entire tree opens up completely
+      const allFolderPaths: Record<string, boolean> = { '': true };
+      for (const f of scanned) {
+        const parts = f.path.split('/');
+        for (let k = 1; k < parts.length; k++) {
+          const fPath = parts.slice(0, k).join('/');
+          allFolderPaths[fPath] = true;
+        }
       }
-      showToast(`Loaded ${scanned.length} files from laptop!`);
+      setExpandedFolders(allFolderPaths);
+
+      // Auto-select primary entry file
+      const primaryFile = scanned.find((f) => /^(index\.html|src\/main\.tsx|src\/App\.tsx|server\.ts|package\.json)$/i.test(f.name || f.path)) || scanned.find((f) => !f.isBinary) || scanned[0];
+      if (primaryFile) {
+        setSelectedFileId(primaryFile.id);
+        setOpenFileIds([primaryFile.id]);
+        if (!primaryFile.isBinary) {
+          setEditingContent(primaryFile.content);
+        }
+      }
+
+      // Persist as permanent default workspace
+      try {
+        localStorage.setItem('sapphire_default_workspace_v2', JSON.stringify({
+          name: detectedRoot,
+          files: scanned
+        }));
+      } catch (err) {
+        console.warn('Storage quota notice when persisting workspace:', err);
+      }
+
+      showToast(`✨ Opened "${detectedRoot}" (${scanned.length} files) & set as default workspace!`);
     } else {
       showToast('No readable files selected.');
     }
@@ -627,9 +671,183 @@ body {
     showToast(`Mounted "${specificTarget}" with Downloads, Documents, Desktop & Projects!`);
   };
 
+  // Full User Workspace Loader: Infinite - Personal (Attachments, Desktop, Documents, Pictures, Downloads, Personal Vault)
+  const handleLoadInfinitePersonalWorkspace = (persistAsDefault = true) => {
+    const infiniteFiles: LocalDiskFile[] = [
+      // 1. Attachments
+      {
+        id: 'inf_attach_1',
+        name: 'invoice_october_2026.pdf',
+        path: 'Attachments/invoice_october_2026.pdf',
+        content: '[PDF Document - 820 KB] Official billing and compute infrastructure invoice for October 2026.',
+        size: 840000,
+        lastModified: Date.now() - 3600000,
+        isBinary: true
+      },
+      {
+        id: 'inf_attach_2',
+        name: 'contract_agreement.docx',
+        path: 'Attachments/contract_agreement.docx',
+        content: '[Word Document - 1.2 MB] Signed developer contract and architectural specifications.',
+        size: 1240000,
+        lastModified: Date.now() - 7200000,
+        isBinary: true
+      },
+
+      // 2. Desktop
+      {
+        id: 'inf_desk_1',
+        name: 'Project_Roadmap_2026.md',
+        path: 'Desktop/Project_Roadmap_2026.md',
+        content: `# Infinite - Personal Workspace Roadmap
+Architect & Lead Developer: Shaheer (Shaheer Hassan)
+
+## System Status
+- [x] Auto-load default user directory (Infinite - Personal)
+- [x] High-fidelity Ultra Web Cloner (DOM, CSS, JS bundles)
+- [x] Instant Native Windows (.exe) compilation (<1s, 0% virus warnings)
+- [x] Senior production-grade coding engine (No childish/toy code)
+- [x] Universal C:\\Users and Cloud Sync
+
+## Priority Milestones
+1. Maintain peak multi-file preview in Codex.
+2. Deploy production build to Asia-Southeast1 cloud cluster.`,
+        size: 580,
+        lastModified: Date.now() - 14400000
+      },
+      {
+        id: 'inf_desk_2',
+        name: 'Shaheer_Architecture_Design.tsx',
+        path: 'Desktop/Shaheer_Architecture_Design.tsx',
+        content: `export interface SystemArchitecture {
+  leadArchitect: 'Shaheer Hassan';
+  studio: 'Sapphire AI Studio';
+  nativePackaging: 'Win32 Native Binary + Android DEX';
+  webCloning: 'High-Fidelity DOM & Asset Scraper';
+  qualityMandate: '100% Senior Production Code';
+}`,
+        size: 320,
+        lastModified: Date.now() - 3600000
+      },
+
+      // 3. Documents
+      {
+        id: 'inf_doc_1',
+        name: 'Enterprise_Clients.json',
+        path: 'Documents/Enterprise_Clients.json',
+        content: `{
+  "workspace": "Infinite - Personal",
+  "leadDeveloper": "Shaheer",
+  "clients": [
+    { "id": 1, "company": "Apex Global Tech", "plan": "Enterprise Ultra", "status": "Active" },
+    { "id": 2, "company": "Nexus Systems", "plan": "Architect Suite", "status": "Active" },
+    { "id": 3, "company": "Vanguard Cloud", "plan": "Developer Max", "status": "Active" }
+  ],
+  "totalAccounts": 3
+}`,
+        size: 380,
+        lastModified: Date.now() - 43200000
+      },
+      {
+        id: 'inf_doc_2',
+        name: 'Financial_Projections_2026.csv',
+        path: 'Documents/Financial_Projections_2026.csv',
+        content: `Month,Revenue_USD,Compute_Cost,Net_Margin,Growth
+Jan,45000,12000,33000,15%
+Feb,58000,14000,44000,28%
+Mar,82000,18000,64000,41%
+Apr,115000,22000,93000,40%`,
+        size: 240,
+        lastModified: Date.now() - 86400000
+      },
+
+      // 4. Pictures
+      {
+        id: 'inf_pic_1',
+        name: 'sapphire_brand_logo.png',
+        path: 'Pictures/sapphire_brand_logo.png',
+        dataUrl: 'https://i.ibb.co/cSJdk808/icon.png',
+        content: '[Image Asset: sapphire_brand_logo.png]',
+        size: 48000,
+        lastModified: Date.now() - 172800000,
+        isBinary: true
+      },
+
+      // 5. Downloads
+      {
+        id: 'inf_down_1',
+        name: 'release_v2.5_stable.zip',
+        path: 'Downloads/release_v2.5_stable.zip',
+        content: '[ZIP Archive - 14.8 MB] Complete Sapphire production bundle.',
+        size: 15500000,
+        lastModified: Date.now() - 21600000,
+        isBinary: true
+      },
+      {
+        id: 'inf_down_2',
+        name: 'analytics_dump.csv',
+        path: 'Downloads/analytics_dump.csv',
+        content: `timestamp,event,latency_ms,status,user_tier
+2026-10-17T09:00:00Z,chat_completion,210,success,enterprise
+2026-10-17T09:01:15Z,web_clone,420,success,enterprise
+2026-10-17T09:02:40Z,exe_build,180,success,enterprise`,
+        size: 260,
+        lastModified: Date.now() - 5400000
+      },
+
+      // 6. Personal Vault
+      {
+        id: 'inf_vault_1',
+        name: 'vault_manifest.json',
+        path: 'Personal Vault/vault_manifest.json',
+        content: `{
+  "vaultId": "vault_infinite_shaheer",
+  "encryptionAlgorithm": "AES-GCM-256",
+  "owner": "Shaheer Hassan",
+  "protectedItems": 6,
+  "lastVerified": "2026-10-17"
+}`,
+        size: 190,
+        lastModified: Date.now() - 172800000
+      }
+    ];
+
+    setRootDirHandle({ name: 'Infinite - Personal' } as any);
+    setRootFolderName('Infinite - Personal');
+    setFiles(infiniteFiles);
+    setSelectedFileId(infiniteFiles[2].id);
+    setOpenFileIds(infiniteFiles.slice(0, 4).map((f) => f.id));
+    setEditingContent(infiniteFiles[2].content);
+
+    if (persistAsDefault) {
+      try {
+        localStorage.setItem(
+          'sapphire_default_workspace_v2',
+          JSON.stringify({ name: 'Infinite - Personal', files: infiniteFiles })
+        );
+      } catch {}
+      showToast('⭐ Loaded "Infinite - Personal" and set as Default Workspace!');
+    } else {
+      showToast('Loaded "Infinite - Personal" directory structure!');
+    }
+  };
+
+  // Set Current Workspace As Default
+  const handleSetAsDefaultWorkspace = () => {
+    try {
+      localStorage.setItem(
+        'sapphire_default_workspace_v2',
+        JSON.stringify({ name: rootFolderName || 'Infinite - Personal', files })
+      );
+      showToast(`⭐ "${rootFolderName || 'Workspace'}" saved as Default! It will open automatically whenever you launch Sapphire.`);
+    } catch {
+      showToast('Could not save default workspace.');
+    }
+  };
+
   // Sample Demo Project Loader
   const handleLoadDemoWorkspace = () => {
-    handleLoadCUsersWorkspace('C:/Users/User');
+    handleLoadInfinitePersonalWorkspace(true);
   };
 
   // Drag and Drop Handler
@@ -747,15 +965,44 @@ body {
         setRootFolderName(handle.name || 'Laptop Directory');
 
         const scanned = await scanDirectory(handle);
-        setFiles(scanned);
         if (scanned.length > 0) {
-          setSelectedFileId(scanned[0].id);
-          setOpenFileIds([scanned[0].id]);
-          setEditingContent(scanned[0].content);
+          setFiles(scanned);
+
+          // Expand ALL folders so the entire directory tree opens up completely
+          const allFolderPaths: Record<string, boolean> = { '': true };
+          for (const f of scanned) {
+            const parts = f.path.split('/');
+            for (let k = 1; k < parts.length; k++) {
+              const fPath = parts.slice(0, k).join('/');
+              allFolderPaths[fPath] = true;
+            }
+          }
+          setExpandedFolders(allFolderPaths);
+
+          // Auto-select primary entry file
+          const primaryFile = scanned.find((f) => /^(index\.html|src\/main\.tsx|src\/App\.tsx|server\.ts|package\.json)$/i.test(f.name || f.path)) || scanned.find((f) => !f.isBinary) || scanned[0];
+          if (primaryFile) {
+            setSelectedFileId(primaryFile.id);
+            setOpenFileIds([primaryFile.id]);
+            if (!primaryFile.isBinary) {
+              setEditingContent(primaryFile.content);
+            }
+          }
+
+          // Persist as default workspace
+          try {
+            localStorage.setItem('sapphire_default_workspace_v2', JSON.stringify({
+              name: handle.name || 'Laptop Directory',
+              files: scanned
+            }));
+          } catch (err) {
+            console.warn('Storage quota notice:', err);
+          }
+
+          setIsLoadingDir(false);
+          showToast(`✨ Opened "${handle.name}" (${scanned.length} files) & set as default workspace!`);
+          return;
         }
-        setIsLoadingDir(false);
-        showToast(`Connected to "${handle.name}" with ${scanned.length} files.`);
-        return;
       }
     } catch (err: any) {
       setIsLoadingDir(false);
@@ -1400,14 +1647,24 @@ TASK:
                 {/* Button 2: Upload Entire Folder */}
                 <button
                   type="button"
-                  onClick={() => folderInputRef.current?.click()}
+                  onClick={handleConnectDirectory}
                   disabled={isLoadingDir}
                   className="py-3.5 px-4 rounded-2xl bg-zinc-800 hover:bg-zinc-700 text-white text-xs sm:text-sm font-bold flex items-center justify-center gap-2 border border-zinc-700 shadow-md transition-all cursor-pointer active:scale-95"
                 >
                   <FolderOpen className="w-4 h-4 stroke-[2.5] text-[#d97757]" />
-                  <span>Upload Laptop Folder</span>
+                  <span>Upload / Open Laptop Folder</span>
                 </button>
               </div>
+
+              {/* Infinite - Personal Full Folder (Attachments, Desktop, Documents, Pictures, Downloads, Vault) */}
+              <button
+                type="button"
+                onClick={() => handleLoadInfinitePersonalWorkspace(true)}
+                className="w-full py-3.5 px-4 rounded-2xl bg-gradient-to-r from-cyan-600 via-blue-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white text-xs sm:text-sm font-bold flex items-center justify-center gap-2 shadow-lg shadow-cyan-900/30 transition-all cursor-pointer active:scale-95"
+              >
+                <HardDrive className="w-4 h-4 text-cyan-200" />
+                <span>Open Infinite - Personal User Folder (All Subfolders & Files) [Default]</span>
+              </button>
 
               {/* Instant C:\Users Mount Suite */}
               <button
@@ -1532,15 +1789,26 @@ TASK:
             </div>
 
             <div className="flex items-center gap-2 shrink-0">
-              {/* Quick C:\Users Switch / Mount */}
+              {/* Set Current as Default Workspace */}
               <button
                 type="button"
-                onClick={() => handleLoadCUsersWorkspace('C:/Users/User')}
-                className={`px-2.5 py-1.5 rounded-xl border border-sky-500/40 bg-sky-500/10 hover:bg-sky-500/20 text-sky-200 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer`}
-                title="Mount / Switch to C:\Users Folder"
+                onClick={handleSetAsDefaultWorkspace}
+                className="px-2.5 py-1.5 rounded-xl border border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                title="Make this folder your default workspace whenever you launch Sapphire"
               >
-                <Sparkles className="w-3.5 h-3.5 text-sky-400" />
-                <span className="hidden sm:inline">C:\Users</span>
+                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                <span className="hidden sm:inline">Set Default</span>
+              </button>
+
+              {/* Quick Infinite - Personal Switch */}
+              <button
+                type="button"
+                onClick={() => handleLoadInfinitePersonalWorkspace(true)}
+                className="px-2.5 py-1.5 rounded-xl border border-cyan-500/40 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-200 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                title="Load Infinite - Personal Folder Structure"
+              >
+                <HardDrive className="w-3.5 h-3.5 text-cyan-400" />
+                <span className="hidden sm:inline">Infinite - Personal</span>
               </button>
 
               {/* Export Full Workspace as ZIP */}

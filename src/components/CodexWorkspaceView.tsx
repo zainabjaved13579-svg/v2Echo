@@ -88,48 +88,48 @@ export interface CodexEngineConfig {
 }
 
 export const CODEX_ENGINES: Record<CodexEngineId, CodexEngineConfig> = {
+  'heavy-turbo': {
+    id: 'heavy-turbo',
+    name: 'Sapphire Flash New',
+    badge: '⚡ Flash Latest',
+    model: 'gemini-flash-latest',
+    description: 'Blazing sub-second response times, ultra-fast UI generation, and rapid multi-file prototyping.',
+    speed: 'Ultra-Fast New Model',
+    strength: 'Rapid Senior Coding & UI',
+    thinking: false,
+    color: 'from-amber-600 to-[#d97757]'
+  },
   'ultra-reasoning': {
     id: 'ultra-reasoning',
-    name: 'Heavy Ultra Reasoning',
-    badge: 'Pro 3.1 Thinking',
-    model: 'gemini-3.1-pro-preview',
-    description: 'Deepest architectural planning, complex state machines & full-stack applications with 64K reasoning budget.',
+    name: 'Heavy Senior Architect',
+    badge: 'Argon 4 Heavy',
+    model: 'gemini-4-argon',
+    description: 'Deepest enterprise architectural planning, complete complex state machines & full-scale applications.',
     speed: 'High Intelligence',
-    strength: 'Architecture & Full Apps',
+    strength: 'Enterprise Full-Stack Architecture',
     thinking: true,
     color: 'from-purple-600 to-indigo-600'
   },
   'deep-omni': {
     id: 'deep-omni',
-    name: 'Heavy System Architect',
-    badge: 'Omni Synthesis',
-    model: 'gemini-3.1-pro-preview',
+    name: 'Heavy System Synthesis',
+    badge: 'Flash 3.8 Ultra',
+    model: 'gemini-3.8-flash',
     description: 'Multi-file cohesion, reactive states, beautiful CSS Grid layouts, and seamless logic flow.',
     speed: 'Deep Multi-File',
     strength: 'Production Aesthetics',
     thinking: false,
     color: 'from-blue-600 to-cyan-600'
   },
-  'heavy-turbo': {
-    id: 'heavy-turbo',
-    name: 'Heavy Speed Turbo',
-    badge: 'Flash 3.8',
-    model: 'gemini-3.8-flash',
-    description: 'Instantaneous response times (~120 tokens/sec), rapid UI tweaking, and rapid code prototyping.',
-    speed: '120 tok/sec Ultra-Fast',
-    strength: 'Rapid Coding & UI',
-    thinking: false,
-    color: 'from-amber-600 to-[#d97757]'
-  },
   'code-auditor': {
     id: 'code-auditor',
     name: 'Heavy Code Auditor',
     badge: 'Shield Auditor',
-    model: 'gemini-3.8-flash',
+    model: 'gemini-flash-latest',
     description: 'Defensive code auditing, syntax repair, null-safety checks, and robust DOM event handling.',
     speed: 'Real-time Guard',
     strength: 'Bug-Free Verification',
-    thinking: true,
+    thinking: false,
     color: 'from-emerald-600 to-teal-600'
   }
 };
@@ -521,7 +521,28 @@ export const CodexWorkspaceView: React.FC<CodexWorkspaceViewProps> = ({
       });
       setExpandedFolders(folders);
 
+      // Persist as default workspace
+      try {
+        localStorage.setItem(
+          'sapphire_default_workspace_v2',
+          JSON.stringify({
+            name: dirHandle.name,
+            files: allFiles.map((f) => ({
+              id: f.id,
+              name: f.name,
+              path: f.path,
+              content: f.content,
+              size: f.size,
+              lastModified: f.lastModified,
+              isBinary: f.isBinary
+            }))
+          })
+        );
+      } catch {}
+
       setPreviewReloadKey((k) => k + 1);
+      setShowNotificationToast(`⭐ Opened "${dirHandle.name}" and saved as Default Workspace!`);
+      setTimeout(() => setShowNotificationToast(null), 4500);
     } catch (err: any) {
       if (err.name !== 'AbortError') {
         console.warn('Folder open error:', err);
@@ -1004,41 +1025,31 @@ ${html}
         .join('\n\n');
 
       const systemPrompt = `You are Codex Studio, an elite Principal Software Architect and Senior Full-Stack Engineer powered by Sapphire AI.
-You write world-class, production-ready, beautiful, bug-free, and fully functional software.
+MANDATORY CONSTITUTION: WRITE 100% PROFESSIONAL, PRODUCTION-GRADE, SENIOR ENTERPRISE CODE.
+NEVER write childish, basic, simplistic, or toy code ("bacho wali coding").
 
 [CREATOR & DEVELOPER IDENTITY]:
-Sapphire and Codex Studio were created, developed, and are owned by Shaheer Hassan (shaheerhassan). If asked who is your developer, creator, founder, or owner, proudly and clearly state that Shaheer Hassan (shaheerhassan) is the developer, creator, and owner of Sapphire and Codex Studio! (In Urdu/Roman Urdu: "Mujhe Shaheer Hassan (shaheerhassan) ne develop kiya hai, aur wahi Sapphire aur Codex Studio ke creator aur owner hain!").
+Sapphire and Codex Studio were created, developed, and are owned by Shaheer (Shaheer Hassan - shaheerhassan). If asked who is your developer, creator, founder, or owner, proudly and clearly state: "Shaheer is the developer, creator, and owner of Sapphire and Codex Studio!"
 
-[CODING LOGIC & HIGH-LEVEL ARCHITECTURE MANDATE - CRITICAL]:
-1. REAL FUNCTIONAL LOGIC (NO HALF-BAKED CODE OR PLACEHOLDERS):
-   - Never write placeholders, stubs, ellipses, or comments like "// TODO: add logic here", "// implement later", or "// ... rest of code".
-   - Every single button MUST perform its intended function with complete state updates.
-   - Every form MUST validate fields, provide instant visual feedback, and save data.
-   - Implement real calculations, state management, sorting, filtering, and search functionality.
-   - Persist state into localStorage with proper error handling and fallback defaults so user work is never lost on refresh.
-   - Write defensive, fault-tolerant JavaScript: wrap code in document.addEventListener('DOMContentLoaded', ...) or verify elements exist before querying/attaching listeners.
-   - Provide sound error handling, clear status toasts/banners, and graceful state handling.
-
-2. EXACT FILE PATHS & CLEAN NAMING IN THE RIGHT MANNER:
-   - Output each file in its own markdown code block with the exact relative file path on the code fence:
-     - HTML Entry: \`\`\`html index.html
-     - Styling: \`\`\`css style.css
-     - Logic: \`\`\`javascript script.js
-   - In index.html:
-     - Link CSS strictly as: <link rel="stylesheet" href="style.css">
-     - Link JS strictly as: <script src="script.js" defer></script>
-     - Do NOT use mismatched names (e.g., do not link "style.css" and then name the file "styles.css").
-   - If auxiliary files/directories are required (e.g. data/items.json or src/helpers.js), use exact, consistent relative paths in both the file definitions and in your code imports/fetch calls.
-
-3. MODERN VISUAL AESTHETICS & RESPONSIVENESS:
-   - Modern design system: clean typography, harmonious color palette, custom scrollbars, subtle box-shadows, responsive CSS Grid / Flexbox layouts, mobile-friendly touch targets, and dark/light adaptive accents.
-   - Include smooth transitions, active button press states (:active scale-95), and accessible focus rings.
+[ANTI-AMATEUR CODING DIRECTIVE - CRITICAL]:
+1. NO TOY OR DEMO CODE:
+   - Deliver rich, production-tier applications that look and feel like premium commercial software (e.g. Stripe, Linear, Notion, Airbnb).
+   - Use vibrant modern UI palettes, glassmorphism card surfaces, clean borders, crisp typography, and responsive layouts.
+   - Every single interactive feature must be fully functional. No dead buttons, no fake controls.
+2. FULL REAL STATE & PERSISTENCE:
+   - Full state management in JavaScript with localStorage persistence, undo/redo, real data filtering/sorting, search, and export.
+   - Complete input validation with instant visual error states and feedback toasts.
+   - Defensive JavaScript: verify DOM nodes exist, wrap event listeners cleanly.
+3. EXACT MULTI-FILE ARCHITECTURE:
+   - index.html: <link rel="stylesheet" href="style.css"> and <script src="script.js" defer></script>
+   - style.css: Modern CSS variables, complete reset, responsive media queries, card layouts, active button transitions.
+   - script.js: Deep, complete business logic without stubs or placeholders.
 
 Current Project: "${activeProject?.name || 'Workspace'}"
 Existing files in project:
 ${filesContext || '(Empty project - generate complete initial files: index.html, style.css, script.js)'}`;
 
-      const selectedModel = modelMode === 'reasoning' ? 'gemini-3.1-pro-preview' : 'gemini-3.8-flash';
+      const selectedModel = modelMode === 'reasoning' ? 'gemini-4-argon' : 'gemini-flash-latest';
 
       const response = await fetch('/api/chat/stream', {
         method: 'POST',

@@ -251,7 +251,7 @@ export const FileManagerModal: React.FC<FileManagerModalProps> = ({
               }
             ],
             systemInstruction:
-              'You are an expert web software engineer. Create complete, polished, bug-free multi-file projects with all HTML, CSS, and JS implemented.',
+              'You are Codex Studio, powered by Sapphire AI. MANDATORY DIRECTIVE: Output 100% PROFESSIONAL, PRODUCTION-GRADE, SENIOR ENTERPRISE CODE. NEVER write childish, basic, simplistic, or toy code ("bacho wali coding"). Implement rich responsive UI with modern CSS and deep JavaScript state, error handling, and zero stubs or placeholders. Shaheer Hassan (shaheerhassan) is the developer and creator.',
             onChunk: (chunk) => {
               accumulated = chunk;
             },
@@ -358,7 +358,7 @@ export const FileManagerModal: React.FC<FileManagerModalProps> = ({
             }
           ],
           systemInstruction:
-            'You are an expert coder. Modify the provided code accurately according to the user request. Output ONLY the complete, production-ready code inside a code block. Do not truncate or leave placeholders.',
+            'You are an expert Principal Engineer. Modify the provided code with 100% professional, senior enterprise quality. NEVER output childish or placeholder code ("bacho wali coding"). Output ONLY the complete, production-ready code inside a code block. Do not truncate or leave placeholders. Shaheer Hassan is your developer.',
           onChunk: (chunk) => {
             const match = chunk.match(/```(?:\w+)?\n([\s\S]*?)```/);
             if (match) updatedCode = match[1].trim();

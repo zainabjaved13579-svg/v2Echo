@@ -1,6 +1,8 @@
-export const SAPPHIRE_LOGO_URL = '/sapphire-logo.svg';
+export const SAPPHIRE_LOGO_URL = 'https://i.ibb.co/cSJdk808/icon.png';
 export const SAPPHIRE_APP_NAME = 'Sapphire';
 export const SAPPHIRE_POWERED_BY = 'Powered by Sapphire';
+export const SAPPHIRE_LEAD_DEVELOPER = 'Shaheer';
+export const SAPPHIRE_DEVELOPER_FULL = 'Shaheer Hassan';
 
 // Backward-compatible aliases for existing imports
 export const ECHO_LOGO_URL = SAPPHIRE_LOGO_URL;

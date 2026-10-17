@@ -133,7 +133,7 @@ export function downloadOfflinePwaPackage(): void {
 </head>
 <body>
   <div class="card">
-    <img src="https://i.ibb.co/pjrYmt1t/sapphire-Photoroom.png" width="64" height="64" style="border-radius: 1rem; margin-bottom: 1rem; object-fit: contain;" />
+    <img src="https://i.ibb.co/cSJdk808/icon.png" width="64" height="64" style="border-radius: 1rem; margin-bottom: 1rem; object-fit: contain;" />
     <h1>Sapphire Studio</h1>
     <p>Sapphire Progressive Web Application standalone launcher.</p>
     <a href="${window.location.origin}" class="btn" target="_blank">Launch Sapphire Online</a>

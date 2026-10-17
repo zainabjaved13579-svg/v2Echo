@@ -1,4 +1,5 @@
 {
+  "id": "/",
   "name": "Sapphire AI — #1 Education AI & Autonomous Codex Studio",
   "short_name": "Sapphire",
   "description": "Sapphire AI: The #1 Education AI, autonomous multi-file architecture, Codex app builder & global intelligent assistant.",
@@ -15,136 +16,40 @@
   "prefer_related_applications": false,
   "icons": [
     {
-      "src": "https://i.ibb.co/sd0GqTcS/sapphire-Photoroom.png",
-      "sizes": "72x72",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "https://i.ibb.co/sd0GqTcS/sapphire-Photoroom.png",
-      "sizes": "96x96",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "https://i.ibb.co/sd0GqTcS/sapphire-Photoroom.png",
-      "sizes": "128x128",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "https://i.ibb.co/sd0GqTcS/sapphire-Photoroom.png",
-      "sizes": "144x144",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "https://i.ibb.co/sd0GqTcS/sapphire-Photoroom.png",
-      "sizes": "152x152",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "https://i.ibb.co/sd0GqTcS/sapphire-Photoroom.png",
+      "src": "/pwa-192x192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "https://i.ibb.co/sd0GqTcS/sapphire-Photoroom.png",
-      "sizes": "256x256",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "https://i.ibb.co/sd0GqTcS/sapphire-Photoroom.png",
-      "sizes": "384x384",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "https://i.ibb.co/sd0GqTcS/sapphire-Photoroom.png",
+      "src": "/pwa-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "https://i.ibb.co/sd0GqTcS/sapphire-Photoroom.png",
-      "sizes": "any",
+      "src": "/pwa-maskable-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "https://i.ibb.co/cSJdk808/icon.png",
+      "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "https://i.ibb.co/sd0GqTcS/sapphire-Photoroom.png",
-      "sizes": "72x72",
-      "type": "image/png",
-      "purpose": "maskable"
-    },
-    {
-      "src": "https://i.ibb.co/sd0GqTcS/sapphire-Photoroom.png",
-      "sizes": "96x96",
-      "type": "image/png",
-      "purpose": "maskable"
-    },
-    {
-      "src": "https://i.ibb.co/sd0GqTcS/sapphire-Photoroom.png",
-      "sizes": "128x128",
-      "type": "image/png",
-      "purpose": "maskable"
-    },
-    {
-      "src": "https://i.ibb.co/sd0GqTcS/sapphire-Photoroom.png",
-      "sizes": "144x144",
-      "type": "image/png",
-      "purpose": "maskable"
-    },
-    {
-      "src": "https://i.ibb.co/sd0GqTcS/sapphire-Photoroom.png",
-      "sizes": "152x152",
-      "type": "image/png",
-      "purpose": "maskable"
-    },
-    {
-      "src": "https://i.ibb.co/sd0GqTcS/sapphire-Photoroom.png",
+      "src": "https://i.ibb.co/cSJdk808/icon.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "maskable"
+      "purpose": "any"
     },
     {
-      "src": "https://i.ibb.co/sd0GqTcS/sapphire-Photoroom.png",
-      "sizes": "256x256",
-      "type": "image/png",
-      "purpose": "maskable"
-    },
-    {
-      "src": "https://i.ibb.co/sd0GqTcS/sapphire-Photoroom.png",
-      "sizes": "384x384",
-      "type": "image/png",
-      "purpose": "maskable"
-    },
-    {
-      "src": "https://i.ibb.co/sd0GqTcS/sapphire-Photoroom.png",
+      "src": "https://i.ibb.co/cSJdk808/icon.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
-    },
-    {
-      "src": "https://i.ibb.co/sd0GqTcS/sapphire-Photoroom.png",
-      "sizes": "any",
-      "type": "image/png",
-      "purpose": "maskable"
-    },
-    {
-      "src": "https://i.ibb.co/sd0GqTcS/sapphire-Photoroom.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "monochrome"
-    },
-    {
-      "src": "https://i.ibb.co/sd0GqTcS/sapphire-Photoroom.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "monochrome"
     }
   ],
   "shortcuts": [
@@ -155,7 +60,7 @@
       "url": "/?action=new-chat",
       "icons": [
         {
-          "src": "https://i.ibb.co/sd0GqTcS/sapphire-Photoroom.png",
+          "src": "/pwa-192x192.png",
           "sizes": "192x192",
           "type": "image/png"
         }
@@ -168,7 +73,7 @@
       "url": "/?action=codex",
       "icons": [
         {
-          "src": "https://i.ibb.co/sd0GqTcS/sapphire-Photoroom.png",
+          "src": "/pwa-192x192.png",
           "sizes": "192x192",
           "type": "image/png"
         }
@@ -181,7 +86,7 @@
       "url": "/?action=workspace",
       "icons": [
         {
-          "src": "https://i.ibb.co/sd0GqTcS/sapphire-Photoroom.png",
+          "src": "/pwa-192x192.png",
           "sizes": "192x192",
           "type": "image/png"
         }
@@ -194,7 +99,7 @@
       "url": "/?action=settings",
       "icons": [
         {
-          "src": "https://i.ibb.co/sd0GqTcS/sapphire-Photoroom.png",
+          "src": "/pwa-192x192.png",
           "sizes": "192x192",
           "type": "image/png"
         }
@@ -203,15 +108,15 @@
   ],
   "screenshots": [
     {
-      "src": "https://i.ibb.co/sd0GqTcS/sapphire-Photoroom.png",
-      "sizes": "1280x720",
+      "src": "https://i.ibb.co/cSJdk808/icon.png",
+      "sizes": "512x512",
       "type": "image/png",
       "form_factor": "wide",
       "label": "Sapphire AI on Desktop"
     },
     {
-      "src": "https://i.ibb.co/sd0GqTcS/sapphire-Photoroom.png",
-      "sizes": "720x1280",
+      "src": "https://i.ibb.co/cSJdk808/icon.png",
+      "sizes": "512x512",
       "type": "image/png",
       "form_factor": "narrow",
       "label": "Sapphire AI on Mobile"
