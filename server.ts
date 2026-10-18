@@ -663,6 +663,85 @@ app.post('/api/tools/web-clone/export-zip', async (req, res) => {
   }
 });
 
+// Proxy Request for Developer API Tester Tool (bypasses CORS restrictions safely)
+app.post('/api/tools/proxy-request', async (req, res) => {
+  const startTime = Date.now();
+  try {
+    const { url, method = 'GET', headers = {}, body } = req.body || {};
+    if (!url || typeof url !== 'string' || !/^https?:\/\//i.test(url)) {
+      return res.status(400).json({ error: 'Valid HTTP/HTTPS URL is required' });
+    }
+
+    const cleanMethod = String(method).toUpperCase();
+    const forwardHeaders: Record<string, string> = {
+      'User-Agent': 'Sapphire-API-Tester/1.0',
+      'Accept': '*/*'
+    };
+
+    if (headers && typeof headers === 'object') {
+      for (const [k, v] of Object.entries(headers)) {
+        if (typeof v === 'string' && k.toLowerCase() !== 'host') {
+          forwardHeaders[k] = v;
+        }
+      }
+    }
+
+    const fetchOptions: RequestInit = {
+      method: cleanMethod,
+      headers: forwardHeaders
+    };
+
+    if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(cleanMethod) && body !== undefined && body !== null) {
+      fetchOptions.body = typeof body === 'string' ? body : JSON.stringify(body);
+      if (!forwardHeaders['Content-Type'] && !forwardHeaders['content-type']) {
+        (fetchOptions.headers as Record<string, string>)['Content-Type'] = 'application/json';
+      }
+    }
+
+    const ctrl = new AbortController();
+    const timeout = setTimeout(() => ctrl.abort(), 20000);
+    fetchOptions.signal = ctrl.signal;
+
+    const proxyRes = await fetch(url, fetchOptions);
+    clearTimeout(timeout);
+    const latencyMs = Date.now() - startTime;
+
+    const responseHeaders: Record<string, string> = {};
+    proxyRes.headers.forEach((val, key) => {
+      responseHeaders[key] = val;
+    });
+
+    const contentType = proxyRes.headers.get('content-type') || '';
+    let responseData: any;
+    if (contentType.includes('application/json')) {
+      try {
+        responseData = await proxyRes.json();
+      } catch {
+        responseData = await proxyRes.text();
+      }
+    } else {
+      responseData = await proxyRes.text();
+    }
+
+    res.json({
+      success: true,
+      status: proxyRes.status,
+      statusText: proxyRes.statusText,
+      latencyMs,
+      headers: responseHeaders,
+      data: responseData,
+      contentType
+    });
+  } catch (err: any) {
+    const latencyMs = Date.now() - startTime;
+    res.status(500).json({
+      success: false,
+      error: err.name === 'AbortError' ? 'Request timed out after 20s' : (err.message || 'Proxy request failed'),
+      latencyMs
+    });
+  }
+});
+
 // Build Safe Windows Desktop App Bundle (.zip) — 0% Google Chrome Antivirus Warning
 app.post('/api/build/windows-zip', async (req, res) => {
   try {

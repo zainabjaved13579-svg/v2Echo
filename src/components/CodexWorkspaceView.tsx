@@ -11,35 +11,45 @@ import {
   X,
   Globe,
   Code2,
-  ArrowUp,
-  Loader2,
   Smartphone,
   Monitor,
   ChevronLeft,
-  ChevronRight,
   ChevronDown,
+  ChevronRight,
   Upload,
   Save,
   Zap,
   Cpu,
   Laptop,
-  FolderUp,
-  FilePlus,
-  AlertCircle,
-  Layers,
-  Edit3,
   Check,
   Sparkles,
   Search,
   MessageSquare,
-  Eye,
   Play,
-  ArrowRight
+  ArrowRight,
+  FileText,
+  FileJson,
+  FilePlus,
+  FolderPlus,
+  ExternalLink,
+  Tablet,
+  Settings,
+  GitBranch,
+  AlertCircle,
+  Eye,
+  Columns,
+  Maximize2,
+  RotateCcw,
+  Layers,
+  Terminal,
+  Share2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import JSZip from 'jszip';
 import { AppSettings, UserProfile } from '../types';
 import { useAppTheme } from '../context/ThemeContext';
 import { getStoredApiKey } from '../services/geminiService';
+import { SAPPHIRE_LEAD_DEVELOPER } from '../data/constants';
 
 // ============================================================
 // TYPES
@@ -65,74 +75,21 @@ export interface CodexProject {
   files: LaptopFile[];
 }
 
+interface FileActionSummary {
+  path: string;
+  lines: number;
+  action: 'created' | 'updated';
+}
+
 interface CodexMessage {
   id: string;
   role: 'user' | 'assistant';
   text: string;
+  summary?: string;
+  actionFiles?: FileActionSummary[];
   timestamp: number;
   isStreaming?: boolean;
 }
-
-export type CodexEngineId = 'ultra-reasoning' | 'deep-omni' | 'heavy-turbo' | 'code-auditor';
-
-export interface CodexEngineConfig {
-  id: CodexEngineId;
-  name: string;
-  badge: string;
-  model: string;
-  description: string;
-  speed: string;
-  strength: string;
-  thinking: boolean;
-  color: string;
-}
-
-export const CODEX_ENGINES: Record<CodexEngineId, CodexEngineConfig> = {
-  'heavy-turbo': {
-    id: 'heavy-turbo',
-    name: 'Sapphire Flash New',
-    badge: '⚡ Flash Latest',
-    model: 'gemini-flash-latest',
-    description: 'Blazing sub-second response times, ultra-fast UI generation, and rapid multi-file prototyping.',
-    speed: 'Ultra-Fast New Model',
-    strength: 'Rapid Senior Coding & UI',
-    thinking: false,
-    color: 'from-amber-600 to-[#d97757]'
-  },
-  'ultra-reasoning': {
-    id: 'ultra-reasoning',
-    name: 'Heavy Senior Architect',
-    badge: 'Argon 4 Heavy',
-    model: 'gemini-4-argon',
-    description: 'Deepest enterprise architectural planning, complete complex state machines & full-scale applications.',
-    speed: 'High Intelligence',
-    strength: 'Enterprise Full-Stack Architecture',
-    thinking: true,
-    color: 'from-purple-600 to-indigo-600'
-  },
-  'deep-omni': {
-    id: 'deep-omni',
-    name: 'Heavy System Synthesis',
-    badge: 'Flash 3.8 Ultra',
-    model: 'gemini-3.8-flash',
-    description: 'Multi-file cohesion, reactive states, beautiful CSS Grid layouts, and seamless logic flow.',
-    speed: 'Deep Multi-File',
-    strength: 'Production Aesthetics',
-    thinking: false,
-    color: 'from-blue-600 to-cyan-600'
-  },
-  'code-auditor': {
-    id: 'code-auditor',
-    name: 'Heavy Code Auditor',
-    badge: 'Shield Auditor',
-    model: 'gemini-flash-latest',
-    description: 'Defensive code auditing, syntax repair, null-safety checks, and robust DOM event handling.',
-    speed: 'Real-time Guard',
-    strength: 'Bug-Free Verification',
-    thinking: false,
-    color: 'from-emerald-600 to-teal-600'
-  }
-};
 
 export interface CodexWorkspaceViewProps {
   settings: AppSettings;
@@ -142,10 +99,19 @@ export interface CodexWorkspaceViewProps {
   onOpenPreview?: (code: string, lang: string, filename?: string, files?: any[]) => void;
 }
 
+// Tree node structure for hierarchical explorer
+interface TreeNode {
+  name: string;
+  path: string;
+  isFolder: boolean;
+  children: TreeNode[];
+  file?: LaptopFile;
+}
+
 // ============================================================
-// HELPERS
+// HELPERS & FILE LANGUAGE DETECTION
 // ============================================================
-const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
 const LANGUAGE_MAP: Record<string, string> = {
   js: 'javascript', jsx: 'javascript', mjs: 'javascript', cjs: 'javascript',
@@ -153,32 +119,14 @@ const LANGUAGE_MAP: Record<string, string> = {
   html: 'html', htm: 'html',
   css: 'css', scss: 'scss', sass: 'scss', less: 'less',
   json: 'json', md: 'markdown', markdown: 'markdown',
-  py: 'python', java: 'java', cpp: 'cpp', cc: 'cpp', c: 'c', h: 'c',
-  php: 'php', rb: 'ruby', go: 'go', rs: 'rust',
+  py: 'python', java: 'java', cpp: 'cpp', c: 'c',
   sql: 'sql', xml: 'xml', svg: 'svg',
   yml: 'yaml', yaml: 'yaml', toml: 'toml',
-  sh: 'bash', bash: 'bash', zsh: 'bash',
-  txt: 'text', env: 'text', gitignore: 'text',
-  vue: 'vue', svelte: 'svelte', astro: 'astro'
+  sh: 'bash', bash: 'bash', txt: 'text', env: 'text'
 };
-
-const TEXT_EXTENSIONS = new Set([
-  'js', 'jsx', 'mjs', 'cjs', 'ts', 'tsx', 'html', 'htm', 'css', 'scss',
-  'sass', 'less', 'json', 'md', 'markdown', 'py', 'java', 'cpp', 'cc',
-  'c', 'h', 'hpp', 'php', 'rb', 'go', 'rs', 'sql', 'xml', 'svg',
-  'yml', 'yaml', 'toml', 'sh', 'bash', 'zsh', 'txt', 'env', 'gitignore',
-  'vue', 'svelte', 'astro', 'graphql', 'prisma', 'lock', 'config',
-  'editorconfig', 'prettierrc', 'eslintrc', 'babelrc'
-]);
 
 const getLanguage = (name: string): string => {
   const ext = name.split('.').pop()?.toLowerCase() || '';
-  if (!ext) {
-    const lower = name.toLowerCase();
-    if (lower === 'dockerfile') return 'dockerfile';
-    if (lower === 'makefile') return 'makefile';
-    return 'text';
-  }
   return LANGUAGE_MAP[ext] || 'text';
 };
 
@@ -186,415 +134,322 @@ const isTextFile = (name: string): boolean => {
   const ext = name.split('.').pop()?.toLowerCase() || '';
   if (!ext) {
     const lower = name.toLowerCase();
-    return ['dockerfile', 'makefile', 'readme', 'license'].includes(lower);
+    return ['dockerfile', 'makefile', 'readme', 'license', '.env', '.gitignore'].includes(lower);
   }
-  return TEXT_EXTENSIONS.has(ext);
+  return ext in LANGUAGE_MAP || ['txt', 'env', 'gitignore', 'config', 'lock'].includes(ext);
 };
 
 const normalizePath = (path: string): string => {
   return path.replace(/\\/g, '/').replace(/^\/+/, '');
 };
 
+// Default starter templates
+const STARTER_TEMPLATES: Record<string, LaptopFile[]> = {
+  web: [
+    {
+      id: 'init_html',
+      name: 'index.html',
+      path: 'index.html',
+      content: `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Modern Application</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-[#0b0f19] text-slate-100 min-h-screen flex items-center justify-center p-6 selection:bg-cyan-500/30">
+  <div class="max-w-md w-full bg-[#131b2e] border border-cyan-500/20 rounded-3xl p-8 shadow-2xl backdrop-blur-xl relative overflow-hidden">
+    <div class="absolute -right-12 -top-12 w-36 h-36 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none"></div>
+    <div class="flex items-center gap-3 mb-6">
+      <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center text-white shadow-lg shadow-cyan-500/20">
+        <i data-lucide="sparkles" class="w-5 h-5"></i>
+      </div>
+      <div>
+        <h1 class="text-xl font-bold text-white tracking-tight">Sapphire Codex</h1>
+        <p class="text-xs text-cyan-400 font-mono">Autonomous VS Code Studio</p>
+      </div>
+    </div>
+    <p class="text-slate-300 text-sm leading-relaxed mb-6">
+      Production-grade environment with live preview, Tailwind CSS, Lucide icons, and zero-lag streaming.
+    </p>
+    <div class="space-y-3">
+      <button id="cta-btn" class="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-semibold text-sm transition-all transform active:scale-95 shadow-lg shadow-cyan-500/25 flex items-center justify-center gap-2 cursor-pointer">
+        <i data-lucide="zap" class="w-4 h-4"></i>
+        <span>Test Interactive Action</span>
+      </button>
+      <div id="output-box" class="hidden p-3 rounded-xl bg-cyan-950/40 border border-cyan-800/40 text-xs text-cyan-200 font-mono text-center"></div>
+    </div>
+  </div>
+  <script src="script.js"></script>
+</body>
+</html>`,
+      language: 'html',
+      size: 1940,
+      lastModified: Date.now(),
+      status: 'ready'
+    },
+    {
+      id: 'init_css',
+      name: 'style.css',
+      path: 'style.css',
+      content: `/* Custom App Enhancements */
+@keyframes pulseGlow {
+  0%, 100% { opacity: 0.2; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(1.05); }
+}
+
+.glow-effect {
+  animation: pulseGlow 4s ease-in-out infinite;
+}`,
+      language: 'css',
+      size: 220,
+      lastModified: Date.now(),
+      status: 'ready'
+    },
+    {
+      id: 'init_js',
+      name: 'script.js',
+      path: 'script.js',
+      content: `// Interactive Application Logic
+document.addEventListener('DOMContentLoaded', () => {
+  if (window.lucide) {
+    window.lucide.createIcons();
+  }
+
+  const btn = document.getElementById('cta-btn');
+  const output = document.getElementById('output-box');
+  let clicks = 0;
+
+  btn?.addEventListener('click', () => {
+    clicks++;
+    if (output) {
+      output.classList.remove('hidden');
+      output.textContent = \`Interactive action executed! Total clicks: \${clicks}\`;
+    }
+  });
+});`,
+      language: 'javascript',
+      size: 470,
+      lastModified: Date.now(),
+      status: 'ready'
+    }
+  ]
+};
+
+// Build tree from flat files
+function buildFileTree(files: LaptopFile[]): TreeNode {
+  const root: TreeNode = { name: '', path: '', isFolder: true, children: [] };
+
+  files.forEach((file) => {
+    const parts = file.path.split('/');
+    let current = root;
+
+    for (let i = 0; i < parts.length; i++) {
+      const part = parts[i];
+      const isFile = i === parts.length - 1;
+      const currentPath = parts.slice(0, i + 1).join('/');
+
+      let existing = current.children.find((c) => c.name === part);
+      if (!existing) {
+        existing = {
+          name: part,
+          path: currentPath,
+          isFolder: !isFile,
+          children: [],
+          file: isFile ? file : undefined
+        };
+        current.children.push(existing);
+      }
+      current = existing;
+    }
+  });
+
+  // Sort folders first, then alphabetically
+  const sortNodes = (node: TreeNode) => {
+    node.children.sort((a, b) => {
+      if (a.isFolder === b.isFolder) {
+        return a.name.localeCompare(b.name);
+      }
+      return a.isFolder ? -1 : 1;
+    });
+    node.children.forEach(sortNodes);
+  };
+  sortNodes(root);
+
+  return root;
+}
+
 // ============================================================
-// COMPONENT
+// MAIN COMPONENT
 // ============================================================
 export const CodexWorkspaceView: React.FC<CodexWorkspaceViewProps> = ({
   settings,
   onClose
 }) => {
   const { theme } = useAppTheme();
-  const isMoon = theme === 'moon';
 
-  // ========== PROJECTS STATE (No forced default files!) ==========
+  // Projects State
   const [projects, setProjects] = useState<CodexProject[]>(() => {
     try {
-      const saved = localStorage.getItem('sapphire_codex_projects_v3');
+      const saved = localStorage.getItem('sapphire_codex_projects_v4');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       }
     } catch {}
-    // Clean initial project with NO default boilerplate files!
     return [
       {
         id: `proj_${Date.now()}`,
-        name: 'Project 1',
+        name: 'Sapphire App',
         createdAt: Date.now(),
         lastModified: Date.now(),
-        files: []
+        files: STARTER_TEMPLATES.web
       }
     ];
   });
 
   const [activeProjectId, setActiveProjectId] = useState<string>(() => {
     try {
-      const saved = localStorage.getItem('sapphire_codex_active_proj_id');
+      const saved = localStorage.getItem('sapphire_codex_active_proj_id_v4');
       if (saved) return saved;
     } catch {}
     return projects[0]?.id || `proj_${Date.now()}`;
   });
 
-  const [isProjectDropdownOpen, setIsProjectDropdownOpen] = useState(false);
-  const [showNewProjectModal, setShowNewProjectModal] = useState(false);
-  const [newProjectName, setNewProjectName] = useState('');
-  const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
-  const [editingProjectName, setEditingProjectName] = useState('');
-
-  // Active Project Reference
-  const activeProject = useMemo(() => {
-    return projects.find((p) => p.id === activeProjectId) || projects[0] || {
-      id: 'proj_fallback',
-      name: 'Project 1',
-      createdAt: Date.now(),
-      lastModified: Date.now(),
-      files: []
-    };
-  }, [projects, activeProjectId]);
-
-  const files = activeProject.files || [];
-
-  // Update active project files cleanly
-  const setFiles = useCallback((newFilesOrFn: LaptopFile[] | ((prev: LaptopFile[]) => LaptopFile[])) => {
-    setProjects((prevProjects) => {
-      return prevProjects.map((p) => {
-        if (p.id === activeProjectId) {
-          const nextFiles = typeof newFilesOrFn === 'function' ? newFilesOrFn(p.files) : newFilesOrFn;
-          return {
-            ...p,
-            files: nextFiles,
-            lastModified: Date.now()
-          };
-        }
-        return p;
-      });
-    });
-  }, [activeProjectId]);
-
-  const [selectedFileId, setSelectedFileId] = useState<string>(() => files[0]?.id || '');
-  const [editingContent, setEditingContent] = useState<string>('');
-  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
-  const [rootDirHandle, setRootDirHandle] = useState<any>(null);
-  const [folderName, setFolderName] = useState<string>('Virtual Workspace');
-  const [rightTab, setRightTab] = useState<'preview' | 'files'>('preview');
-  const [viewportMode, setViewportMode] = useState<'desktop' | 'mobile'>('desktop');
-  const [previewReloadKey, setPreviewReloadKey] = useState(0);
-  const [selectedHtmlFile, setSelectedHtmlFile] = useState<string>('');
-  const [messages, setMessages] = useState<CodexMessage[]>([]);
-  const [input, setInput] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [modelMode, setModelMode] = useState<'fast' | 'reasoning'>('fast');
-  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
-  const [viewMode, setViewMode] = useState<'dashboard' | 'workspace'>('dashboard');
-  const [mobileTab, setMobileTab] = useState<'chat' | 'preview' | 'files'>('chat');
-  const [projectSearchQuery, setProjectSearchQuery] = useState('');
-  const [projectToDelete, setProjectToDelete] = useState<CodexProject | null>(null);
-  const [showNotificationToast, setShowNotificationToast] = useState<string | null>(null);
-
-  const formatTimeAgo = useCallback((timestamp: number) => {
-    const diff = Math.max(0, Date.now() - timestamp);
-    const mins = Math.floor(diff / 60000);
-    if (mins < 1) return 'Just now';
-    if (mins < 60) return `${mins}m ago`;
-    const hours = Math.floor(mins / 3600000);
-    if (hours < 24) return `${hours}h ago`;
-    const days = Math.floor(hours / 24);
-    return `${days}d ago`;
-  }, []);
-
-  // ========== PERSIST PROJECTS ==========
+  // Save projects to localStorage
   useEffect(() => {
     try {
-      const serializableProjects = projects.map((p) => ({
-        ...p,
-        files: p.files.map(({ fileHandle, ...rest }) => rest)
-      }));
-      localStorage.setItem('sapphire_codex_projects_v3', JSON.stringify(serializableProjects));
-      localStorage.setItem('sapphire_codex_active_proj_id', activeProjectId);
-    } catch (err) {
-      console.warn('Failed to save projects to localStorage:', err);
-    }
+      localStorage.setItem('sapphire_codex_projects_v4', JSON.stringify(projects));
+      localStorage.setItem('sapphire_codex_active_proj_id_v4', activeProjectId);
+    } catch {}
   }, [projects, activeProjectId]);
 
-  // ========== REFS ==========
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const activeProject = useMemo(() => {
+    return projects.find((p) => p.id === activeProjectId) || projects[0];
+  }, [projects, activeProjectId]);
+
+  const files = activeProject?.files || [];
+
+  const setFiles = useCallback(
+    (newFilesOrFn: LaptopFile[] | ((prev: LaptopFile[]) => LaptopFile[])) => {
+      setProjects((prevProjects) => {
+        return prevProjects.map((p) => {
+          if (p.id === activeProjectId) {
+            const nextFiles = typeof newFilesOrFn === 'function' ? newFilesOrFn(p.files) : newFilesOrFn;
+            return {
+              ...p,
+              files: nextFiles,
+              lastModified: Date.now()
+            };
+          }
+          return p;
+        });
+      });
+    },
+    [activeProjectId]
+  );
+
+  // Layout View Modes:
+  // 'code': Editor only
+  // 'split': Editor + Live Preview side-by-side
+  // 'preview': Dedicated Full-Tab Live Preview inside the workspace!
+  const [viewMode, setViewMode] = useState<'code' | 'split' | 'preview'>('split');
+  const [activeActivityTab, setActiveActivityTab] = useState<'explorer' | 'search' | 'ai'>('explorer');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [previewViewport, setPreviewViewport] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
+  const [previewReloadKey, setPreviewReloadKey] = useState(0);
+
+  // Editor Tabs & Active File
+  const [openTabIds, setOpenTabIds] = useState<string[]>(() => {
+    return files.slice(0, 3).map((f) => f.id);
+  });
+  const [selectedFileId, setSelectedFileId] = useState<string>(() => files[0]?.id || '');
+  const [editingContent, setEditingContent] = useState<string>('');
+  const [cursorPosition, setCursorPosition] = useState({ line: 1, col: 1 });
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set(['src', 'components']));
+  const [rootDirHandle, setRootDirHandle] = useState<any>(null);
+
+  // New Project / Folder Modal
+  const [isNewProjectModalOpen, setIsNewProjectModalOpen] = useState(false);
+  const [newProjectName, setNewProjectName] = useState('');
+  const [newProjectTemplate, setNewProjectTemplate] = useState<'web' | 'empty'>('web');
+
+  // Search in Files State
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // AI Chat & Generation State
+  const [messages, setMessages] = useState<CodexMessage[]>([
+    {
+      id: 'welcome',
+      role: 'assistant',
+      text: 'Sapphire Codex AI Architect ready.',
+      summary: 'Ready to build high-performance multi-file web apps, clean components, and full pages.',
+      timestamp: Date.now()
+    }
+  ]);
+  const [inputPrompt, setInputPrompt] = useState('');
+  const [isLoadingAi, setIsLoadingAi] = useState(false);
+  const [aiStreamingStatus, setAiStreamingStatus] = useState<string | null>(null);
+  const [selectedModel, setSelectedModel] = useState<'gemini-flash-latest' | 'gemini-4-argon'>('gemini-flash-latest');
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Refs
+  const editorTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const lineGutterRef = useRef<HTMLDivElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
+  const chatBottomRef = useRef<HTMLDivElement>(null);
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // ========== COMPUTED ==========
-  const activeFile = useMemo(
-    () => files.find((f) => f.id === selectedFileId) || files[0],
-    [files, selectedFileId]
-  );
+  const activeFile = useMemo(() => {
+    return files.find((f) => f.id === selectedFileId) || files[0] || null;
+  }, [files, selectedFileId]);
 
-  const htmlFiles = useMemo(
-    () => files.filter((f) => f.name.endsWith('.html') || f.language === 'html'),
-    [files]
-  );
+  // Sync open tabs
+  useEffect(() => {
+    if (selectedFileId && !openTabIds.includes(selectedFileId)) {
+      setOpenTabIds((prev) => [...prev, selectedFileId]);
+    }
+  }, [selectedFileId]);
 
-  const cssFiles = useMemo(
-    () => files.filter((f) => f.name.endsWith('.css') || f.language === 'css'),
-    [files]
-  );
-
-  const jsFiles = useMemo(
-    () => files.filter((f) =>
-      f.name.endsWith('.js') || f.name.endsWith('.jsx') ||
-      f.name.endsWith('.mjs') || f.name.endsWith('.cjs') ||
-      f.name.endsWith('.ts') || f.name.endsWith('.tsx') ||
-      f.language === 'javascript' || f.language === 'typescript'
-    ),
-    [files]
-  );
-
-  // ========== EFFECTS ==========
-
-  // Sync editor content when active file changes
+  // Sync editor content
   useEffect(() => {
     if (activeFile && !activeFile.isBinary) {
       setEditingContent(activeFile.content);
     }
   }, [activeFile?.id]);
 
-  // Auto-select first HTML file
-  useEffect(() => {
-    if (!selectedHtmlFile && htmlFiles.length > 0) {
-      setSelectedHtmlFile(htmlFiles[0].name);
+  // Synchronize Line Gutter Scroll
+  const handleEditorScroll = () => {
+    if (editorTextareaRef.current && lineGutterRef.current) {
+      lineGutterRef.current.scrollTop = editorTextareaRef.current.scrollTop;
     }
-  }, [htmlFiles, selectedHtmlFile]);
+  };
 
-  // Persist files to localStorage (without fileHandle which is not serializable)
-  useEffect(() => {
-    try {
-      const serializable = files.map(({ fileHandle, ...rest }) => rest);
-      localStorage.setItem('sapphire_codex_files_v2', JSON.stringify(serializable));
-    } catch (err) {
-      console.warn('Failed to save files to localStorage:', err);
-    }
-  }, [files]);
+  // Cursor tracking
+  const handleEditorKeyUp = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    const textarea = e.currentTarget;
+    const selStart = textarea.selectionStart;
+    const textBefore = textarea.value.substring(0, selStart);
+    const lines = textBefore.split('\n');
+    setCursorPosition({
+      line: lines.length,
+      col: lines[lines.length - 1].length + 1
+    });
+  };
 
-  // Auto-scroll chat
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
-
-  // ========== AUTO-SAVE EDITOR CONTENT ==========
+  // Auto-Save Content with debounce
   useEffect(() => {
     if (!activeFile || activeFile.isBinary) return;
     if (editingContent === activeFile.content) return;
 
-    if (autoSaveTimerRef.current) {
-      clearTimeout(autoSaveTimerRef.current);
-    }
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
 
     autoSaveTimerRef.current = setTimeout(async () => {
       setSaveStatus('saving');
-      try {
-        // Update in-memory
-        setFiles((prev) =>
-          prev.map((f) =>
-            f.id === activeFile.id
-              ? { ...f, content: editingContent, size: editingContent.length, lastModified: Date.now(), status: 'modified' }
-              : f
-          )
-        );
-
-        // Save to laptop if we have the handle
-        if (activeFile.fileHandle) {
-          try {
-            const writable = await activeFile.fileHandle.createWritable();
-            await writable.write(editingContent);
-            await writable.close();
-          } catch (err) {
-            console.warn('Laptop save failed:', err);
-          }
-        }
-
-        setSaveStatus('saved');
-        setPreviewReloadKey((k) => k + 1);
-        setTimeout(() => setSaveStatus('idle'), 2000);
-      } catch (err) {
-        setSaveStatus('error');
-        setTimeout(() => setSaveStatus('idle'), 3000);
-      }
-    }, 1500); // 1.5s debounce
-
-    return () => {
-      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
-    };
-  }, [editingContent, activeFile?.id]);
-
-  // ========== FILE SYSTEM: READ DIRECTORY ==========
-  const readDirectoryRecursive = useCallback(
-    async (dirHandle: any, path = ''): Promise<LaptopFile[]> => {
-      const result: LaptopFile[] = [];
-      try {
-        for await (const entry of (dirHandle as any).values()) {
-          const [name, handle] = [entry.name, entry];
-          if (name.startsWith('.') || name === 'node_modules' || name === 'dist' || name === '.git') {
-            continue;
-          }
-
-          const fullPath = normalizePath(path ? `${path}/${name}` : name);
-
-          if (handle.kind === 'file') {
-            try {
-              const file = await handle.getFile();
-              if (file.size > MAX_FILE_SIZE) {
-                result.push({
-                  id: `f_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-                  name,
-                  path: fullPath,
-                  content: `[File too large: ${(file.size / 1024 / 1024).toFixed(2)} MB]`,
-                  language: getLanguage(name),
-                  size: file.size,
-                  lastModified: file.lastModified,
-                  status: 'ready',
-                  isBinary: true
-                });
-                continue;
-              }
-
-              const text = isTextFile(name) ? await file.text() : '';
-              result.push({
-                id: `f_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-                name,
-                path: fullPath,
-                content: text || '[Binary file - preview not available]',
-                language: getLanguage(name),
-                size: file.size,
-                lastModified: file.lastModified,
-                status: 'ready',
-                fileHandle: handle,
-                isBinary: !isTextFile(name)
-              });
-            } catch (e) {
-              console.warn(`Read file error ${fullPath}:`, e);
-            }
-          } else if (handle.kind === 'directory') {
-            const children = await readDirectoryRecursive(handle, fullPath);
-            result.push(...children);
-          }
-        }
-      } catch (e) {
-        console.warn(`Read directory error ${path}:`, e);
-      }
-      return result;
-    },
-    []
-  );
-
-  // ========== OPEN FOLDER ==========
-  const handleOpenFolder = async () => {
-    try {
-      if (!('showDirectoryPicker' in window)) {
-        setShowNotificationToast('Folder access requires Chrome, Edge, or Brave browser.');
-        setTimeout(() => setShowNotificationToast(null), 4000);
-        return;
-      }
-
-      const dirHandle = await (window as any).showDirectoryPicker({ mode: 'readwrite' });
-      if (!dirHandle) return;
-
-      setRootDirHandle(dirHandle);
-      setFolderName(dirHandle.name);
-
-      const allFiles = await readDirectoryRecursive(dirHandle);
-      if (allFiles.length === 0) {
-        setShowNotificationToast('Selected folder is empty.');
-        setTimeout(() => setShowNotificationToast(null), 3000);
-        return;
-      }
-
-      setFiles(allFiles);
-      setSelectedFileId(allFiles[0].id);
-
-      // Auto-expand folders
-      const folders = new Set<string>();
-      allFiles.forEach((f) => {
-        const parts = f.path.split('/');
-        let cur = '';
-        for (let i = 0; i < parts.length - 1; i++) {
-          cur = cur ? `${cur}/${parts[i]}` : parts[i];
-          folders.add(cur);
-        }
-      });
-      setExpandedFolders(folders);
-
-      // Persist as default workspace
-      try {
-        localStorage.setItem(
-          'sapphire_default_workspace_v2',
-          JSON.stringify({
-            name: dirHandle.name,
-            files: allFiles.map((f) => ({
-              id: f.id,
-              name: f.name,
-              path: f.path,
-              content: f.content,
-              size: f.size,
-              lastModified: f.lastModified,
-              isBinary: f.isBinary
-            }))
-          })
-        );
-      } catch {}
-
-      setPreviewReloadKey((k) => k + 1);
-      setShowNotificationToast(`⭐ Opened "${dirHandle.name}" and saved as Default Workspace!`);
-      setTimeout(() => setShowNotificationToast(null), 4500);
-    } catch (err: any) {
-      if (err.name !== 'AbortError') {
-        console.warn('Folder open error:', err);
-        alert('Could not open folder: ' + (err.message || 'Unknown error'));
-      }
-    }
-  };
-
-  // ========== UPLOAD FILES ==========
-  const handleUploadFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const uploaded = e.target.files;
-    if (!uploaded || uploaded.length === 0) return;
-
-    const newFiles: LaptopFile[] = [];
-    for (const file of Array.from(uploaded)) {
-      if (file.size > MAX_FILE_SIZE) continue;
-      const text = isTextFile(file.name) ? await file.text() : '';
-      const relPath = normalizePath((file as any).webkitRelativePath || file.name);
-
-      newFiles.push({
-        id: `up_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-        name: file.name,
-        path: relPath,
-        content: text || '[Binary file - preview not available]',
-        language: getLanguage(file.name),
-        size: file.size,
-        lastModified: file.lastModified || Date.now(),
-        status: 'created',
-        isBinary: !isTextFile(file.name)
-      });
-    }
-
-    setFiles((prev) => {
-      const merged = [...newFiles];
-      prev.forEach((p) => {
-        if (!newFiles.some((n) => n.path === p.path)) merged.push(p);
-      });
-      return merged;
-    });
-
-    if (newFiles.length > 0) setSelectedFileId(newFiles[0].id);
-    if (fileInputRef.current) fileInputRef.current.value = '';
-    if (folderInputRef.current) folderInputRef.current.value = '';
-    setPreviewReloadKey((k) => k + 1);
-  };
-
-  // ========== SAVE FILE (manual) ==========
-  const handleSaveFile = async () => {
-    if (!activeFile || activeFile.isBinary) return;
-    setSaveStatus('saving');
-
-    try {
       setFiles((prev) =>
         prev.map((f) =>
           f.id === activeFile.id
@@ -603,453 +458,598 @@ export const CodexWorkspaceView: React.FC<CodexWorkspaceViewProps> = ({
         )
       );
 
+      // Write directly to laptop disk if handle exists
       if (activeFile.fileHandle) {
-        const writable = await activeFile.fileHandle.createWritable();
-        await writable.write(editingContent);
-        await writable.close();
+        try {
+          const writable = await activeFile.fileHandle.createWritable();
+          await writable.write(editingContent);
+          await writable.close();
+        } catch {}
       }
 
       setSaveStatus('saved');
       setPreviewReloadKey((k) => k + 1);
       setTimeout(() => setSaveStatus('idle'), 2000);
-    } catch (err) {
-      console.error('Save error:', err);
-      setSaveStatus('error');
-      setTimeout(() => setSaveStatus('idle'), 3000);
+    }, 800);
+
+    return () => {
+      if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    };
+  }, [editingContent, activeFile?.id]);
+
+  // Keyboard shortcut Ctrl/Cmd+S
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        if (activeFile && !activeFile.isBinary) {
+          setFiles((prev) =>
+            prev.map((f) =>
+              f.id === activeFile.id
+                ? { ...f, content: editingContent, size: editingContent.length, lastModified: Date.now(), status: 'modified' }
+                : f
+            )
+          );
+          setSaveStatus('saved');
+          setPreviewReloadKey((k) => k + 1);
+          setTimeout(() => setSaveStatus('idle'), 1500);
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activeFile, editingContent]);
+
+  // ========== DIRECTORY & FOLDER HANDLING ==========
+  const scanDirectoryRecursive = async (dirHandle: any, currentPath = ''): Promise<LaptopFile[]> => {
+    const list: LaptopFile[] = [];
+    try {
+      for await (const entry of (dirHandle as any).values()) {
+        const name = entry.name;
+        if (name === 'node_modules' || name === '.git' || name === 'dist' || name === '.DS_Store') {
+          continue;
+        }
+
+        const fullPath = normalizePath(currentPath ? `${currentPath}/${name}` : name);
+
+        if (entry.kind === 'file') {
+          try {
+            const file = await entry.getFile();
+            if (file.size > MAX_FILE_SIZE) continue;
+            const text = isTextFile(name) ? await file.text() : '';
+            list.push({
+              id: `f_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+              name,
+              path: fullPath,
+              content: text || '[Binary / Media Asset]',
+              language: getLanguage(name),
+              size: file.size,
+              lastModified: file.lastModified,
+              fileHandle: entry,
+              isBinary: !isTextFile(name)
+            });
+          } catch {}
+        } else if (entry.kind === 'directory') {
+          const sub = await scanDirectoryRecursive(entry, fullPath);
+          list.push(...sub);
+        }
+      }
+    } catch {}
+    return list;
+  };
+
+  const handleOpenLaptopFolder = async () => {
+    try {
+      if ('showDirectoryPicker' in window) {
+        const handle = await (window as any).showDirectoryPicker({ mode: 'readwrite' });
+        if (!handle) return;
+
+        setRootDirHandle(handle);
+        const scanned = await scanDirectoryRecursive(handle);
+
+        if (scanned.length === 0) {
+          // Empty folder selected! Provide starter prompt or file
+          const initialFile: LaptopFile = {
+            id: `f_${Date.now()}`,
+            name: 'index.html',
+            path: 'index.html',
+            content: `<!DOCTYPE html>\n<html>\n<head>\n  <title>${handle.name}</title>\n  <script src="https://cdn.tailwindcss.com"></script>\n</head>\n<body class="bg-slate-900 text-white min-h-screen flex items-center justify-center p-6">\n  <div class="text-center">\n    <h1 class="text-2xl font-bold">${handle.name}</h1>\n    <p class="text-slate-400 mt-2">Folder opened. Ask Codex to build your application!</p>\n  </div>\n</body>\n</html>`,
+            language: 'html',
+            size: 350,
+            lastModified: Date.now()
+          };
+          const newProj: CodexProject = {
+            id: `proj_${Date.now()}`,
+            name: handle.name,
+            createdAt: Date.now(),
+            lastModified: Date.now(),
+            files: [initialFile]
+          };
+          setProjects((prev) => [newProj, ...prev]);
+          setActiveProjectId(newProj.id);
+          setSelectedFileId(initialFile.id);
+          setOpenTabIds([initialFile.id]);
+          setToastMessage(`Opened empty laptop folder "${handle.name}". Scaffold ready!`);
+          setTimeout(() => setToastMessage(null), 3000);
+          return;
+        }
+
+        const newProj: CodexProject = {
+          id: `proj_${Date.now()}`,
+          name: handle.name,
+          createdAt: Date.now(),
+          lastModified: Date.now(),
+          files: scanned
+        };
+        setProjects((prev) => [newProj, ...prev]);
+        setActiveProjectId(newProj.id);
+        setSelectedFileId(scanned[0].id);
+        setOpenTabIds([scanned[0].id]);
+
+        // Auto expand directories
+        const folders = new Set<string>();
+        scanned.forEach((f) => {
+          const parts = f.path.split('/');
+          for (let i = 1; i < parts.length; i++) {
+            folders.add(parts.slice(0, i).join('/'));
+          }
+        });
+        setExpandedFolders(folders);
+
+        setPreviewReloadKey((k) => k + 1);
+        setToastMessage(`Connected folder "${handle.name}" (${scanned.length} files)`);
+        setTimeout(() => setToastMessage(null), 3000);
+        return;
+      }
+    } catch (err: any) {
+      if (err.name === 'AbortError') return;
+    }
+
+    folderInputRef.current?.click();
+  };
+
+  const handleFolderInputChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const fileList = e.target.files;
+    if (!fileList || fileList.length === 0) return;
+
+    const scanned: LaptopFile[] = [];
+    let detectedRoot = 'Laptop Project';
+
+    for (let i = 0; i < fileList.length; i++) {
+      const file = fileList[i];
+      const relPath = normalizePath((file as any).webkitRelativePath || file.name);
+      if (relPath.includes('node_modules/') || relPath.includes('.git/')) continue;
+
+      const parts = relPath.split('/');
+      if (parts.length > 1 && detectedRoot === 'Laptop Project') {
+        detectedRoot = parts[0];
+      }
+
+      const text = isTextFile(file.name) ? await file.text() : '';
+      scanned.push({
+        id: `f_${Date.now()}_${i}`,
+        name: file.name,
+        path: relPath,
+        content: text || '[Binary / Media Asset]',
+        language: getLanguage(file.name),
+        size: file.size,
+        lastModified: file.lastModified,
+        isBinary: !isTextFile(file.name)
+      });
+    }
+
+    if (scanned.length > 0) {
+      const newProj: CodexProject = {
+        id: `proj_${Date.now()}`,
+        name: detectedRoot,
+        createdAt: Date.now(),
+        lastModified: Date.now(),
+        files: scanned
+      };
+      setProjects((prev) => [newProj, ...prev]);
+      setActiveProjectId(newProj.id);
+      setSelectedFileId(scanned[0].id);
+      setOpenTabIds([scanned[0].id]);
+
+      const folders = new Set<string>();
+      scanned.forEach((f) => {
+        const parts = f.path.split('/');
+        for (let i = 1; i < parts.length; i++) {
+          folders.add(parts.slice(0, i).join('/'));
+        }
+      });
+      setExpandedFolders(folders);
+
+      setPreviewReloadKey((k) => k + 1);
+      setToastMessage(`Loaded folder "${detectedRoot}" (${scanned.length} files)`);
+      setTimeout(() => setToastMessage(null), 3000);
     }
   };
 
-  // ========== CREATE NEW FILE ==========
-  const handleCreateFile = async () => {
-    const name = prompt('Enter filename (e.g., new-file.js):');
-    if (!name?.trim()) return;
-    const trimmed = normalizePath(name.trim());
+  // Create New Project Folder
+  const handleCreateNewProject = () => {
+    const name = newProjectName.trim() || 'New App';
+    const newFiles: LaptopFile[] =
+      newProjectTemplate === 'web'
+        ? STARTER_TEMPLATES.web.map((f, i) => ({
+            ...f,
+            id: `f_new_${Date.now()}_${i}`
+          }))
+        : [
+            {
+              id: `f_empty_${Date.now()}`,
+              name: 'index.html',
+              path: 'index.html',
+              content: `<!DOCTYPE html>\n<html>\n<head>\n  <title>${name}</title>\n</head>\n<body>\n  <h1>Welcome to ${name}</h1>\n</body>\n</html>`,
+              language: 'html',
+              size: 120,
+              lastModified: Date.now()
+            }
+          ];
+
+    const newProj: CodexProject = {
+      id: `proj_${Date.now()}`,
+      name,
+      createdAt: Date.now(),
+      lastModified: Date.now(),
+      files: newFiles
+    };
+
+    setProjects((prev) => [newProj, ...prev]);
+    setActiveProjectId(newProj.id);
+    setSelectedFileId(newFiles[0].id);
+    setOpenTabIds([newFiles[0].id]);
+    setIsNewProjectModalOpen(false);
+    setNewProjectName('');
+    setToastMessage(`Created project folder "${name}"`);
+    setTimeout(() => setToastMessage(null), 3000);
+  };
+
+  // ========== FILE OPERATIONS ==========
+  const handleCreateNewFile = (parentFolder = '') => {
+    const promptMsg = parentFolder
+      ? `Create file inside "${parentFolder}/" (e.g. Navbar.tsx):`
+      : 'File path/name (e.g. src/App.tsx, styles.css):';
+    const input = prompt(promptMsg);
+    if (!input?.trim()) return;
+
+    let fullPath = normalizePath(input.trim());
+    if (parentFolder && !fullPath.startsWith(parentFolder)) {
+      fullPath = normalizePath(`${parentFolder}/${fullPath}`);
+    }
+
+    const fileName = fullPath.split('/').pop() || fullPath;
 
     const newFile: LaptopFile = {
-      id: `new_${Date.now()}`,
-      name: trimmed.split('/').pop() || trimmed,
-      path: trimmed,
+      id: `file_${Date.now()}`,
+      name: fileName,
+      path: fullPath,
       content: '',
-      language: getLanguage(trimmed),
+      language: getLanguage(fileName),
       size: 0,
       lastModified: Date.now(),
       status: 'created'
     };
 
-    if (rootDirHandle) {
-      try {
-        const parts = trimmed.split('/');
-        let currentDir = rootDirHandle;
-        for (let i = 0; i < parts.length - 1; i++) {
-          currentDir = await currentDir.getDirectoryHandle(parts[i], { create: true });
-        }
-        const fileHandle = await currentDir.getFileHandle(parts[parts.length - 1], { create: true });
-        newFile.fileHandle = fileHandle;
-      } catch (err) {
-        console.warn('Could not create file in laptop folder:', err);
-      }
-    }
-
     setFiles((prev) => [newFile, ...prev]);
     setSelectedFileId(newFile.id);
+    if (!openTabIds.includes(newFile.id)) {
+      setOpenTabIds((prev) => [...prev, newFile.id]);
+    }
   };
 
-  // ========== DELETE FILE ==========
-  const handleDeleteFile = async (id: string, e: React.MouseEvent) => {
+  const handleCreateNewFolder = (parentFolder = '') => {
+    const promptMsg = parentFolder
+      ? `Create folder inside "${parentFolder}/":`
+      : 'Folder path/name (e.g. src/components):';
+    const folderInput = prompt(promptMsg);
+    if (!folderInput?.trim()) return;
+
+    let targetPath = normalizePath(folderInput.trim());
+    if (parentFolder && !targetPath.startsWith(parentFolder)) {
+      targetPath = normalizePath(`${parentFolder}/${targetPath}`);
+    }
+
+    // Auto add a placeholder .gitkeep or index file
+    const placeholder: LaptopFile = {
+      id: `file_${Date.now()}`,
+      name: '.gitkeep',
+      path: `${targetPath}/.gitkeep`,
+      content: '',
+      language: 'text',
+      size: 0,
+      lastModified: Date.now(),
+      status: 'created'
+    };
+
+    setFiles((prev) => [...prev, placeholder]);
+    setExpandedFolders((prev) => new Set([...prev, targetPath]));
+    setToastMessage(`Created folder "${targetPath}"`);
+    setTimeout(() => setToastMessage(null), 2500);
+  };
+
+  const handleCloseTab = (idToClose: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const nextTabs = openTabIds.filter((id) => id !== idToClose);
+    setOpenTabIds(nextTabs);
+    if (selectedFileId === idToClose) {
+      if (nextTabs.length > 0) {
+        setSelectedFileId(nextTabs[nextTabs.length - 1]);
+      } else {
+        setSelectedFileId('');
+        setEditingContent('');
+      }
+    }
+  };
+
+  const handleDeleteFile = (fileId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     if (files.length <= 1) {
-      alert('Keep at least one file in workspace.');
+      alert('Workspace must keep at least one file.');
       return;
     }
-    if (!confirm('Delete this file permanently from workspace?')) return;
+    const target = files.find((f) => f.id === fileId);
+    if (!confirm(`Delete "${target?.name || 'this file'}"?`)) return;
 
-    const file = files.find((f) => f.id === id);
-
-    // Try to delete from laptop folder
-    if (file?.fileHandle && rootDirHandle) {
-      try {
-        const pathParts = file.path.split('/');
-        let currentDir = rootDirHandle;
-        for (let i = 0; i < pathParts.length - 1; i++) {
-          currentDir = await currentDir.getDirectoryHandle(pathParts[i]);
-        }
-        await currentDir.removeEntry(pathParts[pathParts.length - 1]);
-      } catch (err) {
-        console.warn('Could not delete from laptop:', err);
-      }
-    }
-
-    const remaining = files.filter((f) => f.id !== id);
+    const remaining = files.filter((f) => f.id !== fileId);
     setFiles(remaining);
-    if (selectedFileId === id) setSelectedFileId(remaining[0].id);
-    setPreviewReloadKey((k) => k + 1);
+    setOpenTabIds((prev) => prev.filter((id) => id !== fileId));
+    if (selectedFileId === fileId) {
+      setSelectedFileId(remaining[0]?.id || '');
+    }
   };
 
-  // ========== FILE TREE ==========
-  const fileTree = useMemo(() => {
-    const tree: any = { name: 'root', children: {} };
-    files.forEach((file) => {
-      const parts = file.path.split('/');
-      let current = tree;
-      for (let i = 0; i < parts.length - 1; i++) {
-        const folder = parts[i];
-        if (!current.children[folder]) {
-          current.children[folder] = { name: folder, isFolder: true, children: {} };
+  // Export full project as VS Code Zip package
+  const handleExportVsCodeZip = async () => {
+    try {
+      const zip = new JSZip();
+
+      // Add all project files
+      files.forEach((f) => {
+        if (!f.isBinary) {
+          zip.file(f.path, f.content);
         }
-        current = current.children[folder];
-      }
-      current.children[parts[parts.length - 1]] = {
-        name: parts[parts.length - 1],
-        isFolder: false,
-        file
-      };
-    });
-    return tree;
-  }, [files]);
-
-  const toggleFolder = (path: string) => {
-    setExpandedFolders((prev) => {
-      const next = new Set(prev);
-      if (next.has(path)) next.delete(path);
-      else next.add(path);
-      return next;
-    });
-  };
-
-  // ========== RENDER FILE TREE ==========
-  const renderTreeNode = (node: any, currentPath: string, depth: number = 0) => {
-    const entries = Object.values(node.children || {}).sort((a: any, b: any) => {
-      if (a.isFolder && !b.isFolder) return -1;
-      if (!a.isFolder && b.isFolder) return 1;
-      return a.name.localeCompare(b.name);
-    });
-
-    return entries.map((entry: any) => {
-      const fullPath = currentPath ? `${currentPath}/${entry.name}` : entry.name;
-
-      if (entry.isFolder) {
-        const isExpanded = expandedFolders.has(fullPath);
-        return (
-          <div key={fullPath}>
-            <div
-              onClick={() => toggleFolder(fullPath)}
-              className={`flex items-center gap-1.5 px-2 py-1 rounded-lg ${hoverBg} cursor-pointer ${textSub} text-xs`}
-              style={{ paddingLeft: `${depth * 12 + 8}px` }}
-            >
-              {isExpanded ? (
-                <ChevronDown className="w-3.5 h-3.5 shrink-0" />
-              ) : (
-                <ChevronRight className="w-3.5 h-3.5 shrink-0" />
-              )}
-              {isExpanded ? (
-                <FolderOpen className="w-3.5 h-3.5 shrink-0 text-[#d97757]" />
-              ) : (
-                <Folder className="w-3.5 h-3.5 shrink-0 text-[#d97757]" />
-              )}
-              <span className="truncate font-medium">{entry.name}</span>
-            </div>
-            {isExpanded && (
-              <div>{renderTreeNode(entry, fullPath, depth + 1)}</div>
-            )}
-          </div>
-        );
-      }
-
-      const isSelected = selectedFileId === entry.file.id;
-      return (
-        <div
-          key={fullPath}
-          onClick={() => setSelectedFileId(entry.file.id)}
-          className={`group flex items-center justify-between gap-1 px-2 py-1 rounded-lg cursor-pointer text-xs ${
-            isSelected
-              ? `${bgCard} ${textBright} font-semibold shadow-sm`
-              : `${textSub} ${hoverBg}`
-          }`}
-          style={{ paddingLeft: `${depth * 12 + 8}px` }}
-          title={entry.file.path}
-        >
-          <div className="flex items-center gap-1.5 min-w-0 flex-1">
-            <FileCode className={`w-3.5 h-3.5 shrink-0 ${isSelected ? 'text-[#d97757]' : textMuted}`} />
-            <span className="truncate">{entry.name}</span>
-          </div>
-          <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                const blob = new Blob([entry.file.content], { type: 'text/plain' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = entry.file.name;
-                a.click();
-                URL.revokeObjectURL(url);
-              }}
-              className={`p-1 rounded ${textMuted} hover:text-[#d97757] transition-colors cursor-pointer`}
-              title="Download"
-            >
-              <Download className="w-3 h-3" />
-            </button>
-            {files.length > 1 && (
-              <button
-                onClick={(e) => handleDeleteFile(entry.file.id, e)}
-                className={`p-1 rounded ${textMuted} hover:text-red-400 transition-colors cursor-pointer`}
-                title="Delete"
-              >
-                <Trash2 className="w-3 h-3" />
-              </button>
-            )}
-          </div>
-        </div>
-      );
-    });
-  };
-
-  // ========== LIVE PREVIEW (ALL FILES COMBINED) ==========
-  const livePreviewDoc = useMemo(() => {
-    const htmlFile =
-      files.find((f) => f.name === selectedHtmlFile) ||
-      htmlFiles[0] ||
-      files.find((f) => f.name.endsWith('.html') || f.language === 'html');
-
-    if (!htmlFile) {
-      if (files.length === 0) {
-        return `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${activeProject?.name || 'Workspace'}</title>
-  <style>
-    * { margin:0; padding:0; box-sizing:border-box; }
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: radial-gradient(circle at 50% 30%, #1e1f29 0%, #0d0e13 100%);
-      color: #ede8e1;
-      padding: 24px;
-      text-align: center;
-    }
-    .card {
-      max-width: 440px;
-      padding: 36px 28px;
-      background: rgba(255, 255, 255, 0.04);
-      border: 1px solid rgba(217, 119, 87, 0.3);
-      border-radius: 24px;
-      box-shadow: 0 20px 50px rgba(0,0,0,0.6);
-      backdrop-filter: blur(12px);
-    }
-    .badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 5px 14px;
-      border-radius: 999px;
-      background: rgba(217, 119, 87, 0.18);
-      border: 1px solid rgba(217, 119, 87, 0.5);
-      color: #ffaa8a;
-      font-size: 11px;
-      font-weight: 800;
-      letter-spacing: 0.5px;
-      text-transform: uppercase;
-      margin-bottom: 16px;
-    }
-    h1 {
-      font-size: 22px;
-      font-weight: 800;
-      color: #ffffff;
-      margin-bottom: 8px;
-    }
-    p {
-      font-size: 13px;
-      color: #a0a3af;
-      line-height: 1.6;
-      margin-bottom: 20px;
-    }
-    .tips {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      text-align: left;
-    }
-    .tip {
-      padding: 10px 14px;
-      background: rgba(255, 255, 255, 0.03);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 12px;
-      font-size: 12px;
-      color: #d1d5db;
-    }
-    .tip strong { color: #ff9e7d; }
-  </style>
-</head>
-<body>
-  <div class="card">
-    <div class="badge">🚀 Clean Project Workspace</div>
-    <h1>${activeProject?.name || 'My Project'}</h1>
-    <p>Zero boilerplate clutter. Ask Codex on the left to code your app from scratch, or click <strong>New File</strong> to start typing!</p>
-    <div class="tips">
-      <div class="tip">💬 <strong>AI Coding:</strong> Type your prompt to generate full HTML, CSS & JS.</div>
-      <div class="tip">📁 <strong>Multi-Project:</strong> Create & switch between unlimited projects anytime.</div>
-    </div>
-  </div>
-</body>
-</html>`;
-      }
-
-      return `<!DOCTYPE html>
-<html>
-<body style="font-family:system-ui;padding:40px;text-align:center;background:#181922;color:#999;">
-  <div style="max-width:400px;margin:auto;">
-    <div style="font-size:48px;margin-bottom:16px;">📄</div>
-    <h2 style="color:#eee;font-size:18px;margin-bottom:8px;">No HTML file found</h2>
-    <p style="font-size:13px;color:#888;">Create an <code>index.html</code> file or ask Codex to generate one for live preview.</p>
-  </div>
-</body>
-</html>`;
-    }
-
-    let html = htmlFile.content;
-
-    // Wrap if not full HTML
-    if (!html.toLowerCase().includes('<html')) {
-      html = `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${htmlFile.name}</title>
-</head>
-<body>
-${html}
-</body>
-</html>`;
-    }
-
-    // Remove existing external references to avoid duplication
-    html = html.replace(/<link[^>]*rel=["']stylesheet["'][^>]*>/gi, '');
-    html = html.replace(/<script[^>]*src=["'][^"']+\.(?:js|jsx|ts|tsx|mjs|cjs)["'][^>]*>\s*<\/script>/gi, '');
-
-    // Remove previous injections
-    html = html.replace(/<style data-injected[^>]*>[\s\S]*?<\/style>/gi, '');
-    html = html.replace(/<script data-injected[^>]*>[\s\S]*?<\/script>/gi, '');
-
-    // Inject all CSS files
-    const otherCssFiles = cssFiles.filter((c) => c.id !== htmlFile.id && !c.isBinary);
-    if (otherCssFiles.length > 0) {
-      const cssBundle = otherCssFiles
-        .map((c) => `/* ═══════ ${c.path} ═══════ */\n${c.content}`)
-        .join('\n\n');
-
-      const styleTag = `<style data-injected="css-bundle">\n${cssBundle}\n</style>`;
-
-      if (html.includes('</head>')) {
-        html = html.replace('</head>', `${styleTag}\n</head>`);
-      } else if (html.match(/<body[^>]*>/i)) {
-        html = html.replace(/(<body[^>]*>)/i, `<head>${styleTag}</head>\n$1`);
-      } else {
-        html = `${styleTag}\n${html}`;
-      }
-    }
-
-    // Inject all JS files with isolated execution guards
-    const otherJsFiles = jsFiles.filter((j) => j.id !== htmlFile.id && !j.isBinary);
-    if (otherJsFiles.length > 0) {
-      const jsBundle = otherJsFiles
-        .map((j) => `/* ═══════ ${j.path} ═══════ */\ntry {\n${j.content}\n} catch (err) { console.error('[${j.name}]', err); }`)
-        .join('\n\n');
-
-      const scriptTag = `<script data-injected="js-bundle">\n${jsBundle}\n<\/script>`;
-
-      if (html.includes('</body>')) {
-        html = html.replace('</body>', `${scriptTag}\n</body>`);
-      } else {
-        html = `${html}\n${scriptTag}`;
-      }
-    }
-
-    // Error overlay
-    const errorOverlay = `<script>
-      window.addEventListener('error', function(e) {
-        var overlay = document.getElementById('__preview_error');
-        if (!overlay) {
-          overlay = document.createElement('div');
-          overlay.id = '__preview_error';
-          overlay.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:#dc2626;color:white;padding:10px;font-family:monospace;font-size:11px;z-index:999999;max-height:100px;overflow:auto;';
-          if (document.body) document.body.appendChild(overlay);
-        }
-        overlay.innerHTML += '⚠️ ' + e.message + '<br>';
       });
-    <\/script>`;
+
+      // Add standard VS Code configurations
+      zip.folder('.vscode')?.file(
+        'settings.json',
+        JSON.stringify(
+          {
+            'editor.tabSize': 2,
+            'editor.formatOnSave': true,
+            'files.autoSave': 'afterDelay',
+            'files.autoSaveDelay': 1000
+          },
+          null,
+          2
+        )
+      );
+
+      const blob = await zip.generateAsync({ type: 'blob' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${activeProject.name.toLowerCase().replace(/\s+/g, '-')}-vscode.zip`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      setToastMessage('Exported complete project for VS Code (.zip)');
+      setTimeout(() => setToastMessage(null), 3000);
+    } catch {
+      alert('Error exporting ZIP');
+    }
+  };
+
+  // Quick Format Code
+  const handleFormatCode = () => {
+    if (!editingContent.trim() || !activeFile) return;
+    try {
+      if (activeFile.language === 'json') {
+        const parsed = JSON.parse(editingContent);
+        setEditingContent(JSON.stringify(parsed, null, 2));
+        setToastMessage('Formatted JSON');
+        setTimeout(() => setToastMessage(null), 2000);
+        return;
+      }
+
+      const lines = editingContent.split('\n');
+      let indentLevel = 0;
+      const formatted = lines.map((line) => {
+        const trimmed = line.trim();
+        if (trimmed.startsWith('}') || trimmed.startsWith(']') || trimmed.startsWith(')')) {
+          indentLevel = Math.max(0, indentLevel - 1);
+        }
+        const indented = '  '.repeat(indentLevel) + trimmed;
+        if (trimmed.endsWith('{') || trimmed.endsWith('[') || trimmed.endsWith('(')) {
+          indentLevel++;
+        }
+        return indented;
+      });
+      setEditingContent(formatted.join('\n'));
+      setToastMessage('Formatted Code');
+      setTimeout(() => setToastMessage(null), 2000);
+    } catch {
+      setToastMessage('Could not auto-format: check syntax');
+      setTimeout(() => setToastMessage(null), 2000);
+    }
+  };
+
+  // ========== ROBUST LIVE PREVIEW BUNDLE ==========
+  // Powers seamless rendering: HTML + Tailwind + Lucide Icons + React 18 + Babel + CSS/JS bundling
+  const livePreviewDoc = useMemo(() => {
+    const htmlFile = files.find((f) => f.name.endsWith('.html') || f.language === 'html');
+    const cssFiles = files.filter((f) => f.name.endsWith('.css') || f.language === 'css');
+    const jsFiles = files.filter((f) => {
+      const n = f.name.toLowerCase();
+      return n.endsWith('.js') || n.endsWith('.jsx') || n.endsWith('.ts') || n.endsWith('.tsx');
+    });
+
+    let html = htmlFile ? htmlFile.content : '';
+
+    // If no HTML file is present, construct a modern runtime shell showcasing the active file
+    if (!html) {
+      if (activeFile && (activeFile.language === 'javascript' || activeFile.language === 'typescript')) {
+        html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.6/babel.min.js"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="bg-[#0b0f19] text-white p-6 font-sans min-h-screen">
+  <div id="root"></div>
+</body>
+</html>`;
+      } else {
+        return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-[#0a0d14] text-slate-300 font-sans flex items-center justify-center min-h-screen p-6">
+  <div class="text-center max-w-sm p-6 rounded-2xl bg-[#121624] border border-cyan-500/20">
+    <h3 class="text-white font-bold text-base mb-1">Live Sandbox Ready</h3>
+    <p class="text-xs text-slate-400">Add an index.html or script to preview your components in real time.</p>
+  </div>
+</body>
+</html>`;
+      }
+    }
+
+    // Auto-inject Tailwind CSS CDN if not already present
+    if (!html.includes('tailwindcss.com')) {
+      const tailwindScript = `<script src="https://cdn.tailwindcss.com"></script>`;
+      html = html.includes('<head>')
+        ? html.replace('<head>', `<head>\n  ${tailwindScript}`)
+        : `${tailwindScript}\n${html}`;
+    }
+
+    // Auto-inject Lucide Icons CDN and init
+    if (!html.includes('unpkg.com/lucide')) {
+      const lucideScript = `
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script>
+    window.addEventListener('DOMContentLoaded', function() {
+      if (window.lucide) window.lucide.createIcons();
+    });
+  </script>`;
+      html = html.includes('</head>')
+        ? html.replace('</head>', `${lucideScript}\n</head>`)
+        : `${lucideScript}\n${html}`;
+    }
+
+    // Inline CSS from all .css files
+    const cssBundle = cssFiles.map((c) => `/* ${c.name} */\n${c.content}`).join('\n\n');
+    if (cssBundle) {
+      const styleTag = `<style id="codex-injected-styles">\n${cssBundle}\n</style>`;
+      html = html.includes('</head>')
+        ? html.replace('</head>', `${styleTag}\n</head>`)
+        : `${styleTag}\n${html}`;
+    }
+
+    // Inline JS/TS/JSX scripts with error toast notification
+    const errorToastScript = `
+  <script>
+    window.addEventListener('error', function(e) {
+      try {
+        var existing = document.getElementById('sapphire-err-toast');
+        if (existing) existing.remove();
+        var toast = document.createElement('div');
+        toast.id = 'sapphire-err-toast';
+        toast.style.cssText = 'position:fixed;bottom:12px;left:12px;right:12px;max-width:480px;margin:0 auto;z-index:99999;background:#161922;border:1px solid #06b6d4;border-radius:12px;padding:10px 14px;color:#cbd5e1;font-family:monospace;font-size:11px;box-shadow:0 10px 25px rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:between;gap:8px;';
+        toast.innerHTML = '<span>⚡ ' + (e.message || 'Script error') + '</span><button onclick="this.parentElement.remove()" style="background:none;border:none;color:#94a3b8;cursor:pointer;font-size:16px;">&times;</button>';
+        document.body.appendChild(toast);
+      } catch(err) {}
+    });
+  </script>`;
+
+    const jsBundle = jsFiles
+      .map((j) => {
+        return `
+    <script>
+      try {
+        ${j.content}
+      } catch(err) {
+        console.error('Sandbox script error in ${j.name}:', err);
+      }
+    </script>`;
+      })
+      .join('\n');
+
+    const finalScripts = `${errorToastScript}\n${jsBundle}`;
 
     if (html.includes('</body>')) {
-      html = html.replace('</body>', `${errorOverlay}\n</body>`);
+      html = html.replace('</body>', `${finalScripts}\n</body>`);
     } else {
-      html = `${html}\n${errorOverlay}`;
+      html = `${html}\n${finalScripts}`;
     }
 
     return html;
-  }, [files, htmlFiles, cssFiles, jsFiles, selectedHtmlFile, previewReloadKey, activeProject?.name]);
+  }, [files, previewReloadKey, activeFile?.id]);
 
-  // ========== AI CHAT & ADVANCED CODE GENERATION ==========
-  const handleSendPrompt = async (forcedPrompt?: string) => {
-    const text = (forcedPrompt || input).trim();
-    if (!text || isLoading) return;
+  // ========== AI MULTI-FILE CODE GENERATION (CLEAN CHAT & ZERO-LAG) ==========
+  const handleSendAiPrompt = async (promptOverride?: string) => {
+    const prompt = (promptOverride || inputPrompt).trim();
+    if (!prompt || isLoadingAi) return;
 
     const userMsg: CodexMessage = {
       id: `u_${Date.now()}`,
       role: 'user',
-      text,
+      text: prompt,
       timestamp: Date.now()
     };
     setMessages((prev) => [...prev, userMsg]);
-    setInput('');
-    setIsLoading(true);
+    setInputPrompt('');
+    setIsLoadingAi(true);
+    setAiStreamingStatus('Architecting multi-file solution...');
 
     const botId = `b_${Date.now()}`;
-    setMessages((prev) => [...prev, {
-      id: botId,
-      role: 'assistant',
-      text: '',
-      timestamp: Date.now(),
-      isStreaming: true
-    }]);
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: botId,
+        role: 'assistant',
+        text: 'Generating project files...',
+        summary: 'Architecting solution...',
+        timestamp: Date.now(),
+        isStreaming: true,
+        actionFiles: []
+      }
+    ]);
 
     try {
       const filesContext = files
-        .filter((f) => !f.isBinary && !f.path.includes('node_modules'))
-        .slice(0, 12)
-        .map((f) => `=== ${f.path} ===\n${f.content.slice(0, 1500)}`)
+        .filter((f) => !f.isBinary)
+        .slice(0, 8)
+        .map((f) => `=== ${f.path} ===\n${f.content.slice(0, 1000)}`)
         .join('\n\n');
 
-      const systemPrompt = `You are Codex Studio, an elite Principal Software Architect and Senior Full-Stack Engineer powered by Sapphire AI.
-MANDATORY CONSTITUTION: WRITE 100% PROFESSIONAL, PRODUCTION-GRADE, SENIOR ENTERPRISE CODE.
-NEVER write childish, basic, simplistic, or toy code ("bacho wali coding").
-
-[CREATOR & DEVELOPER IDENTITY]:
-Sapphire and Codex Studio were created, developed, and are owned by Shaheer (Shaheer Hassan - shaheerhassan). If asked who is your developer, creator, founder, or owner, proudly and clearly state: "Shaheer is the developer, creator, and owner of Sapphire and Codex Studio!"
-
-[ANTI-AMATEUR CODING DIRECTIVE - CRITICAL]:
-1. NO TOY OR DEMO CODE:
-   - Deliver rich, production-tier applications that look and feel like premium commercial software (e.g. Stripe, Linear, Notion, Airbnb).
-   - Use vibrant modern UI palettes, glassmorphism card surfaces, clean borders, crisp typography, and responsive layouts.
-   - Every single interactive feature must be fully functional. No dead buttons, no fake controls.
-2. FULL REAL STATE & PERSISTENCE:
-   - Full state management in JavaScript with localStorage persistence, undo/redo, real data filtering/sorting, search, and export.
-   - Complete input validation with instant visual error states and feedback toasts.
-   - Defensive JavaScript: verify DOM nodes exist, wrap event listeners cleanly.
-3. EXACT MULTI-FILE ARCHITECTURE:
-   - index.html: <link rel="stylesheet" href="style.css"> and <script src="script.js" defer></script>
-   - style.css: Modern CSS variables, complete reset, responsive media queries, card layouts, active button transitions.
-   - script.js: Deep, complete business logic without stubs or placeholders.
-
-Current Project: "${activeProject?.name || 'Workspace'}"
-Existing files in project:
-${filesContext || '(Empty project - generate complete initial files: index.html, style.css, script.js)'}`;
-
-      const selectedModel = modelMode === 'reasoning' ? 'gemini-4-argon' : 'gemini-flash-latest';
+      const systemPrompt = `You are Sapphire Codex Studio, an elite Principal Software Architect created and developed by Shaheer (${SAPPHIRE_LEAD_DEVELOPER}).
+MANDATORY DIRECTIVE:
+1. WRITE 100% PROFESSIONAL, SENIOR ENTERPRISE PRODUCTION CODE.
+2. NEVER write childish, basic, simplistic, or placeholder code ("bacho wali coding").
+3. DO NOT output conversational filler or bloated commentary in your response.
+4. Output your files strictly in this clean Markdown code block format:
+\`\`\`html index.html
+<!DOCTYPE html>
+<html lang="en">
+...
+</html>
+\`\`\`
+\`\`\`css style.css
+...
+\`\`\`
+\`\`\`javascript script.js
+...
+\`\`\`
+Always provide complete, production-grade, bug-free implementations with modern responsive UI (Tailwind CSS, Lucide icons, glassmorphism, flex/grid, clean interaction).`;
 
       const response = await fetch('/api/chat/stream', {
         method: 'POST',
@@ -1058,13 +1058,13 @@ ${filesContext || '(Empty project - generate complete initial files: index.html,
           'x-gemini-api-key': getStoredApiKey()
         },
         body: JSON.stringify({
-          contents: [{ role: 'user', parts: [{ text }] }],
+          contents: [{ role: 'user', parts: [{ text: `${prompt}\n\nCurrent Workspace Files:\n${filesContext}` }] }],
           systemInstruction: systemPrompt,
           model: selectedModel
         })
       });
 
-      if (!response.ok || !response.body) throw new Error('Stream failed');
+      if (!response.ok || !response.body) throw new Error('Stream request failed');
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
@@ -1078,1295 +1078,1067 @@ ${filesContext || '(Empty project - generate complete initial files: index.html,
         for (const line of lines) {
           if (line.startsWith('data: ')) {
             const jsonStr = line.slice(6).trim();
-            if (jsonStr === '[DONE]') continue;
+            if (jsonStr === '[DONE]') break;
             try {
-              const data = JSON.parse(jsonStr);
-              const piece = data.candidates?.[0]?.content?.parts?.[0]?.text || data.text || '';
-              accumulated += piece;
-              setMessages((prev) =>
-                prev.map((m) => (m.id === botId ? { ...m, text: accumulated } : m))
-              );
+              const parsed = JSON.parse(jsonStr);
+              const textPiece = parsed.candidates?.[0]?.content?.parts?.[0]?.text || '';
+              accumulated += textPiece;
+
+              // Check if currently generating a specific file block
+              const currentBlockMatch = accumulated.match(/```([a-zA-Z0-9_-]+)?(?:\s+([\w\.\-\/]+))?[^`]*$/);
+              if (currentBlockMatch && currentBlockMatch[2]) {
+                setAiStreamingStatus(`Crafting ${currentBlockMatch[2]}...`);
+              }
             } catch {}
           }
         }
       }
 
-      // Enhanced Multi-File Parser
-      // Supports ```html index.html, ```html:index.html, ```css style.css, comments <!-- filename: index.html -->
-      const codeRegex = /```([a-zA-Z0-9_\-\.]+)?(?::|\s+)?([a-zA-Z0-9_\-\.\/]+\.[a-zA-Z0-9]+)?\n([\s\S]*?)```/g;
+      // Parse generated files from markdown blocks
+      const blockRegex = /```([a-zA-Z0-9_-]+)?(?:\s+([\w\.\-\/]+))?\n([\s\S]*?)```/g;
       let match;
-      const parsed: { name: string; path: string; language: string; content: string }[] = [];
+      const parsedFiles: { name: string; path: string; content: string; language: string }[] = [];
 
-      while ((match = codeRegex.exec(accumulated)) !== null) {
-        const lang = (match[1] || 'js').toLowerCase();
-        let filename = match[2];
-        const content = match[3];
+      while ((match = blockRegex.exec(accumulated)) !== null) {
+        const lang = (match[1] || 'html').toLowerCase();
+        let fileName = match[2];
+        const content = match[3].trim();
 
-        if (!filename) {
-          const commentMatch = content.match(/^(?:\/\*|\/\/|<!--)\s*(?:filename|file|path):\s*([a-zA-Z0-9_\-\.\/]+\.[a-zA-Z0-9]+)/i);
-          if (commentMatch) {
-            filename = commentMatch[1];
-          }
+        if (!fileName) {
+          if (lang === 'html') fileName = 'index.html';
+          else if (lang === 'css') fileName = 'style.css';
+          else if (lang === 'js' || lang === 'javascript') fileName = 'script.js';
+          else fileName = `file_${parsedFiles.length + 1}.${lang}`;
         }
 
-        if (!filename) {
-          if (lang === 'html' || content.includes('<!DOCTYPE') || content.includes('<html')) filename = 'index.html';
-          else if (lang === 'css' || (content.includes('{') && content.includes(':') && (content.includes('margin') || content.includes('padding') || content.includes('color') || content.includes('display')))) filename = 'style.css';
-          else if (lang === 'js' || lang === 'javascript' || lang === 'typescript' || lang === 'ts') filename = 'script.js';
-          else if (lang === 'json') filename = 'data.json';
-          else filename = `file_${parsed.length + 1}.${lang}`;
-        }
-
-        if (content && content.trim().length > 10) {
-          const cleanPath = normalizePath(filename);
-          parsed.push({
-            name: cleanPath.split('/').pop() || cleanPath,
-            path: cleanPath,
-            language: getLanguage(cleanPath),
-            content: content.trim()
-          });
-        }
+        parsedFiles.push({
+          name: fileName.split('/').pop() || fileName,
+          path: normalizePath(fileName),
+          content,
+          language: getLanguage(fileName)
+        });
       }
 
-      if (parsed.length > 0) {
-        // Update files in active project
-        const updatedFiles = [...files];
-        parsed.forEach((p) => {
-          const idx = updatedFiles.findIndex((u) => u.path === p.path || u.name === p.name);
-          if (idx >= 0) {
-            updatedFiles[idx] = { ...updatedFiles[idx], content: p.content, size: p.content.length, lastModified: Date.now(), status: 'modified' };
-          } else {
-            updatedFiles.unshift({
-              id: `ai_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-              name: p.name,
-              path: p.path,
-              content: p.content,
-              language: p.language,
-              size: p.content.length,
-              lastModified: Date.now(),
-              status: 'created'
-            });
-          }
+      if (parsedFiles.length > 0) {
+        const actionSummaries: FileActionSummary[] = [];
+
+        setFiles((prev) => {
+          const updated = [...prev];
+          parsedFiles.forEach((newF) => {
+            const existingIdx = updated.findIndex((f) => f.path === newF.path);
+            const lineCount = newF.content.split('\n').length;
+
+            if (existingIdx >= 0) {
+              updated[existingIdx] = {
+                ...updated[existingIdx],
+                content: newF.content,
+                size: newF.content.length,
+                lastModified: Date.now(),
+                status: 'modified'
+              };
+              actionSummaries.push({
+                path: newF.path,
+                lines: lineCount,
+                action: 'updated'
+              });
+            } else {
+              updated.push({
+                id: `f_gen_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+                name: newF.name,
+                path: newF.path,
+                content: newF.content,
+                language: newF.language,
+                size: newF.content.length,
+                lastModified: Date.now(),
+                status: 'created'
+              });
+              actionSummaries.push({
+                path: newF.path,
+                lines: lineCount,
+                action: 'created'
+              });
+            }
+          });
+          return updated;
         });
 
-        setFiles(updatedFiles);
-
-        // Auto-select HTML file for immediate live preview and switch to preview tab
-        const firstHtml = parsed.find((p) => p.name.endsWith('.html') || p.name === 'index.html');
-        if (firstHtml) {
-          setSelectedHtmlFile(firstHtml.name);
-          const matched = updatedFiles.find((f) => f.name === firstHtml.name);
-          if (matched) setSelectedFileId(matched.id);
-        } else if (parsed[0]) {
-          const matched = updatedFiles.find((f) => f.name === parsed[0].name);
-          if (matched) setSelectedFileId(matched.id);
-        }
-        setRightTab('preview');
-        setPreviewReloadKey((k) => k + 1);
-
-        // Auto-save AI-generated files to laptop folder if folder open
-        if (rootDirHandle) {
-          for (const p of parsed) {
-            try {
-              const parts = p.path.split('/');
-              let currentDir = rootDirHandle;
-              for (let i = 0; i < parts.length - 1; i++) {
-                currentDir = await currentDir.getDirectoryHandle(parts[i], { create: true });
-              }
-              const fileHandle = await currentDir.getFileHandle(parts[parts.length - 1], { create: true });
-              const writable = await fileHandle.createWritable();
-              await writable.write(p.content);
-              await writable.close();
-            } catch (err) {
-              console.warn(`Could not save ${p.path} to laptop:`, err);
-            }
+        // Set primary file active
+        const primary = parsedFiles.find((p) => p.path === 'index.html') || parsedFiles[0];
+        const target = files.find((f) => f.path === primary.path);
+        if (target) {
+          setSelectedFileId(target.id);
+          if (!openTabIds.includes(target.id)) {
+            setOpenTabIds((prev) => [...prev, target.id]);
           }
         }
 
-        setPreviewReloadKey((k) => k + 1);
-        setRightTab('preview');
-        setShowNotificationToast('✨ Live preview updated! Check preview tab');
-        setTimeout(() => setShowNotificationToast(null), 4500);
-      }
+        // Clean, ultra-concise message in chat - ZERO code dumped!
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === botId
+              ? {
+                  ...m,
+                  isStreaming: false,
+                  text: `Completed architecture for "${prompt.slice(0, 40)}..."`,
+                  summary: `Successfully generated ${parsedFiles.length} file(s) with production styling and responsive logic.`,
+                  actionFiles: actionSummaries
+                }
+              : m
+          )
+        );
 
-      setMessages((prev) => prev.map((m) => (m.id === botId ? { ...m, isStreaming: false } : m)));
-    } catch (err) {
+        setPreviewReloadKey((k) => k + 1);
+        setToastMessage(`Generated ${parsedFiles.length} production files!`);
+        setTimeout(() => setToastMessage(null), 3500);
+      } else {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === botId
+              ? {
+                  ...m,
+                  isStreaming: false,
+                  text: accumulated.slice(0, 240) || 'Action completed.',
+                  summary: 'Code analyzed.'
+                }
+              : m
+          )
+        );
+      }
+    } catch (err: any) {
       setMessages((prev) =>
         prev.map((m) =>
-          m.id === botId ? { ...m, text: '⚠️ Code generation could not complete. Please retry.', isStreaming: false } : m
+          m.id === botId
+            ? {
+                ...m,
+                text: 'Architect notice: Request encountered an error.',
+                summary: err.message || 'Error executing request.',
+                isStreaming: false
+              }
+            : m
         )
       );
     } finally {
-      setIsLoading(false);
+      setIsLoadingAi(false);
+      setAiStreamingStatus(null);
     }
   };
 
-  // ========== DASHBOARD & WORKSPACE HELPERS ==========
-  const filteredProjects = useMemo(() => {
-    if (!projectSearchQuery.trim()) return projects;
-    const q = projectSearchQuery.toLowerCase();
-    return projects.filter(
-      (p) => p.name.toLowerCase().includes(q) || p.files.some((f) => f.name.toLowerCase().includes(q))
+  // Search Results
+  const searchResults = useMemo(() => {
+    if (!searchQuery.trim()) return [];
+    const q = searchQuery.toLowerCase();
+    return files.filter(
+      (f) => f.path.toLowerCase().includes(q) || (!f.isBinary && f.content.toLowerCase().includes(q))
     );
-  }, [projects, projectSearchQuery]);
+  }, [files, searchQuery]);
 
-  const totalFilesCount = useMemo(() => {
-    return projects.reduce((acc, p) => acc + (p.files?.length || 0), 0);
-  }, [projects]);
+  // Line numbers
+  const lineCount = useMemo(() => {
+    return Math.max(1, editingContent.split('\n').length);
+  }, [editingContent]);
 
-  const handleCreateNewProject = (nameInput?: string) => {
-    const name = (nameInput || newProjectName).trim() || `Project ${projects.length + 1}`;
-    const newProj: CodexProject = {
-      id: `proj_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-      name,
-      createdAt: Date.now(),
-      lastModified: Date.now(),
-      files: [] // Zero pre-added files by AI! Clean slate!
-    };
-    setProjects((prev) => [newProj, ...prev]);
-    setActiveProjectId(newProj.id);
-    setSelectedFileId('');
-    setEditingContent('');
-    setNewProjectName('');
-    setShowNewProjectModal(false);
-    setMessages([]);
-    setPreviewReloadKey((k) => k + 1);
-    setMobileTab('chat');
-    setViewMode('workspace');
-  };
+  // File tree
+  const fileTree = useMemo(() => buildFileTree(files), [files]);
 
-  const handleOpenProject = (projId: string) => {
-    const proj = projects.find((p) => p.id === projId);
-    if (!proj) return;
-    setActiveProjectId(proj.id);
-    if (proj.files.length > 0) {
-      setSelectedFileId(proj.files[0].id);
-      setEditingContent(proj.files[0].content);
-      const firstHtml = proj.files.find((f) => f.name.endsWith('.html') || f.name === 'index.html');
-      if (firstHtml) setSelectedHtmlFile(firstHtml.name);
-    } else {
-      setSelectedFileId('');
-      setEditingContent('');
-      setSelectedHtmlFile('');
-    }
-    setPreviewReloadKey((k) => k + 1);
-    setMobileTab('chat');
-    setViewMode('workspace');
-  };
-
-  // ========== THEME CLASSES ==========
-  const bgMain = isMoon ? 'bg-[#0a0b0e]' : 'bg-[#faf9f7]';
-  const bgHeader = isMoon ? 'bg-[#0e0f13]' : 'bg-white';
-  const bgCard = isMoon ? 'bg-[#1a1c22]' : 'bg-[#f0ede7]';
-  const bgSubtle = isMoon ? 'bg-[#1a1c22]' : 'bg-[#f5f3ef]';
-  const bgInput = isMoon ? 'bg-[#0a0b0e]' : 'bg-[#faf9f7]';
-  const border = isMoon ? 'border-[#22242c]' : 'border-[#e8e5df]';
-  const textPrimary = isMoon ? 'text-[#e8e8ea]' : 'text-[#1a1815]';
-  const textBright = isMoon ? 'text-white' : 'text-[#0d0b09]';
-  const textSub = isMoon ? 'text-[#8a8d96]' : 'text-[#6b6760]';
-  const textMuted = isMoon ? 'text-[#5a5d66]' : 'text-[#9a958d]';
-  const hoverBg = isMoon ? 'hover:bg-[#1a1c22]' : 'hover:bg-[#f0ede7]';
-  const accent = 'text-[#d97757]';
-  const accentBg = 'bg-[#d97757]';
-
-  // ========== RENDER ==========
-  return (
-    <div className={`h-full w-full flex flex-col ${bgMain} ${textPrimary} overflow-hidden font-['Plus_Jakarta_Sans',sans-serif]`}>
-
-      {/* ========================================================================= */}
-      {/* 1. PROJECTS HISTORY & MANAGEMENT DASHBOARD VIEW                            */}
-      {/* ========================================================================= */}
-      {viewMode === 'dashboard' ? (
-        <div className="flex-1 flex flex-col h-full overflow-hidden">
-          {/* Dashboard Header */}
-          <header className={`h-14 px-4 sm:px-6 border-b ${border} ${bgHeader} flex items-center justify-between shrink-0`}>
-            <div className="flex items-center gap-3">
-              {onClose && (
-                <button
-                  onClick={onClose}
-                  className={`p-2 rounded-xl ${textSub} ${hoverBg} transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-semibold`}
-                  title="Back to Sapphire Chat"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                  <span className="hidden sm:inline">Back</span>
-                </button>
-              )}
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-[#d97757]/15 border border-[#d97757]/30 flex items-center justify-center">
-                  <Code2 className="w-4 h-4 text-[#d97757]" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className={`text-sm sm:text-base font-extrabold ${textBright}`}>Codex Studio</span>
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#d97757]/15 text-[#d97757] font-bold">
-                      Projects Hub
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 sm:gap-3">
-              {/* Search Bar */}
-              <div className={`relative hidden sm:flex items-center rounded-xl border ${border} ${bgInput} px-2.5 py-1.5 focus-within:border-[#d97757]/60 transition-colors w-44 md:w-60`}>
-                <Search className="w-3.5 h-3.5 text-zinc-400 mr-2 shrink-0" />
-                <input
-                  type="text"
-                  value={projectSearchQuery}
-                  onChange={(e) => setProjectSearchQuery(e.target.value)}
-                  placeholder="Search projects..."
-                  className="bg-transparent border-none outline-none text-xs w-full placeholder-zinc-500"
-                />
-                {projectSearchQuery && (
-                  <button onClick={() => setProjectSearchQuery('')} className="text-zinc-400 hover:text-zinc-200">
-                    <X className="w-3 h-3" />
-                  </button>
+  // Recursive tree component
+  const renderTree = (node: TreeNode, depth = 0) => {
+    if (node.isFolder) {
+      const isExpanded = expandedFolders.has(node.path);
+      return (
+        <div key={node.path || 'root'} className="select-none">
+          {node.name && (
+            <div
+              onClick={() => {
+                setExpandedFolders((prev) => {
+                  const next = new Set(prev);
+                  if (next.has(node.path)) next.delete(node.path);
+                  else next.add(node.path);
+                  return next;
+                });
+              }}
+              style={{ paddingLeft: `${depth * 12 + 6}px` }}
+              className="flex items-center justify-between py-1 px-2 rounded-md hover:bg-slate-800/50 cursor-pointer text-xs text-slate-400 hover:text-slate-200 transition-colors group"
+            >
+              <div className="flex items-center gap-1.5 truncate">
+                {isExpanded ? (
+                  <ChevronDown className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                ) : (
+                  <ChevronRight className="w-3.5 h-3.5 text-slate-500 shrink-0" />
                 )}
-              </div>
-
-              {/* Add Project Primary Button */}
-              <button
-                type="button"
-                onClick={() => {
-                  setNewProjectName(`Project ${projects.length + 1}`);
-                  setShowNewProjectModal(true);
-                }}
-                className="px-3.5 py-2 rounded-xl bg-[#d97757] hover:bg-[#c86949] text-white text-xs sm:text-sm font-bold flex items-center gap-1.5 shadow-md shadow-[#d97757]/20 transition-all cursor-pointer active:scale-95 shrink-0"
-              >
-                <Plus className="w-4 h-4 stroke-[2.5]" />
-                <span>Add New Project</span>
-              </button>
-            </div>
-          </header>
-
-          {/* Dashboard Scrollable Body */}
-          <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto w-full">
-            {/* Hero / Overview Banner */}
-            <div className={`p-5 sm:p-6 rounded-3xl border ${border} ${bgCard} relative overflow-hidden shadow-sm`}>
-              <div className="max-w-2xl">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-[#d97757]/20 text-[#d97757]">
-                    Workspace Manager
-                  </span>
-                </div>
-                <h1 className={`text-xl sm:text-2xl font-black ${textBright} mb-2`}>
-                  Projects History & Workspaces
-                </h1>
-                <p className={`text-xs sm:text-sm ${textSub} leading-relaxed mb-4`}>
-                  Every project starts clean with zero AI boilerplate. Chat in the prompt panel to generate full-stack software and watch it render in real-time live preview.
-                </p>
-
-                {/* Quick Metrics */}
-                <div className="flex flex-wrap items-center gap-2 sm:gap-4 pt-1">
-                  <div className={`px-3 py-1.5 rounded-xl border ${border} ${bgSubtle} text-xs font-semibold flex items-center gap-1.5`}>
-                    <Layers className="w-3.5 h-3.5 text-[#d97757]" />
-                    <span>{projects.length} Total Projects</span>
-                  </div>
-                  <div className={`px-3 py-1.5 rounded-xl border ${border} ${bgSubtle} text-xs font-semibold flex items-center gap-1.5`}>
-                    <FileCode className="w-3.5 h-3.5 text-blue-500" />
-                    <span>{totalFilesCount} Files Built</span>
-                  </div>
-                  {activeProject && (
-                    <div className={`px-3 py-1.5 rounded-xl border border-[#d97757]/30 bg-[#d97757]/10 text-xs font-bold text-[#d97757] flex items-center gap-1.5`}>
-                      <Sparkles className="w-3.5 h-3.5" />
-                      <span className="truncate max-w-[150px]">Current: {activeProject.name}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Mobile Search Bar */}
-            <div className="sm:hidden">
-              <div className={`relative flex items-center rounded-2xl border ${border} ${bgInput} px-3 py-2.5 w-full`}>
-                <Search className="w-4 h-4 text-zinc-400 mr-2 shrink-0" />
-                <input
-                  type="text"
-                  value={projectSearchQuery}
-                  onChange={(e) => setProjectSearchQuery(e.target.value)}
-                  placeholder="Search projects..."
-                  className="bg-transparent border-none outline-none text-xs w-full placeholder-zinc-500"
-                />
-                {projectSearchQuery && (
-                  <button onClick={() => setProjectSearchQuery('')} className="text-zinc-400 hover:text-zinc-200">
-                    <X className="w-3.5 h-3.5" />
-                  </button>
+                {isExpanded ? (
+                  <FolderOpen className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                ) : (
+                  <Folder className="w-3.5 h-3.5 text-cyan-500/70 shrink-0" />
                 )}
+                <span className="font-medium truncate">{node.name}</span>
               </div>
-            </div>
-
-            {/* Projects Section Header */}
-            <div className="flex items-center justify-between pt-2">
-              <div className="flex items-center gap-2">
-                <h2 className={`text-base sm:text-lg font-bold ${textBright}`}>
-                  Your Projects ({filteredProjects.length})
-                </h2>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setNewProjectName(`Project ${projects.length + 1}`);
-                  setShowNewProjectModal(true);
-                }}
-                className="text-xs font-bold text-[#d97757] hover:underline flex items-center gap-1 cursor-pointer"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>New Project</span>
-              </button>
-            </div>
-
-            {/* Projects Grid */}
-            {filteredProjects.length === 0 ? (
-              <div className={`p-10 rounded-3xl border ${border} ${bgCard} text-center max-w-md mx-auto my-6 space-y-3`}>
-                <div className="w-12 h-12 rounded-2xl bg-[#d97757]/15 text-[#d97757] flex items-center justify-center mx-auto mb-2">
-                  <Layers className="w-6 h-6" />
-                </div>
-                <h3 className={`text-sm font-bold ${textBright}`}>No projects found</h3>
-                <p className={`text-xs ${textSub} leading-relaxed`}>
-                  {projectSearchQuery ? 'No projects match your search query.' : 'You do not have any projects yet. Create your first clean workspace!'}
-                </p>
+              <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1 shrink-0">
                 <button
                   type="button"
-                  onClick={() => {
-                    setNewProjectName(`Project ${projects.length + 1}`);
-                    setShowNewProjectModal(true);
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleCreateNewFile(node.path);
                   }}
-                  className="px-4 py-2 rounded-xl bg-[#d97757] hover:bg-[#c86949] text-white text-xs font-bold transition-colors cursor-pointer shadow-sm"
+                  className="p-0.5 rounded hover:bg-slate-700 text-slate-400 hover:text-cyan-300"
+                  title="New File in Folder"
                 >
-                  + Add New Project
+                  <FilePlus className="w-3 h-3" />
+                </button>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleCreateNewFolder(node.path);
+                  }}
+                  className="p-0.5 rounded hover:bg-slate-700 text-slate-400 hover:text-cyan-300"
+                  title="New Subfolder"
+                >
+                  <FolderPlus className="w-3 h-3" />
                 </button>
               </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredProjects.map((proj) => {
-                  const isActive = proj.id === activeProjectId;
-                  const isEditing = editingProjectId === proj.id;
-                  const htmlCount = proj.files.filter((f) => f.name.endsWith('.html')).length;
-                  const cssCount = proj.files.filter((f) => f.name.endsWith('.css')).length;
-                  const jsCount = proj.files.filter((f) => f.name.endsWith('.js') || f.name.endsWith('.ts')).length;
+            </div>
+          )}
+          {(!node.name || isExpanded) && (
+            <div>{node.children.map((child) => renderTree(child, depth + (node.name ? 1 : 0)))}</div>
+          )}
+        </div>
+      );
+    }
 
-                  return (
-                    <motion.div
-                      key={proj.id}
-                      layout
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className={`p-4 sm:p-5 rounded-3xl border transition-all duration-200 flex flex-col justify-between ${
-                        isActive
-                          ? isMoon
-                            ? 'bg-[#151722] border-[#d97757]/50 shadow-lg shadow-black/40 ring-1 ring-[#d97757]/30'
-                            : 'bg-white border-[#d97757] shadow-lg shadow-orange-100 ring-1 ring-[#d97757]/30'
-                          : `${bgCard} ${border} hover:border-[#d97757]/40 shadow-sm`
-                      }`}
+    if (!node.file) return null;
+    const file = node.file;
+    const isSelected = selectedFileId === file.id;
+    const ext = file.name.split('.').pop()?.toLowerCase();
+
+    return (
+      <div
+        key={file.id}
+        onClick={() => {
+          setSelectedFileId(file.id);
+          if (!openTabIds.includes(file.id)) {
+            setOpenTabIds((prev) => [...prev, file.id]);
+          }
+          if (viewMode === 'preview') {
+            setViewMode('split');
+          }
+        }}
+        style={{ paddingLeft: `${depth * 12 + 6}px` }}
+        className={`group flex items-center justify-between py-1 px-2 rounded-md cursor-pointer transition-colors text-xs ${
+          isSelected
+            ? 'bg-cyan-500/15 text-cyan-300 font-semibold border-l-2 border-cyan-400'
+            : 'text-slate-400 hover:bg-slate-800/40 hover:text-slate-200'
+        }`}
+      >
+        <div className="flex items-center gap-1.5 min-w-0 flex-1 truncate">
+          {ext === 'html' ? (
+            <FileCode className="w-3.5 h-3.5 text-orange-400 shrink-0" />
+          ) : ext === 'css' ? (
+            <FileCode className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+          ) : ext === 'json' ? (
+            <FileJson className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+          ) : (
+            <FileText className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+          )}
+          <span className="truncate">{file.name}</span>
+        </div>
+        <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1 shrink-0">
+          <button
+            type="button"
+            onClick={(e) => handleDeleteFile(file.id, e)}
+            className="p-0.5 rounded hover:bg-slate-700 text-slate-500 hover:text-rose-400"
+            title="Delete File"
+          >
+            <Trash2 className="w-3 h-3" />
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="h-full w-full flex flex-col bg-[#0b0e17] text-slate-200 overflow-hidden font-['JetBrains_Mono',monospace]">
+      {/* Hidden Folder Input */}
+      <input
+        type="file"
+        ref={folderInputRef}
+        {...({ webkitdirectory: '', directory: '' } as any)}
+        multiple
+        className="hidden"
+        onChange={handleFolderInputChange}
+      />
+
+      {/* TOP HEADER MENU BAR (Matches Sapphire Theme) */}
+      <div className="h-10 bg-[#080b12] border-b border-[#1a2030] flex items-center justify-between px-3 text-xs shrink-0 select-none font-['Plus_Jakarta_Sans',sans-serif]">
+        <div className="flex items-center gap-3">
+          {onClose && (
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/80 transition-colors cursor-pointer flex items-center gap-1"
+              title="Return to Sapphire"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              <span className="text-[11px] font-semibold hidden sm:inline">Back</span>
+            </button>
+          )}
+
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-lg bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center text-white shadow-xs">
+              <Code2 className="w-3.5 h-3.5" />
+            </div>
+            <span className="font-bold text-white text-xs">Sapphire Codex</span>
+            <span className="text-slate-500 text-[11px] hidden md:inline">· {activeProject.name}</span>
+          </div>
+        </div>
+
+        {/* View Mode Segmented Controls (Editor, Split, Full Preview) */}
+        <div className="flex items-center gap-1 bg-[#121624] p-0.5 rounded-xl border border-slate-800">
+          <button
+            type="button"
+            onClick={() => setViewMode('code')}
+            className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+              viewMode === 'code' ? 'bg-cyan-500/20 text-cyan-300 font-bold' : 'text-slate-400 hover:text-slate-200'
+            }`}
+            title="Code Editor Only"
+          >
+            <Code2 className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Code</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode('split')}
+            className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+              viewMode === 'split' ? 'bg-cyan-500/20 text-cyan-300 font-bold' : 'text-slate-400 hover:text-slate-200'
+            }`}
+            title="Split Code & Live Preview"
+          >
+            <Columns className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Split</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode('preview')}
+            className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+              viewMode === 'preview' ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-bold' : 'text-slate-400 hover:text-slate-200'
+            }`}
+            title="Full-Tab Live Preview"
+          >
+            <Play className="w-3.5 h-3.5 fill-current" />
+            <span>Live Preview</span>
+          </button>
+        </div>
+
+        {/* Actions Bar */}
+        <div className="flex items-center gap-2">
+          {saveStatus === 'saving' && (
+            <span className="text-[10px] text-amber-400 flex items-center gap-1 font-mono">
+              <RefreshCw className="w-3 h-3 animate-spin" /> Saving...
+            </span>
+          )}
+          {saveStatus === 'saved' && (
+            <span className="text-[10px] text-emerald-400 flex items-center gap-1 font-mono">
+              <Check className="w-3 h-3" /> Saved
+            </span>
+          )}
+
+          <button
+            type="button"
+            onClick={() => setIsNewProjectModalOpen(true)}
+            className="px-2.5 py-1 rounded-lg bg-[#151926] hover:bg-[#1e2436] text-slate-200 text-[11px] font-semibold flex items-center gap-1.5 transition-colors border border-slate-700/60 cursor-pointer"
+            title="Create New Project Folder"
+          >
+            <FolderPlus className="w-3.5 h-3.5 text-cyan-400" />
+            <span className="hidden sm:inline">New Folder</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleOpenLaptopFolder}
+            className="px-2.5 py-1 rounded-lg bg-[#151926] hover:bg-[#1e2436] text-slate-200 text-[11px] font-semibold flex items-center gap-1.5 transition-colors border border-slate-700/60 cursor-pointer"
+            title="Open Folder from Laptop"
+          >
+            <FolderOpen className="w-3.5 h-3.5 text-blue-400" />
+            <span className="hidden sm:inline">Open Folder</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleExportVsCodeZip}
+            className="px-2.5 py-1 rounded-lg bg-[#151926] hover:bg-[#1e2436] text-slate-200 text-[11px] font-semibold flex items-center gap-1.5 transition-colors border border-slate-700/60 cursor-pointer"
+            title="Download for VS Code (.zip)"
+          >
+            <Download className="w-3.5 h-3.5 text-emerald-400" />
+            <span className="hidden md:inline">VS Code Zip</span>
+          </button>
+        </div>
+      </div>
+
+      {/* MAIN WORKSPACE BODY (Activity Bar + Sidebar + Editor/Preview Pane) */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* 1. ACTIVITY BAR (Left 48px) */}
+        <div className="w-12 bg-[#06080e] border-r border-[#161b29] flex flex-col items-center py-2.5 justify-between shrink-0 select-none">
+          <div className="flex flex-col items-center space-y-2.5">
+            <button
+              type="button"
+              onClick={() => {
+                if (activeActivityTab === 'explorer' && isSidebarOpen) {
+                  setIsSidebarOpen(false);
+                } else {
+                  setActiveActivityTab('explorer');
+                  setIsSidebarOpen(true);
+                }
+              }}
+              className={`p-2.5 rounded-xl transition-all cursor-pointer ${
+                activeActivityTab === 'explorer' && isSidebarOpen
+                  ? 'bg-cyan-500/20 text-cyan-400 border-l-2 border-cyan-400'
+                  : 'text-slate-500 hover:text-slate-300'
+              }`}
+              title="File Explorer"
+            >
+              <Folder className="w-4 h-4" />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                if (activeActivityTab === 'search' && isSidebarOpen) {
+                  setIsSidebarOpen(false);
+                } else {
+                  setActiveActivityTab('search');
+                  setIsSidebarOpen(true);
+                }
+              }}
+              className={`p-2.5 rounded-xl transition-all cursor-pointer ${
+                activeActivityTab === 'search' && isSidebarOpen
+                  ? 'bg-cyan-500/20 text-cyan-400 border-l-2 border-cyan-400'
+                  : 'text-slate-500 hover:text-slate-300'
+              }`}
+              title="Search in Files"
+            >
+              <Search className="w-4 h-4" />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                if (activeActivityTab === 'ai' && isSidebarOpen) {
+                  setIsSidebarOpen(false);
+                } else {
+                  setActiveActivityTab('ai');
+                  setIsSidebarOpen(true);
+                }
+              }}
+              className={`p-2.5 rounded-xl transition-all cursor-pointer ${
+                activeActivityTab === 'ai' && isSidebarOpen
+                  ? 'bg-gradient-to-r from-cyan-500/20 to-blue-500/20 text-cyan-300 border-l-2 border-cyan-400'
+                  : 'text-slate-500 hover:text-cyan-400'
+              }`}
+              title="Autonomous Codex Architect"
+            >
+              <Sparkles className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div className="flex flex-col items-center space-y-2">
+            <button
+              type="button"
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              className="p-2.5 rounded-xl text-slate-500 hover:text-slate-300 cursor-pointer"
+              title="Toggle Primary Sidebar"
+            >
+              <Settings className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* 2. PRIMARY SIDEBAR (~260px) */}
+        {isSidebarOpen && (
+          <div className="w-64 bg-[#0a0d14] border-r border-[#161b29] flex flex-col shrink-0 overflow-hidden font-['Plus_Jakarta_Sans',sans-serif]">
+            {/* Sidebar Header */}
+            <div className="px-3 py-2.5 border-b border-[#161b29] flex items-center justify-between text-[11px] font-bold text-slate-400 uppercase tracking-wider select-none">
+              <span className="flex items-center gap-1.5">
+                {activeActivityTab === 'explorer' && 'Project Explorer'}
+                {activeActivityTab === 'search' && 'Search Files'}
+                {activeActivityTab === 'ai' && 'Codex Architect'}
+              </span>
+
+              <div className="flex items-center gap-1">
+                {activeActivityTab === 'explorer' && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => handleCreateNewFile()}
+                      className="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-cyan-300 cursor-pointer"
+                      title="New File"
                     >
-                      <div>
-                        {/* Top: Icon & Actions */}
-                        <div className="flex items-center justify-between mb-3">
-                          <div className="flex items-center gap-2.5 min-w-0">
-                            <div className={`w-9 h-9 rounded-2xl flex items-center justify-center shrink-0 ${
-                              isActive ? 'bg-[#d97757] text-white' : `${bgSubtle} text-[#d97757]`
-                            }`}>
-                              <Layers className="w-4 h-4" />
-                            </div>
-                            <div className="min-w-0">
-                              {isEditing ? (
-                                <input
-                                  type="text"
-                                  value={editingProjectName}
-                                  onChange={(e) => setEditingProjectName(e.target.value)}
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Enter') {
-                                      if (editingProjectName.trim()) {
-                                        setProjects((prev) =>
-                                          prev.map((p) => (p.id === proj.id ? { ...p, name: editingProjectName.trim() } : p))
-                                        );
-                                      }
-                                      setEditingProjectId(null);
-                                    }
-                                    if (e.key === 'Escape') setEditingProjectId(null);
-                                  }}
-                                  className="w-full bg-transparent border-b border-[#d97757] outline-none text-sm font-bold"
-                                  autoFocus
-                                />
-                              ) : (
-                                <h3 className={`text-sm font-extrabold ${textBright} truncate`}>
-                                  {proj.name}
-                                </h3>
-                              )}
-                              <span className="text-[11px] text-zinc-400 block">
-                                {formatTimeAgo(proj.lastModified)}
-                              </span>
-                            </div>
-                          </div>
+                      <FilePlus className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleCreateNewFolder()}
+                      className="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-cyan-300 cursor-pointer"
+                      title="New Folder"
+                    >
+                      <FolderPlus className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleOpenLaptopFolder}
+                      className="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-blue-300 cursor-pointer"
+                      title="Open Laptop Folder"
+                    >
+                      <FolderOpen className="w-3.5 h-3.5" />
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
 
-                          {/* Quick Edit/Delete */}
-                          <div className="flex items-center gap-1 shrink-0">
-                            {isEditing ? (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  if (editingProjectName.trim()) {
-                                    setProjects((prev) =>
-                                      prev.map((p) => (p.id === proj.id ? { ...p, name: editingProjectName.trim() } : p))
-                                    );
-                                  }
-                                  setEditingProjectId(null);
-                                }}
-                                className="p-1.5 text-emerald-500 hover:text-emerald-400 cursor-pointer"
-                                title="Save Name"
-                              >
-                                <Check className="w-4 h-4" />
-                              </button>
-                            ) : (
-                              <>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setEditingProjectId(proj.id);
-                                    setEditingProjectName(proj.name);
-                                  }}
-                                  className="p-1.5 text-zinc-400 hover:text-[#d97757] rounded-lg transition-colors cursor-pointer"
-                                  title="Rename Project"
-                                >
-                                  <Edit3 className="w-3.5 h-3.5" />
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => setProjectToDelete(proj)}
-                                  className="p-1.5 text-zinc-400 hover:text-rose-500 rounded-lg transition-colors cursor-pointer"
-                                  title="Delete Project"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </button>
-                              </>
-                            )}
-                          </div>
-                        </div>
+            {/* Sidebar Content */}
+            <div className="flex-1 overflow-y-auto p-2 text-xs font-mono">
+              {activeActivityTab === 'explorer' && (
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between px-2 py-1 text-slate-500 font-bold uppercase tracking-wider text-[10px] font-['Plus_Jakarta_Sans',sans-serif]">
+                    <span className="truncate">{activeProject.name}</span>
+                    <span>{files.length} files</span>
+                  </div>
 
-                        {/* Middle: File Status & Preview Badges */}
-                        <div className="space-y-2 mb-4">
-                          <div className="flex items-center gap-2">
-                            {proj.files.length === 0 ? (
-                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-500">
-                                Clean Slate (0 files)
-                              </span>
-                            ) : (
-                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-500">
-                                {proj.files.length} {proj.files.length === 1 ? 'file' : 'files'}
-                              </span>
-                            )}
-                            {isActive && (
-                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#d97757]/20 text-[#d97757]">
-                                ACTIVE
-                              </span>
-                            )}
-                          </div>
-
-                          <div className="text-xs text-zinc-400 min-h-[38px] flex items-center">
-                            {proj.files.length === 0 ? (
-                              <span className="text-[11px] text-zinc-400 italic">
-                                Zero files pre-added. Ready for AI chat prompts or custom files.
-                              </span>
-                            ) : (
-                              <div className="flex flex-wrap items-center gap-1.5">
-                                {proj.files.slice(0, 3).map((f) => (
-                                  <span key={f.id} className={`text-[10px] font-mono px-1.5 py-0.5 rounded-md border ${border} ${bgSubtle} text-zinc-300`}>
-                                    {f.name}
-                                  </span>
-                                ))}
-                                {proj.files.length > 3 && (
-                                  <span className="text-[10px] text-zinc-500">
-                                    +{proj.files.length - 3} more
-                                  </span>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Card Action */}
+                  {files.length === 0 ? (
+                    <div className="p-4 text-center space-y-3 font-sans">
+                      <p className="text-slate-500 text-xs">Workspace is empty.</p>
                       <button
                         type="button"
-                        onClick={() => handleOpenProject(proj.id)}
-                        className={`w-full py-2.5 px-3 rounded-2xl text-xs font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
-                          isActive
-                            ? 'bg-[#d97757] hover:bg-[#c86949] text-white shadow-sm'
-                            : `${bgSubtle} ${hoverBg} text-zinc-200 border ${border} hover:border-[#d97757]/50`
-                        }`}
+                        onClick={handleOpenLaptopFolder}
+                        className="w-full py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold transition-colors cursor-pointer"
                       >
-                        <Play className="w-3.5 h-3.5 fill-current" />
-                        <span>Open Workspace</span>
-                        <ArrowRight className="w-3.5 h-3.5 ml-auto" />
+                        Open Laptop Folder
                       </button>
-                    </motion.div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </div>
-      ) : (
-        /* ========================================================================= */
-        /* 2. PROJECT WORKSPACE VIEW (CHAT + PREVIEW / FILES)                        */
-        /* ========================================================================= */
-        <div className="flex-1 flex flex-col h-full overflow-hidden">
-          {/* WORKSPACE HEADER */}
-          <header className={`h-12 px-2.5 sm:px-4 border-b ${border} ${bgHeader} flex items-center justify-between shrink-0 gap-2`}>
-            {/* Left: Back to Projects & Project Selector */}
-            <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
-              <button
-                type="button"
-                onClick={() => setViewMode('dashboard')}
-                className={`p-1.5 rounded-xl ${textSub} ${hoverBg} transition-colors cursor-pointer flex items-center gap-1 text-xs font-bold shrink-0`}
-                title="Return to Projects History Hub"
-              >
-                <ChevronLeft className="w-4 h-4" />
-                <span className="hidden sm:inline">Projects</span>
-              </button>
-
-              <div className={`h-4 w-px ${border} hidden sm:block`} />
-
-              {/* Project Dropdown Selector */}
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => setIsProjectDropdownOpen(!isProjectDropdownOpen)}
-                  className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-xs font-bold cursor-pointer transition-all ${
-                    isMoon
-                      ? 'bg-[#181a24] hover:bg-[#202230] border-[#292c3c] text-zinc-200'
-                      : 'bg-white hover:bg-slate-50 border-slate-200 text-slate-800'
-                  }`}
-                >
-                  <Layers className="w-3.5 h-3.5 text-[#d97757] shrink-0" />
-                  <span className="font-bold max-w-[100px] sm:max-w-[160px] truncate">
-                    {activeProject?.name || 'Workspace'}
-                  </span>
-                  <ChevronDown className="w-3 h-3 text-zinc-400 shrink-0" />
-                </button>
-
-                <AnimatePresence>
-                  {isProjectDropdownOpen && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 6, scale: 0.98 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: 6, scale: 0.98 }}
-                      className={`absolute left-0 top-full mt-2 w-72 rounded-2xl border shadow-2xl p-2.5 z-50 backdrop-blur-xl ${
-                        isMoon
-                          ? 'bg-[#14151e]/95 border-[#282a3c] text-zinc-200 shadow-black/80'
-                          : 'bg-white/95 border-slate-200 text-slate-800 shadow-slate-300/80'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between px-2 py-1 mb-1.5 border-b border-zinc-700/20">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
-                          Projects ({projects.length})
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setNewProjectName(`Project ${projects.length + 1}`);
-                            setShowNewProjectModal(true);
-                            setIsProjectDropdownOpen(false);
-                          }}
-                          className="text-[11px] font-bold text-[#d97757] hover:underline flex items-center gap-1 cursor-pointer"
-                        >
-                          <Plus className="w-3 h-3" />
-                          <span>Add Project</span>
-                        </button>
-                      </div>
-
-                      <div className="max-h-56 overflow-y-auto space-y-1">
-                        {projects.map((proj) => {
-                          const isCurrent = proj.id === activeProjectId;
-                          const isEditing = editingProjectId === proj.id;
-                          return (
-                            <div
-                              key={proj.id}
-                              onClick={() => {
-                                if (!isEditing) {
-                                  handleOpenProject(proj.id);
-                                  setIsProjectDropdownOpen(false);
-                                }
-                              }}
-                              className={`flex items-center justify-between p-2 rounded-xl text-xs transition-colors cursor-pointer ${
-                                isCurrent
-                                  ? isMoon
-                                    ? 'bg-[#d97757]/20 border border-[#d97757]/60 text-white font-bold'
-                                    : 'bg-[#ffeade] border border-[#d97757] text-[#8a2b0e] font-bold'
-                                  : isMoon
-                                  ? 'hover:bg-[#1e202c] text-zinc-300'
-                                  : 'hover:bg-slate-100 text-slate-700'
-                              }`}
-                            >
-                              <div className="flex items-center gap-2 min-w-0 flex-1">
-                                <Layers className={`w-3.5 h-3.5 shrink-0 ${isCurrent ? 'text-[#d97757]' : 'text-zinc-400'}`} />
-                                {isEditing ? (
-                                  <input
-                                    type="text"
-                                    value={editingProjectName}
-                                    onChange={(e) => setEditingProjectName(e.target.value)}
-                                    onClick={(e) => e.stopPropagation()}
-                                    onKeyDown={(e) => {
-                                      if (e.key === 'Enter') {
-                                        if (editingProjectName.trim()) {
-                                          setProjects((prev) =>
-                                            prev.map((p) => (p.id === proj.id ? { ...p, name: editingProjectName.trim() } : p))
-                                          );
-                                        }
-                                        setEditingProjectId(null);
-                                      }
-                                      if (e.key === 'Escape') setEditingProjectId(null);
-                                    }}
-                                    className="w-full bg-transparent border-b border-[#d97757] outline-none text-xs font-bold"
-                                    autoFocus
-                                  />
-                                ) : (
-                                  <div className="truncate">
-                                    <span className="truncate block font-semibold">{proj.name}</span>
-                                    <span className="text-[10px] text-zinc-400 block font-normal">
-                                      {proj.files.length === 0 ? 'Empty (clean slate)' : `${proj.files.length} files`}
-                                    </span>
-                                  </div>
-                                )}
-                              </div>
-
-                              <div className="flex items-center gap-1 shrink-0 ml-1">
-                                {isEditing ? (
-                                  <button
-                                    type="button"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      if (editingProjectName.trim()) {
-                                        setProjects((prev) =>
-                                          prev.map((p) => (p.id === proj.id ? { ...p, name: editingProjectName.trim() } : p))
-                                        );
-                                      }
-                                      setEditingProjectId(null);
-                                    }}
-                                    className="p-1 text-emerald-500 hover:text-emerald-400 cursor-pointer"
-                                  >
-                                    <Check className="w-3.5 h-3.5" />
-                                  </button>
-                                ) : (
-                                  <>
-                                    <button
-                                      type="button"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setEditingProjectId(proj.id);
-                                        setEditingProjectName(proj.name);
-                                      }}
-                                      className="p-1 hover:text-[#d97757] text-zinc-400 cursor-pointer transition-colors"
-                                      title="Rename Project"
-                                    >
-                                      <Edit3 className="w-3 h-3" />
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        setProjectToDelete(proj);
-                                      }}
-                                      className="p-1 hover:text-rose-500 text-zinc-400 cursor-pointer transition-colors"
-                                      title="Delete Project"
-                                    >
-                                      <Trash2 className="w-3 h-3" />
-                                    </button>
-                                  </>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </motion.div>
+                      <button
+                        type="button"
+                        onClick={() => handleCreateNewFile()}
+                        className="w-full py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs transition-colors cursor-pointer"
+                      >
+                        Create New File
+                      </button>
+                    </div>
+                  ) : (
+                    renderTree(fileTree)
                   )}
-                </AnimatePresence>
-              </div>
+                </div>
+              )}
 
-              {/* Direct Add Project Quick Button */}
-              <button
-                type="button"
-                onClick={() => {
-                  setNewProjectName(`Project ${projects.length + 1}`);
-                  setShowNewProjectModal(true);
-                }}
-                className={`p-1.5 sm:px-2.5 sm:py-1.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
-                  isMoon
-                    ? 'bg-[#d97757]/15 hover:bg-[#d97757]/25 border-[#d97757]/50 text-[#ffaa8a]'
-                    : 'bg-[#ffeade] hover:bg-[#ffd8c7] border-[#d97757]/60 text-[#8a2b0e]'
-                }`}
-                title="Add New Project"
-              >
-                <Plus className="w-3.5 h-3.5 text-[#d97757]" />
-                <span className="hidden md:inline ml-1">New</span>
-              </button>
-            </div>
-
-            {/* Center: Mobile Segmented Switcher (Optimized for Mobile Users) */}
-            <div className="flex lg:hidden items-center bg-black/10 dark:bg-white/10 rounded-xl p-0.5 border border-zinc-500/20 text-xs shrink-0">
-              <button
-                type="button"
-                onClick={() => setMobileTab('chat')}
-                className={`px-2.5 py-1 rounded-lg font-bold flex items-center gap-1 transition-all cursor-pointer ${
-                  mobileTab === 'chat' ? 'bg-[#d97757] text-white shadow-sm' : 'text-zinc-400 hover:text-zinc-200'
-                }`}
-              >
-                <MessageSquare className="w-3.5 h-3.5" />
-                <span>Chat</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setMobileTab('preview');
-                  setRightTab('preview');
-                }}
-                className={`px-2.5 py-1 rounded-lg font-bold flex items-center gap-1 transition-all cursor-pointer ${
-                  mobileTab === 'preview' ? 'bg-[#d97757] text-white shadow-sm' : 'text-zinc-400 hover:text-zinc-200'
-                }`}
-              >
-                <Eye className="w-3.5 h-3.5" />
-                <span>Preview</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setMobileTab('files');
-                  setRightTab('files');
-                }}
-                className={`px-2.5 py-1 rounded-lg font-bold flex items-center gap-1 transition-all cursor-pointer ${
-                  mobileTab === 'files' ? 'bg-[#d97757] text-white shadow-sm' : 'text-zinc-400 hover:text-zinc-200'
-                }`}
-              >
-                <Folder className="w-3.5 h-3.5" />
-                <span>Files ({files.length})</span>
-              </button>
-            </div>
-
-            {/* Right: Desktop Controls */}
-            <div className="hidden lg:flex items-center gap-2 shrink-0">
-              {/* Model Mode */}
-              <div className={`flex items-center ${bgSubtle} border ${border} rounded-xl p-0.5 text-xs`}>
-                <button
-                  onClick={() => setModelMode('fast')}
-                  className={`px-2.5 py-1 rounded-lg flex items-center gap-1 transition-all cursor-pointer ${
-                    modelMode === 'fast' ? `${accentBg} text-white font-semibold shadow-sm` : `${textSub} ${hoverBg}`
-                  }`}
-                >
-                  <Zap className="w-3 h-3" />
-                  <span>Fast</span>
-                </button>
-                <button
-                  onClick={() => setModelMode('reasoning')}
-                  className={`px-2.5 py-1 rounded-lg flex items-center gap-1 transition-all cursor-pointer ${
-                    modelMode === 'reasoning' ? `${accentBg} text-white font-semibold shadow-sm` : `${textSub} ${hoverBg}`
-                  }`}
-                >
-                  <Cpu className="w-3 h-3" />
-                  <span>Reasoning</span>
-                </button>
-              </div>
-
-              {/* Desktop Right Tab Toggle */}
-              <div className={`flex items-center ${bgSubtle} border ${border} rounded-xl p-0.5 text-xs`}>
-                <button
-                  onClick={() => setRightTab('preview')}
-                  className={`px-3 py-1 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer ${
-                    rightTab === 'preview' ? `${accentBg} text-white font-semibold shadow-sm` : `${textSub} ${hoverBg}`
-                  }`}
-                >
-                  <Globe className="w-3.5 h-3.5" />
-                  <span>Preview</span>
-                </button>
-                <button
-                  onClick={() => setRightTab('files')}
-                  className={`px-3 py-1 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer ${
-                    rightTab === 'files' ? `${accentBg} text-white font-semibold shadow-sm` : `${textSub} ${hoverBg}`
-                  }`}
-                >
-                  <Folder className="w-3.5 h-3.5" />
-                  <span>Files ({files.length})</span>
-                </button>
-              </div>
-            </div>
-          </header>
-
-          {/* Toast Notification Banner (Auto Preview Jump) */}
-          <AnimatePresence>
-            {showNotificationToast && (
-              <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                className="bg-[#d97757] text-white px-4 py-2 text-xs font-bold flex items-center justify-between shadow-md shrink-0 z-40"
-              >
-                <span>{showNotificationToast}</span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMobileTab('preview');
-                    setRightTab('preview');
-                    setShowNotificationToast(null);
-                  }}
-                  className="px-2.5 py-1 rounded-lg bg-white text-[#d97757] text-xs font-extrabold hover:bg-white/90 transition-colors cursor-pointer"
-                >
-                  View Preview →
-                </button>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* MAIN CONTENT AREA */}
-          <div className="flex-1 flex overflow-hidden">
-            {/* LEFT: CHAT (Talk with Codex AI and it responds with code) */}
-            <div
-              className={`w-full lg:w-1/2 flex-col border-r ${border} ${bgMain} ${
-                mobileTab === 'chat' ? 'flex' : 'hidden lg:flex'
-              }`}
-            >
-              <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                {messages.length === 0 ? (
-                  <div className="h-full flex flex-col items-center justify-center text-center p-6 max-w-sm mx-auto">
-                    <div className={`w-12 h-12 rounded-2xl ${bgCard} border ${border} flex items-center justify-center mb-4 text-[#d97757]`}>
-                      <Code2 className="w-6 h-6" />
-                    </div>
-                    <h2 className={`text-lg font-bold ${textBright} mb-1.5`}>
-                      Code in {activeProject?.name || 'Workspace'}
-                    </h2>
-                    <p className={`text-xs ${textSub} mb-5 leading-relaxed`}>
-                      Clean project with zero dummy boilerplate. Describe the software or web app you want to build and Codex will write full-stack code and update the preview.
-                    </p>
-                    <div className="w-full space-y-2">
-                      {[
-                        'Build a modern interactive Budget & Expense Tracker',
-                        'Create a responsive Developer Portfolio with project modals',
-                        'Make a Scientific Calculator with calculation history & dark mode',
-                        'Build a Kanban Task Board with drag & drop and localStorage'
-                      ].map((p, i) => (
-                        <button
-                          key={i}
-                          onClick={() => handleSendPrompt(p)}
-                          className={`w-full text-left px-3.5 py-2.5 rounded-xl border ${border} ${bgCard} ${hoverBg} text-xs ${textSub} transition-all cursor-pointer`}
-                        >
-                          {p}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                ) : (
-                  messages.map((msg) => (
-                    <div key={msg.id}>
-                      {msg.role === 'user' ? (
-                        <div className="flex justify-end">
-                          <div className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm ${accentBg} text-white font-medium shadow-sm`}>
-                            {msg.text}
-                          </div>
-                        </div>
-                      ) : (
-                        <div className={`rounded-2xl p-4 ${bgCard} border ${border} text-sm space-y-2`}>
-                          {msg.text ? (
-                            <pre className={`whitespace-pre-wrap font-['Plus_Jakarta_Sans',sans-serif] text-xs ${textPrimary} leading-relaxed`}>
-                              {msg.text}
-                            </pre>
-                          ) : (
-                            <div className={`flex items-center gap-2 text-xs ${textSub}`}>
-                              <Loader2 className={`w-3.5 h-3.5 ${accent} animate-spin`} />
-                              <span>Codex is writing and assembling files...</span>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  ))
-                )}
-                <div ref={messagesEndRef} />
-              </div>
-
-              {/* Chat Input Bar */}
-              <div className={`p-3 border-t ${border} ${bgHeader}`}>
-                <div className={`flex items-end gap-2 rounded-2xl border ${border} ${bgInput} p-2 focus-within:border-[#d97757]/50 transition-colors`}>
-                  <textarea
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        handleSendPrompt();
-                      }
-                    }}
-                    placeholder="Describe what you want to build (e.g. Budget tracker with charts)..."
-                    rows={2}
-                    className={`flex-1 bg-transparent border-none outline-none resize-none text-xs sm:text-sm p-1.5 ${textPrimary} placeholder-[#6b6760]`}
+              {activeActivityTab === 'search' && (
+                <div className="space-y-3 font-sans">
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search in workspace..."
+                    className="w-full bg-[#131722] border border-[#232a3d] rounded-xl px-2.5 py-1.5 text-xs text-slate-200 outline-hidden font-mono"
                   />
-                  <button
-                    disabled={!input.trim() || isLoading}
-                    onClick={() => handleSendPrompt()}
-                    className={`p-2.5 rounded-xl flex items-center justify-center transition-all shrink-0 ${
-                      input.trim() && !isLoading
-                        ? `${accentBg} text-white shadow-md hover:scale-105 active:scale-95 cursor-pointer`
-                        : `${bgSubtle} ${textMuted} cursor-not-allowed`
-                    }`}
-                    title="Send Prompt (Enter)"
-                  >
-                    {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowUp className="w-4 h-4 stroke-[2.5]" />}
-                  </button>
-                </div>
-              </div>
-            </div>
 
-            {/* RIGHT: PREVIEW & FILES (Interactive live preview and project files code) */}
-            <div
-              className={`w-full lg:w-1/2 flex-col ${bgMain} ${
-                mobileTab !== 'chat' ? 'flex' : 'hidden lg:flex'
-              }`}
-            >
-              {rightTab === 'preview' ? (
-                <div className="flex-1 flex flex-col overflow-hidden">
-                  {/* Preview Toolbar */}
-                  <div className={`h-10 px-3 border-b ${border} ${bgHeader} flex items-center justify-between shrink-0`}>
-                    <div className="flex items-center gap-1.5">
-                      <span className="w-2.5 h-2.5 rounded-full bg-red-500/70" />
-                      <span className="w-2.5 h-2.5 rounded-full bg-amber-500/70" />
-                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500/70" />
-                      {htmlFiles.length > 1 && (
-                        <select
-                          value={selectedHtmlFile}
-                          onChange={(e) => {
-                            setSelectedHtmlFile(e.target.value);
-                            setPreviewReloadKey((k) => k + 1);
-                          }}
-                          className={`ml-2 px-2 py-1 rounded-lg text-[11px] font-mono ${bgSubtle} ${textPrimary} border ${border} cursor-pointer focus:outline-none`}
-                        >
-                          {htmlFiles.map((f) => (
-                            <option key={f.id} value={f.name}>{f.name}</option>
-                          ))}
-                        </select>
-                      )}
-                      {htmlFiles.length <= 1 && (
-                        <span className={`text-[11px] ${textSub} font-mono ml-2 truncate max-w-[140px]`}>
-                          {selectedHtmlFile || 'Live Preview'}
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="flex items-center gap-1">
-                      <button
-                        onClick={() => setViewportMode(viewportMode === 'desktop' ? 'mobile' : 'desktop')}
-                        className={`p-1.5 rounded-lg ${textSub} ${hoverBg} transition-colors cursor-pointer`}
-                        title={viewportMode === 'desktop' ? 'Switch to Mobile Frame' : 'Switch to Desktop Frame'}
-                      >
-                        {viewportMode === 'desktop' ? <Smartphone className="w-3.5 h-3.5" /> : <Monitor className="w-3.5 h-3.5" />}
-                      </button>
-                      <button
-                        onClick={() => setPreviewReloadKey((k) => k + 1)}
-                        className={`p-1.5 rounded-lg ${textSub} ${hoverBg} transition-colors cursor-pointer`}
-                        title="Reload Preview"
-                      >
-                        <RefreshCw className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Preview Content Area */}
-                  <div className={`flex-1 overflow-hidden ${isMoon ? 'bg-[#0a0b0e]' : 'bg-[#f0ede7]'} flex items-center justify-center p-2 sm:p-4`}>
-                    {files.length === 0 ? (
-                      <div className={`p-8 rounded-3xl border ${border} ${bgCard} text-center max-w-sm space-y-3`}>
-                        <div className="w-12 h-12 rounded-2xl bg-[#d97757]/15 text-[#d97757] flex items-center justify-center mx-auto">
-                          <Globe className="w-6 h-6" />
-                        </div>
-                        <h3 className={`text-sm font-bold ${textBright}`}>Clean Workspace (0 files)</h3>
-                        <p className={`text-xs ${textSub} leading-relaxed`}>
-                          Talk to Codex AI in Chat to generate your HTML, CSS, and JavaScript. Your running app will automatically appear here!
-                        </p>
-                        <button
-                          type="button"
-                          onClick={() => setMobileTab('chat')}
-                          className="px-4 py-2 rounded-xl bg-[#d97757] hover:bg-[#c86949] text-white text-xs font-bold transition-colors cursor-pointer"
-                        >
-                          Go to Chat & Build →
-                        </button>
-                      </div>
-                    ) : (
+                  <div className="space-y-1">
+                    <span className="text-[10px] text-slate-500 uppercase tracking-wider block font-bold">
+                      Matches ({searchResults.length})
+                    </span>
+                    {searchResults.map((file) => (
                       <div
-                        className={`h-full transition-all duration-300 bg-white rounded-2xl overflow-hidden shadow-2xl ${
-                          viewportMode === 'mobile' ? 'w-[375px] max-w-full border-4 border-[#2a2c34]' : 'w-full'
-                        }`}
+                        key={file.id}
+                        onClick={() => {
+                          setSelectedFileId(file.id);
+                          if (!openTabIds.includes(file.id)) {
+                            setOpenTabIds((prev) => [...prev, file.id]);
+                          }
+                          if (viewMode === 'preview') setViewMode('split');
+                        }}
+                        className="p-2 rounded-xl bg-[#121624] border border-[#1e2436] hover:border-cyan-500/40 cursor-pointer text-xs"
                       >
-                        <iframe
-                          key={previewReloadKey}
-                          srcDoc={livePreviewDoc}
-                          title="Live Preview"
-                          sandbox="allow-scripts allow-modals allow-forms allow-same-origin allow-popups allow-downloads"
-                          className="w-full h-full border-none"
-                        />
+                        <p className="font-bold text-cyan-400 truncate font-mono">{file.path}</p>
+                        <p className="text-[10px] text-slate-400 mt-0.5 truncate font-mono">
+                          {file.content.slice(0, 70)}...
+                        </p>
                       </div>
-                    )}
+                    ))}
                   </div>
                 </div>
-              ) : (
-                /* PROJECT FILES & CODE EDITOR */
-                <div className="flex-1 flex flex-col overflow-hidden">
-                  {/* Files Toolbar */}
-                  <div className={`h-10 px-3 border-b ${border} ${bgHeader} flex items-center justify-between shrink-0`}>
-                    <div className="flex items-center gap-2 min-w-0">
-                      <Folder className={`w-3.5 h-3.5 ${accent} shrink-0`} />
-                      <span className={`text-xs font-semibold ${textBright} truncate`}>
-                        {activeProject?.name || 'Workspace'} ({files.length} {files.length === 1 ? 'file' : 'files'})
-                      </span>
-                    </div>
+              )}
 
-                    <div className="flex items-center gap-1">
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        multiple
-                        onChange={handleUploadFiles}
-                        className="hidden"
-                      />
-                      <input
-                        ref={folderInputRef}
-                        type="file"
-                        multiple
-                        onChange={handleUploadFiles}
-                        className="hidden"
-                        {...({ webkitdirectory: '', directory: '', mozdirectory: '' } as any)}
-                      />
-
-                      <button
-                        onClick={handleOpenFolder}
-                        className={`px-2.5 py-1.5 rounded-lg ${accentBg} text-white text-[11px] font-semibold flex items-center gap-1.5 transition-colors cursor-pointer`}
-                        title="Open Folder from Device"
-                      >
-                        <FolderOpen className="w-3 h-3" />
-                        <span className="hidden sm:inline">Open Folder</span>
-                      </button>
-
-                      <button
-                        onClick={() => fileInputRef.current?.click()}
-                        className={`p-1.5 rounded-lg ${textSub} ${hoverBg} transition-colors cursor-pointer`}
-                        title="Upload Files"
-                      >
-                        <Upload className="w-3.5 h-3.5" />
-                      </button>
-
-                      <button
-                        onClick={handleCreateFile}
-                        className={`p-1.5 rounded-lg ${textSub} ${hoverBg} transition-colors cursor-pointer`}
-                        title="New File"
-                      >
-                        <FilePlus className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
+              {activeActivityTab === 'ai' && (
+                <div className="h-full flex flex-col space-y-3 font-sans">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">
+                      Architect Model
+                    </span>
+                    <select
+                      value={selectedModel}
+                      onChange={(e) => setSelectedModel(e.target.value as any)}
+                      aria-label="Codex AI Model"
+                      className="bg-slate-900 border border-slate-800 rounded-lg px-2 py-0.5 text-[10px] text-cyan-300 font-mono outline-hidden"
+                    >
+                      <option value="gemini-flash-latest">Flash New (Instant)</option>
+                      <option value="gemini-4-argon">Argon 4 (Heavy)</option>
+                    </select>
                   </div>
 
-                  {/* File Tree / List */}
-                  <div className="flex-1 overflow-y-auto p-2">
-                    {files.length === 0 ? (
-                      <div className={`h-full flex flex-col items-center justify-center text-center p-6 ${textMuted}`}>
-                        <Folder className="w-10 h-10 mb-3 opacity-40 text-[#d97757]" />
-                        <p className="text-xs font-bold mb-1">No files in project yet</p>
-                        <p className="text-[11px] max-w-xs mb-3">Ask Codex AI in Chat to generate code, or click below to create a file manually.</p>
-                        <button
-                          onClick={handleCreateFile}
-                          className="px-3 py-1.5 rounded-xl bg-[#d97757] hover:bg-[#c86949] text-white text-xs font-bold cursor-pointer"
-                        >
-                          + Create New File
-                        </button>
-                      </div>
-                    ) : (
-                      renderTreeNode(fileTree, '')
-                    )}
-                  </div>
-
-                  {/* Built-in Code Editor */}
-                  {activeFile && !activeFile.isBinary && (
-                    <div className={`border-t ${border} flex flex-col ${isMoon ? 'bg-[#0a0b0e]' : 'bg-[#faf9f7]'} h-[50%] shrink-0`}>
-                      <div className={`h-9 px-3 border-b ${border} flex items-center justify-between shrink-0 ${bgHeader}`}>
-                        <div className="flex items-center gap-2 min-w-0">
-                          <FileCode className={`w-3.5 h-3.5 ${accent} shrink-0`} />
-                          <span className={`text-xs font-mono font-semibold ${textBright} truncate`}>
-                            {activeFile.path}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          {saveStatus === 'saving' && (
-                            <span className={`text-[10px] ${textSub} flex items-center gap-1`}>
-                              <Loader2 className="w-3 h-3 animate-spin" />
-                              Saving...
-                            </span>
-                          )}
-                          {saveStatus === 'saved' && (
-                            <span className="text-[10px] text-emerald-500 flex items-center gap-1">
-                              ✓ Saved
-                            </span>
-                          )}
-                          <button
-                            onClick={handleSaveFile}
-                            className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold flex items-center gap-1 cursor-pointer transition-colors"
-                          >
-                            <Save className="w-3 h-3" />
-                            <span>Save</span>
-                          </button>
-                        </div>
-                      </div>
-
-                      <textarea
-                        value={editingContent}
-                        onChange={(e) => setEditingContent(e.target.value)}
-                        className={`flex-1 w-full p-3 font-mono text-xs leading-relaxed border-none outline-none resize-none ${
-                          isMoon ? 'bg-[#0a0b0e] text-[#e8e8ea]' : 'bg-white text-[#1a1815]'
+                  {/* Clean Messages Feed (Zero Lag) */}
+                  <div className="flex-1 overflow-y-auto space-y-2.5 max-h-80 p-1">
+                    {messages.map((m) => (
+                      <div
+                        key={m.id}
+                        className={`p-2.5 rounded-2xl text-xs ${
+                          m.role === 'user'
+                            ? 'bg-cyan-500/15 border border-cyan-500/30 text-cyan-100 ml-2'
+                            : 'bg-[#121624] border border-[#1e2436] text-slate-200 mr-1 shadow-lg'
                         }`}
-                        spellCheck={false}
-                      />
-                    </div>
-                  )}
+                      >
+                        <p className="font-semibold text-slate-100">{m.text}</p>
+                        {m.summary && (
+                          <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">
+                            {m.summary}
+                          </p>
+                        )}
+
+                        {/* Interactive File Action Badges */}
+                        {m.actionFiles && m.actionFiles.length > 0 && (
+                          <div className="mt-2 pt-2 border-t border-slate-800 space-y-1.5">
+                            <span className="text-[10px] text-cyan-400 font-bold block">
+                              Files Updated:
+                            </span>
+                            <div className="flex flex-col gap-1">
+                              {m.actionFiles.map((item) => (
+                                <button
+                                  key={item.path}
+                                  type="button"
+                                  onClick={() => {
+                                    const found = files.find((f) => f.path === item.path);
+                                    if (found) {
+                                      setSelectedFileId(found.id);
+                                      if (!openTabIds.includes(found.id)) {
+                                        setOpenTabIds((prev) => [...prev, found.id]);
+                                      }
+                                      if (viewMode === 'preview') setViewMode('split');
+                                    }
+                                  }}
+                                  className="w-full px-2 py-1 rounded-lg bg-[#0e111a] hover:bg-cyan-500/10 text-[11px] text-slate-300 hover:text-cyan-300 border border-slate-800 hover:border-cyan-500/40 font-mono flex items-center justify-between transition-colors text-left"
+                                >
+                                  <span className="truncate">{item.path}</span>
+                                  <span className="text-[9px] text-slate-500 shrink-0 font-sans">
+                                    {item.lines} lines
+                                  </span>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+
+                    {/* Live streaming indicator */}
+                    {isLoadingAi && aiStreamingStatus && (
+                      <div className="p-2 rounded-xl bg-cyan-950/40 border border-cyan-500/30 text-xs text-cyan-300 flex items-center gap-2 animate-pulse">
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin text-cyan-400" />
+                        <span>{aiStreamingStatus}</span>
+                      </div>
+                    )}
+                    <div ref={chatBottomRef} />
+                  </div>
+
+                  {/* Input Prompt Box */}
+                  <div className="space-y-1.5 pt-2 border-t border-[#1a2030]">
+                    <textarea
+                      value={inputPrompt}
+                      onChange={(e) => setInputPrompt(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault();
+                          handleSendAiPrompt();
+                        }
+                      }}
+                      placeholder="Ask Codex to code features or apps..."
+                      rows={3}
+                      className="w-full bg-[#121624] border border-[#232a3d] rounded-xl p-2.5 text-xs text-slate-200 outline-hidden resize-none font-mono focus:border-cyan-500/60 transition-colors"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleSendAiPrompt()}
+                      disabled={isLoadingAi || !inputPrompt.trim()}
+                      className="w-full py-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 disabled:opacity-50 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow-lg shadow-cyan-500/20 cursor-pointer"
+                    >
+                      {isLoadingAi ? (
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Sparkles className="w-3.5 h-3.5" />
+                      )}
+                      <span>Build & Apply</span>
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* ========================================================================= */}
-      {/* 3. GLOBAL MODALS (NEW PROJECT & DELETE CONFIRMATION)                      */}
-      {/* ========================================================================= */}
-
-      {/* NEW PROJECT MODAL */}
-      <AnimatePresence>
-        {showNewProjectModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className={`w-full max-w-sm rounded-3xl border p-5 shadow-2xl ${
-                isMoon ? 'bg-[#14151e] border-[#2b2d3e] text-white' : 'bg-white border-slate-200 text-slate-900'
+        {/* 3. CENTER / MAIN WORKSPACE AREA */}
+        <div className="flex-1 flex min-w-0 overflow-hidden bg-[#0b0e17]">
+          {/* EDITOR SECTION (Visible in 'code' or 'split' mode) */}
+          {(viewMode === 'code' || viewMode === 'split') && (
+            <div
+              className={`flex flex-col min-w-0 overflow-hidden ${
+                viewMode === 'split' ? 'w-[55%] border-r border-[#1a2030]' : 'w-full'
               }`}
             >
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-xl bg-[#d97757]/20 border border-[#d97757]/40 flex items-center justify-center text-[#d97757]">
-                    <Layers className="w-4 h-4" />
+              {/* TABS BAR (With dedicated Live Preview Tab!) */}
+              <div className="h-9 bg-[#080b12] border-b border-[#1a2030] flex items-center overflow-x-auto select-none shrink-0 font-['Plus_Jakarta_Sans',sans-serif]">
+                {openTabIds.map((tabId) => {
+                  const file = files.find((f) => f.id === tabId);
+                  if (!file) return null;
+                  const isActive = selectedFileId === tabId;
+                  return (
+                    <div
+                      key={tabId}
+                      onClick={() => setSelectedFileId(tabId)}
+                      className={`h-full px-3 flex items-center gap-2 border-r border-[#1a2030] cursor-pointer text-xs font-medium transition-colors shrink-0 ${
+                        isActive
+                          ? 'bg-[#0b0e17] text-white border-t-2 border-t-cyan-400 font-semibold'
+                          : 'bg-[#080b12] text-slate-400 hover:bg-[#0e121d] hover:text-slate-200'
+                      }`}
+                    >
+                      <FileCode className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                      <span className="truncate max-w-[120px] font-mono">{file.name}</span>
+                      <button
+                        type="button"
+                        onClick={(e) => handleCloseTab(tabId, e)}
+                        className="p-0.5 rounded hover:bg-slate-700 text-slate-500 hover:text-white"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  );
+                })}
+
+                <button
+                  type="button"
+                  onClick={() => handleCreateNewFile()}
+                  className="p-1.5 text-slate-500 hover:text-slate-300 ml-1 cursor-pointer"
+                  title="New File"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                </button>
+
+                {/* Permanent In-Tab Preview Switcher */}
+                <div className="ml-auto pr-2 flex items-center">
+                  <button
+                    type="button"
+                    onClick={() => setViewMode('preview')}
+                    className="px-2 py-0.5 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 text-[11px] font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                    title="Switch to full tab preview"
+                  >
+                    <Eye className="w-3 h-3" />
+                    <span>Live Preview Tab</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Breadcrumb Bar */}
+              <div className="h-6 px-3 bg-[#0d101a] border-b border-[#161b29] flex items-center justify-between text-[11px] text-slate-400 select-none font-mono">
+                <div className="flex items-center gap-1.5 truncate">
+                  <span className="text-slate-500">{activeProject.name}</span>
+                  <span>&gt;</span>
+                  <span className="text-cyan-300 font-semibold">{activeFile?.path || 'Untitled'}</span>
+                </div>
+                <div className="flex items-center gap-2 font-['Plus_Jakarta_Sans',sans-serif]">
+                  <button
+                    type="button"
+                    onClick={handleFormatCode}
+                    className="hover:text-cyan-400 transition-colors cursor-pointer"
+                    title="Format Code"
+                  >
+                    Format
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(editingContent);
+                      setToastMessage('Copied to clipboard');
+                      setTimeout(() => setToastMessage(null), 2000);
+                    }}
+                    className="hover:text-cyan-400 transition-colors cursor-pointer"
+                    title="Copy Code"
+                  >
+                    Copy
+                  </button>
+                </div>
+              </div>
+
+              {/* Editor Textarea with Line Numbers */}
+              <div className="flex-1 flex overflow-hidden relative">
+                {/* Gutter */}
+                <div
+                  ref={lineGutterRef}
+                  className="w-12 bg-[#080b12] border-r border-[#161b29] py-3 text-right pr-2 text-slate-600 font-mono text-xs select-none overflow-hidden shrink-0"
+                >
+                  {Array.from({ length: lineCount }).map((_, i) => (
+                    <div key={i} className="leading-6">
+                      {i + 1}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Textarea */}
+                <textarea
+                  ref={editorTextareaRef}
+                  value={editingContent}
+                  onChange={(e) => setEditingContent(e.target.value)}
+                  onScroll={handleEditorScroll}
+                  onKeyUp={handleEditorKeyUp}
+                  onClick={(e) => handleEditorKeyUp(e as any)}
+                  spellCheck={false}
+                  className="flex-1 bg-transparent p-3 text-xs font-mono text-slate-100 outline-hidden resize-none leading-6 whitespace-pre overflow-auto selection:bg-cyan-500/30"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* LIVE PREVIEW SECTION (Visible in 'split' or 'preview' mode) */}
+          {(viewMode === 'split' || viewMode === 'preview') && (
+            <div
+              className={`bg-[#080a10] flex flex-col shrink-0 overflow-hidden font-['Plus_Jakarta_Sans',sans-serif] ${
+                viewMode === 'split' ? 'w-[45%]' : 'w-full'
+              }`}
+            >
+              {/* Preview Browser Chrome Header */}
+              <div className="h-10 px-3 bg-[#0d101a] border-b border-[#1a2030] flex items-center justify-between text-xs select-none gap-2">
+                <div className="flex items-center gap-2 shrink-0">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-rose-500/80"></span>
+                    <span className="w-2.5 h-2.5 rounded-full bg-amber-500/80"></span>
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500/80"></span>
                   </div>
-                  <h3 className="font-extrabold text-sm">Add New Project</h3>
+                  <span className="font-bold text-white text-[11px] hidden sm:inline">Live Sandbox</span>
+                </div>
+
+                {/* Simulated URL bar */}
+                <div className="flex-1 max-w-sm mx-2 bg-[#141826] border border-slate-800 rounded-lg px-2.5 py-1 text-[11px] text-slate-400 font-mono flex items-center gap-1.5 truncate">
+                  <Globe className="w-3 h-3 text-cyan-400 shrink-0" />
+                  <span className="truncate">http://localhost:3000/preview</span>
+                </div>
+
+                {/* Viewport Toggles */}
+                <div className="flex items-center gap-1 bg-[#141826] rounded-lg p-0.5 border border-slate-800">
+                  <button
+                    type="button"
+                    onClick={() => setPreviewViewport('desktop')}
+                    className={`p-1 rounded ${
+                      previewViewport === 'desktop' ? 'bg-cyan-500/20 text-cyan-300 font-bold' : 'text-slate-500 hover:text-slate-300'
+                    }`}
+                    title="Desktop 100%"
+                  >
+                    <Monitor className="w-3 h-3" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPreviewViewport('tablet')}
+                    className={`p-1 rounded ${
+                      previewViewport === 'tablet' ? 'bg-cyan-500/20 text-cyan-300 font-bold' : 'text-slate-500 hover:text-slate-300'
+                    }`}
+                    title="Tablet 768px"
+                  >
+                    <Tablet className="w-3 h-3" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPreviewViewport('mobile')}
+                    className={`p-1 rounded ${
+                      previewViewport === 'mobile' ? 'bg-cyan-500/20 text-cyan-300 font-bold' : 'text-slate-500 hover:text-slate-300'
+                    }`}
+                    title="Mobile 375px"
+                  >
+                    <Smartphone className="w-3 h-3" />
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setPreviewReloadKey((k) => k + 1)}
+                    className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-colors cursor-pointer"
+                    title="Reload Sandbox"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                  </button>
+                  {viewMode === 'preview' && (
+                    <button
+                      type="button"
+                      onClick={() => setViewMode('split')}
+                      className="px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] font-semibold transition-colors cursor-pointer"
+                      title="Back to Split View"
+                    >
+                      Split View
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Preview Frame Container */}
+              <div className="flex-1 bg-[#06080e] flex items-center justify-center p-2 overflow-auto">
+                <div
+                  className="h-full bg-white transition-all duration-200 rounded-xl overflow-hidden shadow-2xl border border-slate-800"
+                  style={{
+                    width:
+                      previewViewport === 'mobile'
+                        ? '375px'
+                        : previewViewport === 'tablet'
+                        ? '768px'
+                        : '100%'
+                  }}
+                >
+                  <iframe
+                    key={previewReloadKey}
+                    srcDoc={livePreviewDoc}
+                    title="Live Sandbox"
+                    sandbox="allow-scripts allow-modals allow-forms allow-same-origin"
+                    className="w-full h-full border-none"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* 4. BOTTOM STATUS BAR (Sapphire Aesthetic) */}
+      <footer className="h-6 bg-[#080b12] border-t border-[#1a2030] text-slate-400 flex items-center justify-between px-3 text-[11px] select-none shrink-0 font-['Plus_Jakarta_Sans',sans-serif]">
+        <div className="flex items-center gap-3">
+          <span className="flex items-center gap-1 text-cyan-400">
+            <GitBranch className="w-3 h-3" />
+            <span>main*</span>
+          </span>
+          <span className="flex items-center gap-1 text-slate-500">
+            <span>⊗ 0</span>
+            <span>⚠ 0</span>
+          </span>
+          <span className="font-mono text-slate-400">{activeProject.name}</span>
+        </div>
+
+        <div className="flex items-center gap-3 font-mono text-[10px]">
+          <span>Ln {cursorPosition.line}, Col {cursorPosition.col}</span>
+          <span>Spaces: 2</span>
+          <span>UTF-8</span>
+          <span className="font-semibold uppercase text-cyan-300">{activeFile?.language || 'TEXT'}</span>
+          <span className="bg-cyan-500/20 text-cyan-300 px-1.5 py-0.2 rounded font-bold font-sans">
+            Sapphire Codex
+          </span>
+          <span className="hidden sm:inline text-slate-500 font-sans">Shaheer Hassan</span>
+        </div>
+      </footer>
+
+      {/* NEW PROJECT / FOLDER MODAL */}
+      <AnimatePresence>
+        {isNewProjectModalOpen && (
+          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 font-['Plus_Jakarta_Sans',sans-serif]">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-[#0f1422] border border-cyan-500/30 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center text-white shadow-xs">
+                    <FolderPlus className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-white text-sm">Create New Project Folder</h3>
+                    <p className="text-xs text-slate-400">Initialize a workspace folder for your apps</p>
+                  </div>
                 </div>
                 <button
                   type="button"
-                  onClick={() => setShowNewProjectModal(false)}
-                  className="p-1 rounded-lg hover:bg-zinc-800/40 text-zinc-400 cursor-pointer"
+                  onClick={() => setIsNewProjectModalOpen(false)}
+                  className="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white"
                 >
                   <X className="w-4 h-4" />
                 </button>
               </div>
 
-              <p className="text-xs text-zinc-400 mb-3 leading-relaxed">
-                Create a clean, empty workspace with zero default boilerplate. You can chat with Codex AI to code any app or upload files.
-              </p>
-
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  handleCreateNewProject(newProjectName);
-                }}
-                className="space-y-3"
-              >
+              <div className="space-y-3">
                 <div>
-                  <label className="block text-[11px] font-bold uppercase tracking-wider text-zinc-400 mb-1">
-                    Project Name
+                  <label className="text-xs font-semibold text-slate-300 block mb-1.5">
+                    Folder Name
                   </label>
                   <input
                     type="text"
-                    required
                     value={newProjectName}
                     onChange={(e) => setNewProjectName(e.target.value)}
-                    placeholder="e.g. Portfolio, E-Commerce, Budget Tracker"
-                    className={`w-full px-3.5 py-2.5 rounded-xl border text-xs sm:text-sm font-medium outline-none focus:border-[#d97757] ${
-                      isMoon ? 'bg-[#1a1c28] border-[#2f3248] text-white' : 'bg-slate-50 border-slate-300 text-slate-900'
-                    }`}
-                    autoFocus
+                    placeholder="e.g. saas-landing, portfolio-hub, ecommerce-app"
+                    className="w-full bg-[#161c2e] border border-[#27324d] rounded-xl px-3 py-2 text-xs text-white outline-hidden focus:border-cyan-400 transition-colors"
                   />
                 </div>
 
-                <div className="flex items-center justify-end gap-2 pt-1">
-                  <button
-                    type="button"
-                    onClick={() => setShowNewProjectModal(false)}
-                    className="px-3 py-2 rounded-xl text-xs font-semibold text-zinc-400 hover:text-zinc-200 cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-4 py-2 rounded-xl bg-[#d97757] hover:bg-[#c86949] text-white text-xs font-bold cursor-pointer transition-colors shadow-sm"
-                  >
-                    Create Project
-                  </button>
-                </div>
-              </form>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* DELETE PROJECT IN-UI CONFIRMATION MODAL */}
-      <AnimatePresence>
-        {projectToDelete && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className={`w-full max-w-sm rounded-3xl border p-5 shadow-2xl ${
-                isMoon ? 'bg-[#14151e] border-[#2b2d3e] text-white' : 'bg-white border-slate-200 text-slate-900'
-              }`}
-            >
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 rounded-2xl bg-rose-500/20 text-rose-500 flex items-center justify-center shrink-0">
-                  <Trash2 className="w-5 h-5" />
-                </div>
                 <div>
-                  <h3 className="font-extrabold text-sm">Delete Project?</h3>
-                  <p className="text-xs text-zinc-400 leading-relaxed">
-                    "{projectToDelete.name}" and all of its files will be permanently deleted.
-                  </p>
+                  <label className="text-xs font-semibold text-slate-300 block mb-1.5">
+                    Starter Architecture
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setNewProjectTemplate('web')}
+                      className={`p-3 rounded-xl border text-left cursor-pointer transition-all ${
+                        newProjectTemplate === 'web'
+                          ? 'bg-cyan-500/20 border-cyan-400 text-white'
+                          : 'bg-[#161c2e] border-[#27324d] text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      <Zap className="w-4 h-4 text-cyan-400 mb-1" />
+                      <p className="font-bold text-xs">Modern Web App</p>
+                      <p className="text-[10px] text-slate-400 mt-0.5">HTML5, Tailwind, JS & Icons</p>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setNewProjectTemplate('empty')}
+                      className={`p-3 rounded-xl border text-left cursor-pointer transition-all ${
+                        newProjectTemplate === 'empty'
+                          ? 'bg-cyan-500/20 border-cyan-400 text-white'
+                          : 'bg-[#161c2e] border-[#27324d] text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      <Folder className="w-4 h-4 text-blue-400 mb-1" />
+                      <p className="font-bold text-xs">Blank Folder</p>
+                      <p className="text-[10px] text-slate-400 mt-0.5">Empty canvas for AI</p>
+                    </button>
+                  </div>
                 </div>
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-2">
+              <div className="flex items-center gap-2 pt-2">
                 <button
                   type="button"
-                  onClick={() => setProjectToDelete(null)}
-                  className="px-3.5 py-2 rounded-xl text-xs font-semibold text-zinc-400 hover:text-zinc-200 cursor-pointer"
+                  onClick={() => setIsNewProjectModalOpen(false)}
+                  className="flex-1 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    const remaining = projects.filter((p) => p.id !== projectToDelete.id);
-                    setProjects(remaining);
-                    if (activeProjectId === projectToDelete.id) {
-                      if (remaining.length > 0) {
-                        setActiveProjectId(remaining[0].id);
-                        setSelectedFileId(remaining[0].files[0]?.id || '');
-                        setEditingContent(remaining[0].files[0]?.content || '');
-                      } else {
-                        setActiveProjectId('');
-                        setSelectedFileId('');
-                        setEditingContent('');
-                      }
-                    }
-                    setProjectToDelete(null);
-                  }}
-                  className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold cursor-pointer transition-colors shadow-sm"
+                  onClick={handleCreateNewProject}
+                  className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-xs font-bold transition-all shadow-lg shadow-cyan-500/20 cursor-pointer"
                 >
-                  Delete Project
+                  Create Folder
                 </button>
               </div>
             </motion.div>
           </div>
         )}
       </AnimatePresence>
+
+      {/* Notification Toast */}
+      {toastMessage && (
+        <div className="fixed bottom-8 right-6 bg-cyan-600 text-white text-xs font-semibold px-4 py-2.5 rounded-2xl shadow-xl z-50 flex items-center gap-2 font-['Plus_Jakarta_Sans',sans-serif] animate-fade-in">
+          <Check className="w-3.5 h-3.5" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
     </div>
   );
 };

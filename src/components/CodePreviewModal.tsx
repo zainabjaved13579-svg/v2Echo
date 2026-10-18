@@ -264,7 +264,7 @@ export const CodePreviewModal: React.FC<CodePreviewModalProps> = ({
             <img
               src={SAPPHIRE_LOGO_URL}
               alt="Sapphire Studio"
-              className="w-8 h-8 rounded-xl object-contain p-0.5 border border-white/20 bg-white shadow-md shadow-[#d97757]/20 shrink-0"
+              className="w-8 h-8 rounded-xl object-contain p-0.5 border border-cyan-500/30 bg-[#0f1422] shadow-md shadow-cyan-500/20 shrink-0"
             />
 
             <div className="min-w-0">
@@ -272,12 +272,12 @@ export const CodePreviewModal: React.FC<CodePreviewModalProps> = ({
                 <span className="font-bold text-sm text-white tracking-tight truncate">
                   {selectedFile?.name || 'Studio Preview'}
                 </span>
-                <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-mono">
+                <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 text-[10px] font-mono">
                   <CheckCircle2 className="w-3 h-3" />
                   Live Reactive
                 </span>
                 {projectFiles.length > 1 && (
-                  <span className="text-[11px] px-2 py-0.5 rounded-lg bg-[#20201f] text-[#a19e97] border border-[#2b2b2a]">
+                  <span className="text-[11px] px-2 py-0.5 rounded-lg bg-[#181d2c] text-slate-400 border border-[#27324c]">
                     {projectFiles.length} files
                   </span>
                 )}
@@ -286,14 +286,14 @@ export const CodePreviewModal: React.FC<CodePreviewModalProps> = ({
           </div>
 
           {/* Center: Mode Switcher (Preview | Split | Code | All Files) */}
-          <div className="flex items-center bg-[#20201f] border border-[#2b2b2a] rounded-2xl p-1 gap-1">
+          <div className="flex items-center bg-[#101420] border border-[#1e273b] rounded-2xl p-1 gap-1">
             <button
               type="button"
               onClick={() => setActiveTab('preview')}
               className={`px-3.5 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer flex items-center gap-1.5 ${
                 activeTab === 'preview'
-                  ? 'bg-[#d97757] text-white shadow-xs'
-                  : 'text-[#86837c] hover:text-white'
+                  ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-xs'
+                  : 'text-slate-400 hover:text-white'
               }`}
             >
               <Eye className="w-3.5 h-3.5" />
@@ -305,8 +305,8 @@ export const CodePreviewModal: React.FC<CodePreviewModalProps> = ({
               onClick={() => setActiveTab('split')}
               className={`hidden md:flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
                 activeTab === 'split'
-                  ? 'bg-[#d97757] text-white shadow-xs'
-                  : 'text-[#86837c] hover:text-white'
+                  ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-xs'
+                  : 'text-slate-400 hover:text-white'
               }`}
             >
               <Layers className="w-3.5 h-3.5" />
@@ -318,8 +318,8 @@ export const CodePreviewModal: React.FC<CodePreviewModalProps> = ({
               onClick={() => setActiveTab('code')}
               className={`px-3.5 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer flex items-center gap-1.5 ${
                 activeTab === 'code'
-                  ? 'bg-[#d97757] text-white shadow-xs'
-                  : 'text-[#86837c] hover:text-white'
+                  ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-xs'
+                  : 'text-slate-400 hover:text-white'
               }`}
             >
               <Code2 className="w-3.5 h-3.5" />
@@ -331,8 +331,8 @@ export const CodePreviewModal: React.FC<CodePreviewModalProps> = ({
               onClick={() => setActiveTab('all-files')}
               className={`px-3.5 py-1.5 text-xs font-semibold rounded-xl transition-all cursor-pointer flex items-center gap-1.5 ${
                 activeTab === 'all-files'
-                  ? 'bg-[#d97757] text-white shadow-xs'
-                  : 'text-[#86837c] hover:text-white'
+                  ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-xs'
+                  : 'text-slate-400 hover:text-white'
               }`}
               title="Full Preview of All Project Files"
             >
@@ -345,12 +345,12 @@ export const CodePreviewModal: React.FC<CodePreviewModalProps> = ({
           <div className="flex items-center gap-1.5">
             {/* Viewport frames (when preview or split active) */}
             {(activeTab === 'preview' || activeTab === 'split') && (
-              <div className="hidden lg:flex items-center bg-[#20201f] border border-[#2b2b2a] rounded-xl p-0.5 mr-1">
+              <div className="hidden lg:flex items-center bg-[#101420] border border-[#1e273b] rounded-xl p-0.5 mr-1">
                 <button
                   type="button"
                   onClick={() => setDeviceView('desktop')}
                   className={`p-1.5 rounded-lg text-xs transition-colors cursor-pointer ${
-                    deviceView === 'desktop' ? 'bg-[#d97757] text-white' : 'text-[#86837c] hover:text-white'
+                    deviceView === 'desktop' ? 'bg-cyan-500/20 text-cyan-300 font-bold' : 'text-slate-400 hover:text-white'
                   }`}
                   title="Desktop View (100%)"
                 >
@@ -360,7 +360,7 @@ export const CodePreviewModal: React.FC<CodePreviewModalProps> = ({
                   type="button"
                   onClick={() => setDeviceView('tablet')}
                   className={`p-1.5 rounded-lg text-xs transition-colors cursor-pointer ${
-                    deviceView === 'tablet' ? 'bg-[#d97757] text-white' : 'text-[#86837c] hover:text-white'
+                    deviceView === 'tablet' ? 'bg-cyan-500/20 text-cyan-300 font-bold' : 'text-slate-400 hover:text-white'
                   }`}
                   title="Tablet View (768px)"
                 >
@@ -370,7 +370,7 @@ export const CodePreviewModal: React.FC<CodePreviewModalProps> = ({
                   type="button"
                   onClick={() => setDeviceView('mobile')}
                   className={`p-1.5 rounded-lg text-xs transition-colors cursor-pointer ${
-                    deviceView === 'mobile' ? 'bg-[#d97757] text-white' : 'text-[#86837c] hover:text-white'
+                    deviceView === 'mobile' ? 'bg-cyan-500/20 text-cyan-300 font-bold' : 'text-slate-400 hover:text-white'
                   }`}
                   title="Mobile View (375px)"
                 >
@@ -383,7 +383,7 @@ export const CodePreviewModal: React.FC<CodePreviewModalProps> = ({
             <button
               type="button"
               onClick={() => setRefreshKey((k) => k + 1)}
-              className="p-2 rounded-2xl bg-[#20201f] hover:bg-[#282724] border border-[#2b2b2a] text-[#a19e97] hover:text-white transition-colors cursor-pointer"
+              className="p-2 rounded-2xl bg-[#141826] hover:bg-[#1e2436] border border-[#1e273b] text-slate-400 hover:text-white transition-colors cursor-pointer"
               title="Refresh Live Preview"
             >
               <RefreshCw className="w-3.5 h-3.5" />
@@ -393,10 +393,10 @@ export const CodePreviewModal: React.FC<CodePreviewModalProps> = ({
             <button
               type="button"
               onClick={() => setShowRemakeBar((b) => !b)}
-              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-[#20201f] hover:bg-[#282724] border border-[#2b2b2a] text-xs font-medium text-[#d97757] hover:text-white transition-all cursor-pointer"
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-[#141826] hover:bg-[#1e2436] border border-[#1e273b] text-xs font-medium text-cyan-400 hover:text-white transition-all cursor-pointer"
               title="Remake or optimize code with AI"
             >
-              <Wand2 className="w-3.5 h-3.5 text-[#d97757]" />
+              <Wand2 className="w-3.5 h-3.5 text-cyan-400" />
               <span>Remake</span>
             </button>
 
@@ -404,10 +404,10 @@ export const CodePreviewModal: React.FC<CodePreviewModalProps> = ({
             <button
               type="button"
               onClick={() => exportAllFilesAsZip(projectFiles)}
-              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-[#20201f] hover:bg-[#282724] border border-[#2b2b2a] text-xs font-medium text-white transition-colors cursor-pointer"
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-[#141826] hover:bg-[#1e2436] border border-[#1e273b] text-xs font-medium text-white transition-colors cursor-pointer"
               title="Download ZIP of all project files"
             >
-              <Download className="w-3.5 h-3.5 text-[#d97757]" />
+              <Download className="w-3.5 h-3.5 text-cyan-400" />
               <span>Export ZIP</span>
             </button>
 
@@ -416,7 +416,7 @@ export const CodePreviewModal: React.FC<CodePreviewModalProps> = ({
               <button
                 type="button"
                 onClick={onOpenCodexWorkspace}
-                className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-[#d97757] hover:bg-[#c86b4c] text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+                className="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer"
                 title="Open in Full Codex Studio IDE"
               >
                 <Layers className="w-3.5 h-3.5" />
@@ -467,7 +467,7 @@ export const CodePreviewModal: React.FC<CodePreviewModalProps> = ({
                         : 'text-[#86837c] hover:text-white border-transparent hover:bg-[#181818]'
                     }`}
                   >
-                    <FileCode className={`w-3.5 h-3.5 ${isSelected ? 'text-[#d97757]' : 'text-slate-400'}`} />
+                    <FileCode className={`w-3.5 h-3.5 ${isSelected ? 'text-cyan-400' : 'text-slate-400'}`} />
                     <span>{f.name}</span>
                   </button>
                 );
@@ -486,7 +486,7 @@ export const CodePreviewModal: React.FC<CodePreviewModalProps> = ({
                     }}
                     className={`px-2.5 py-1 rounded-lg transition-all ${
                       previewScope === 'selected'
-                        ? 'bg-[#d97757] text-white shadow-xs font-semibold'
+                        ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-xs font-semibold'
                         : 'text-[#86837c] hover:text-white'
                     }`}
                     title="Preview currently active file"
@@ -501,7 +501,7 @@ export const CodePreviewModal: React.FC<CodePreviewModalProps> = ({
                     }}
                     className={`px-2.5 py-1 rounded-lg transition-all ${
                       previewScope === 'app'
-                        ? 'bg-[#d97757] text-white shadow-xs font-semibold'
+                        ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-xs font-semibold'
                         : 'text-[#86837c] hover:text-white'
                     }`}
                     title="Preview bundled web app"
@@ -526,7 +526,7 @@ export const CodePreviewModal: React.FC<CodePreviewModalProps> = ({
                 className="px-2.5 py-1 rounded-lg bg-[#20201f] hover:bg-[#282724] border border-[#2b2b2a] text-xs text-[#ede8e1] flex items-center gap-1 cursor-pointer"
                 title="Download active file"
               >
-                <Download className="w-3 h-3 text-[#d97757]" />
+                <Download className="w-3 h-3 text-cyan-400" />
                 <span className="hidden sm:inline">Download</span>
               </button>
             </div>
@@ -538,7 +538,7 @@ export const CodePreviewModal: React.FC<CodePreviewModalProps> = ({
           <div className="p-3 bg-[#181817] border-b border-[#33312e] space-y-2 text-xs shrink-0 select-none">
             <div className="flex items-center justify-between">
               <span className="font-bold text-[#f5f2eb] flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-[#d97757]" />
+                <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
                 <span>AI Code Remake & Enhancement Studio</span>
               </span>
               {remakeSuccess && (
@@ -558,13 +558,13 @@ export const CodePreviewModal: React.FC<CodePreviewModalProps> = ({
                   if (e.key === 'Enter') handleRemakeCode();
                 }}
                 placeholder="Describe how to remake or optimize this code..."
-                className="flex-1 bg-[#101010] border border-[#2e2d2a] rounded-xl px-3 py-1.5 text-white placeholder-[#666] text-xs focus:outline-none focus:border-[#d97757]"
+                className="flex-1 bg-[#101010] border border-[#2e2d2a] rounded-xl px-3 py-1.5 text-white placeholder-[#666] text-xs focus:outline-none focus:border-cyan-400"
               />
               <button
                 type="button"
                 onClick={() => handleRemakeCode()}
                 disabled={isRemaking || !remakeInstruction.trim()}
-                className="px-4 py-1.5 bg-[#d97757] hover:bg-[#c86b4c] disabled:opacity-40 text-white rounded-xl font-semibold flex items-center gap-1.5 transition-all cursor-pointer shrink-0"
+                className="px-4 py-1.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 disabled:opacity-40 text-white rounded-xl font-semibold flex items-center gap-1.5 transition-all cursor-pointer shrink-0"
               >
                 {isRemaking ? (
                   <>
@@ -697,7 +697,7 @@ export const CodePreviewModal: React.FC<CodePreviewModalProps> = ({
                   <button
                     type="button"
                     onClick={handleDownloadCurrentFile}
-                    className="px-2.5 py-1 rounded-lg bg-[#d97757] hover:bg-[#c86b4c] text-white text-xs font-semibold flex items-center gap-1 cursor-pointer"
+                    className="px-2.5 py-1 rounded-lg bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-xs font-semibold flex items-center gap-1 cursor-pointer"
                   >
                     <Download className="w-3 h-3" />
                     <span>Download</span>
@@ -722,7 +722,7 @@ export const CodePreviewModal: React.FC<CodePreviewModalProps> = ({
               {/* All Files Action Toolbar */}
               <div className="px-4 py-2.5 bg-[#151515] border-b border-[#2b2b2a] flex flex-wrap items-center justify-between gap-2.5 text-xs shrink-0 select-none">
                 <div className="flex items-center gap-2">
-                  <Folder className="w-4 h-4 text-[#d97757]" />
+                  <Folder className="w-4 h-4 text-cyan-400" />
                   <span className="font-semibold text-white">All Project Files</span>
                   <span className="text-[11px] text-[#a19e97] bg-[#20201f] px-2 py-0.5 rounded-lg border border-[#2b2b2a]">
                     {projectFiles.length} {projectFiles.length === 1 ? 'file' : 'files'} • {projectFiles.reduce((acc, f) => acc + (f.content?.split('\n').length || 0), 0)} lines
@@ -736,7 +736,7 @@ export const CodePreviewModal: React.FC<CodePreviewModalProps> = ({
                     onClick={() => setAllFilesMode('preview')}
                     className={`px-3 py-1 rounded-lg transition-all ${
                       allFilesMode === 'preview'
-                        ? 'bg-[#d97757] text-white shadow-xs font-semibold'
+                        ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-xs font-semibold'
                         : 'text-[#86837c] hover:text-white'
                     }`}
                   >
@@ -747,7 +747,7 @@ export const CodePreviewModal: React.FC<CodePreviewModalProps> = ({
                     onClick={() => setAllFilesMode('code')}
                     className={`px-3 py-1 rounded-lg transition-all ${
                       allFilesMode === 'code'
-                        ? 'bg-[#d97757] text-white shadow-xs font-semibold'
+                        ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-xs font-semibold'
                         : 'text-[#86837c] hover:text-white'
                     }`}
                   >
@@ -761,13 +761,13 @@ export const CodePreviewModal: React.FC<CodePreviewModalProps> = ({
                     onClick={handleCopyAllFiles}
                     className="px-3 py-1.5 rounded-xl bg-[#20201f] hover:bg-[#282724] border border-[#2b2b2a] text-white text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer"
                   >
-                    {copiedAll ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-[#d97757]" />}
+                    {copiedAll ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-cyan-400" />}
                     <span>{copiedAll ? 'All Copied' : 'Copy All Code'}</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => exportAllFilesAsZip(projectFiles)}
-                    className="px-3 py-1.5 rounded-xl bg-[#d97757] hover:bg-[#c86b4c] text-white text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                    className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
                   >
                     <Download className="w-3.5 h-3.5" />
                     <span>Export All ZIP</span>
@@ -797,7 +797,7 @@ export const CodePreviewModal: React.FC<CodePreviewModalProps> = ({
                       {/* Header */}
                       <div className="px-4 py-2 bg-[#191919] border-b border-[#2b2b2a] flex items-center justify-between gap-2 select-none">
                         <div className="flex items-center gap-2">
-                          <FileCode className="w-4 h-4 text-[#d97757]" />
+                          <FileCode className="w-4 h-4 text-cyan-400" />
                           <span className="font-bold text-white text-xs tracking-wide">{item.name}</span>
                           <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded-md bg-[#222] text-[#a19e97] border border-[#333]">
                             {item.language || item.name.split('.').pop()}
@@ -827,7 +827,7 @@ export const CodePreviewModal: React.FC<CodePreviewModalProps> = ({
                             className="px-2.5 py-1 rounded-lg bg-[#20201f] hover:bg-[#282724] border border-[#2b2b2a] text-[#ede8e1] text-xs flex items-center gap-1 transition-colors cursor-pointer"
                             title="Edit this file"
                           >
-                            <Code2 className="w-3 h-3 text-[#d97757]" />
+                            <Code2 className="w-3 h-3 text-cyan-400" />
                             <span>Edit</span>
                           </button>
                         </div>
@@ -871,7 +871,7 @@ export const CodePreviewModal: React.FC<CodePreviewModalProps> = ({
                 const url = URL.createObjectURL(blob);
                 window.open(url, '_blank');
               }}
-              className="text-[#d97757] hover:underline flex items-center gap-1 cursor-pointer"
+              className="text-cyan-400 hover:underline flex items-center gap-1 cursor-pointer"
             >
               <span>Popout Window</span>
               <ExternalLink className="w-3 h-3" />

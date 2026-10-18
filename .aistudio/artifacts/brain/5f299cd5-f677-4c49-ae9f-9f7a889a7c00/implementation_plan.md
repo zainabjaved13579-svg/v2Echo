@@ -1,95 +1,117 @@
-# Implementation Plan: File Manager Tool Enhancements
+# Implementation Plan: VS Code IDE Codex, Developer Tools Suite & Ultra-Clean Zero-Lag UI
 
-Upgrade Sapphire File Commander into a professional, IDE-grade local file manager and AI workspace with hierarchical folder navigation, multi-tab editing, side-by-side AI diff preview, one-click code formatting, and full-workspace ZIP export.
-
----
-
-## 1. User Requirements & Feature Scope
-- **Domain**: Developer Console / SaaS Productivity Tool (File Manager, Local Disk Commander & AI Code Modifier).
-- **Core User Goal**: Allow users to seamlessly browse, organize, edit, and AI-refactor files and folders on their laptop with zero friction, clear visual feedback, and reliable disk sync.
-- **Key Enhancements**:
-  1. **Hierarchical Tree & Breadcrumb Navigation**:
-     - Nested folder tree navigation (expand/collapse directories) with clean folder/file icons.
-     - Breadcrumb navigation path above the editor (e.g. `Laptop / src / components / app.js`).
-     - "+ New File" and "+ New Folder" direct creation within any subfolder.
-  2. **Multi-Tab Workspace**:
-     - Tab bar above editor showing currently opened files with close buttons (`×`) and unsaved change indicators (`•`).
-     - Quick tab switching and keyboard shortcuts (`Ctrl+S` to save).
-  3. **Enhanced Code Editor**:
-     - Line numbers with synchronized scrolling.
-     - Syntax beautification / auto-formatter for JSON, JavaScript, HTML, CSS, and Markdown.
-     - Line and character statistics, search in file with highlight.
-     - Direct "Copy All" and "Download File" actions.
-  4. **Side-by-Side AI Diff & Review**:
-     - Visual diff viewer comparing "Original" vs. "AI Modified" before applying changes.
-     - Instant preview of suggested filename and folder path changes.
-     - Pre-packaged AI actions:
-       * **Format Conversion**: CSV ↔ JSON, Markdown ↔ HTML, JSON ↔ YAML, JS ↔ TS.
-       * **Code Refactoring & Bug Fix**: Analyze syntax, fix bugs, optimize logic.
-       * **Auto-Documentation**: Add JSDoc, comments, and generate README.
-       * **AI Smart Categorizer**: Suggest optimal folder structure and organize messy directories.
-  5. **Workspace ZIP Exporter**:
-     - 1-click **Export Entire Workspace (.zip)** using `JSZip` to download all files and folders in their original directory structure.
-  6. **Rich Media & Binary Inspector**:
-     - Enhanced image preview with zoom, dimensions, and format export.
-     - Audio and video inline playback for uploaded media assets.
-     - Formatted hex preview snippet and MIME inspection for binary files.
+Transform the platform based on user specifications:
+1. **Remove File Commander** from the Tools Studio navigation and views.
+2. **Re-architect Codex Studio into a complete, authentic VS Code-style IDE**:
+   - Direct native folder/workspace open button (`showDirectoryPicker` + `webkitdirectory` fallback).
+   - VS Code activity bar (Explorer, Search, Source Control, Extensions/AI).
+   - Side-by-side multi-tab editor with breadcrumb bar, syntax highlights, and line numbers.
+   - Live integrated preview split pane with desktop/mobile viewport toggle, console log drawer, and hot reload.
+   - Autonomous multi-file code generation that creates real project files step-by-step using fast Gemini reasoning models.
+3. **Add 3 high-utility developer tools** to Tools Studio:
+   - **API Tester / REST Client**: Execute HTTP/REST requests (GET, POST, PUT, DELETE), headers, JSON body, query params, response viewer with status code, latency, and syntax formatting.
+   - **Regex Studio**: Live regex pattern matcher, flags, match groups, substitution playground, and regex cheatsheet.
+   - **Code Formatter & Beautifier**: Multi-language code beautifier (HTML, CSS, JS/TS, JSON, SQL) with indentation control and copy/download.
+4. **Ultra-Clean, Zero-Lag UI Polish**:
+   - Remove dense walls of marketing/kicker text, noisy banners, and heavy decorative elements that cause chat lag and clutter.
+   - Compact cards, sleek dark/light palette, minimal typography, and snappy rendering.
 
 ---
 
-## 2. Architecture & Design Specifications
-- **Visual Design Standard** (`frontend-design` & `references/3_saas_dashboard.md`):
-  - Canvas: Dark slate (`#0B0C11` / `#151722`) in Moon theme, crisp slate-50/white in Day theme.
-  - Typography: `Plus Jakarta Sans` for UI labels; `JetBrains Mono` / `font-mono` with `tabular-nums` for code, line numbers, and file sizes.
-  - Zero-pill discipline: Clean typographic badges and subtle hairline borders (`border-[#292c3d]` / `border-slate-200`).
-  - Strict layout integrity: 100% viewport container without clipping or scrollbar leakage.
+## User Review Required
+
+> [!IMPORTANT]
+> **Tools Studio Update**: File Commander will be retired from Tools Studio tabs as requested. Tools Studio will now feature:
+> 1. **Web Cloner** (Ultra website cloner with live sandbox & ZIP export)
+> 2. **URL to App (.exe)** (Ultra-fast Windows executable generator)
+> 3. **API Tester** (Interactive REST/HTTP client)
+> 4. **Regex Studio** (Real-time regex evaluator & match inspector)
+> 5. **Code Formatter** (Multi-language beautifier)
 
 ---
 
-## 3. Step-by-Step Implementation Steps
+## Proposed Changes
 
-### Phase 1: Navigation & Workspace Structure
-1. **Directory Tree Engine**:
-   - Build a recursive tree data structure from `files: LocalDiskFile[]` supporting arbitrary nested folder depths.
-   - Add expandable/collapsible folder nodes with persistent toggle state.
-   - Implement breadcrumb path trail with clickable segment jumps.
-2. **Multi-Tab State Manager**:
-   - Track `openFileIds: string[]` and `activeFileId: string`.
-   - Add smooth tab switching, tab close, and "Close Other Tabs" menu.
-3. **Workspace File Creator**:
-   - Add inline modal/input to create new files or folders in the root or any selected subfolder.
+### 1. Tools Studio Cleanup & New Tools
+#### [src/components/tools/ToolsStudioView.tsx]
+- Remove `FileManagerTool` tab and button from Tools Studio.
+- Add tabs for:
+  - `API Tester`
+  - `Regex Studio`
+  - `Code Formatter`
+- Update tool overview cards to showcase the new developer suite with compact, minimal cards.
 
-### Phase 2: Editor Enhancements & Code Beautifier
-1. **Editor Toolbar & Statistics**:
-   - Add line numbers gutter synchronized with textarea scroll.
-   - Display line count, character count, and file encoding.
-   - Add built-in JSON, JS, and CSS code auto-formatter.
-2. **Keyboard Accelerators**:
-   - Support `Ctrl+S` / `Cmd+S` for quick save directly to disk / memory.
+#### [NEW: src/components/tools/ApiTesterTool.tsx]
+- Full-featured REST client:
+  - Method selector (GET, POST, PUT, PATCH, DELETE, HEAD)
+  - URL input with query parameter builder
+  - Headers editor (key-value table)
+  - Request body (JSON, text, raw)
+  - Send request via server-side proxy route to avoid CORS errors (`/api/tools/proxy-request`)
+  - Response viewer: status badge (200 OK, 404, etc.), roundtrip latency (ms), response size, formatted response body, and response headers.
 
-### Phase 3: AI Refactor & Side-by-Side Diff Viewer
-1. **Visual Diff Comparison Component**:
-   - Show two-column comparison (Original vs. AI Suggestion) with color-coded diff hints.
-   - Display summary of changes, proposed new filename, and proposed folder path.
-   - "Apply All", "Apply Content Only", or "Discard" controls.
-2. **Expanded Preset Gallery**:
-   - Quick one-click prompt pills for format conversion, bug fixing, test generation, and documentation.
+#### [NEW: src/components/tools/RegexStudioTool.tsx]
+- Real-time regular expression tester:
+  - Pattern input with regex flags toggles (`g`, `i`, `m`, `s`, `u`)
+  - Test string editor with real-time highlighted match spans
+  - Captured groups table with index ranges
+  - Regex replace / substitution simulator
+  - Preset library (Email, URL, IP address, UUID, Phone, Hex color, Dates)
 
-### Phase 4: Full Workspace ZIP Export & Binary Tools
-1. **JSZip Workspace Packager**:
-   - Implement `exportWorkspaceZip(files, rootName)` using JSZip.
-   - Package all text, images, and binary files with their exact directory hierarchy.
-2. **Media & Binary Viewer**:
-   - Image preview with zoom controls and dimension detection.
-   - Audio/video media player.
-   - Hex inspector for arbitrary binary files.
+#### [NEW: src/components/tools/CodeFormatterTool.tsx]
+- Multi-language formatter:
+  - Supports HTML, CSS, JavaScript, TypeScript, JSON, and SQL
+  - Configurable indent spacing (2 spaces, 4 spaces, tabs)
+  - Instant formatting, copy to clipboard, and file download
+
+#### [server.ts]
+- Add `/api/tools/proxy-request` to safely proxy external API requests for the API Tester without CORS limitations.
 
 ---
 
-## 4. Verification & Testing Plan
-- Test file tree expansion/collapse with multi-level nested folders.
-- Test opening multiple tabs, switching active tab, and closing tabs.
-- Test line numbers and code formatting for JSON and JavaScript files.
-- Test AI transformation with format changes (e.g. CSV to JSON) and verify side-by-side diff preview.
-- Test "Export Workspace (.zip)" and verify all files download in correct folder hierarchy.
-- Run `compile_applet` and `lint_applet` to ensure zero compilation or TypeScript errors.
+### 2. Full VS Code-Style Codex IDE
+#### [src/components/CodexWorkspaceView.tsx]
+- Redesign layout into an authentic VS Code interface:
+  - **Left Activity Bar** (Explorer, Search, AI Architect, Settings)
+  - **Collapsible Sidebar**:
+    - **Explorer**: Direct "Open Folder" button, project root label, nested tree with folder expand/collapse, file icons (HTML, CSS, JS, TS, JSON, images), new file / new folder buttons.
+    - **Search**: Search across workspace files.
+    - **AI Assistant**: Streamlined prompt bar, multi-file code generator with step-by-step progress cards.
+  - **Editor Workspace**:
+    - Top editor tabs with dirty indicators and close buttons (`x`).
+    - File breadcrumb header (`project > src > App.tsx`).
+    - Monaco/VS Code-style dark code area with line numbering gutter, auto-indent, code formatting shortcut.
+  - **Split Live Preview**:
+    - Right-side docking or split view with instant iframe reload.
+    - Responsive device toolbar (Desktop 100%, Tablet 768px, Mobile 375px).
+    - Quick actions: Open in new tab, restart sandbox, console drawer.
+  - **Bottom Status Bar**:
+    - File path, line/col numbers, UTF-8, Language mode, Gemini Model badge, and Shaheer Developer badge.
+
+---
+
+### 3. Lag-Free, Minimal Clean UI Across Tabs
+#### [src/components/ChatMessageItem.tsx & src/components/ChatView.tsx]
+- Remove repetitive marketing text blocks and bloated informational banners that clog the feed.
+- Optimize Markdown rendering and message item DOM trees to prevent scroll stuttering and chat lag.
+- Clean compact bubble design with clear code blocks and instant action buttons.
+
+---
+
+## Verification Plan
+
+### Automated Verification
+1. **Compilation**: Run `compile_applet` to verify clean build without TypeScript or JSX errors.
+2. **Linting**: Run `lint_applet` to check strict typing, unused imports, and syntax correctness.
+
+### Functional Verification
+1. **Tools Studio**:
+   - Verify File Commander is removed.
+   - Verify API Tester sends requests and displays status/headers/body accurately.
+   - Verify Regex Studio highlights matches in real time.
+   - Verify Code Formatter formats HTML, CSS, JS, and JSON accurately.
+2. **VS Code Codex IDE**:
+   - Click "Open Folder" to verify folder loading, auto-expanding tree, tab opening, and live preview rendering.
+   - Generate code to verify step-by-step multi-file generation with Gemini.
+3. **UI Performance**:
+   - Verify chat view is snappy with zero lag and clean typography.

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Globe,
   Sparkles,
@@ -12,17 +12,24 @@ import {
   Tablet,
   Monitor,
   RefreshCw,
-  Maximize2,
   CheckCircle2,
   AlertCircle,
   FileCode,
   Zap,
-  ShieldCheck,
   FolderDown,
-  ArrowRight
+  ArrowRight,
+  Send,
+  RotateCcw,
+  Undo2,
+  MessageSquare,
+  Eye,
+  Sliders,
+  Maximize2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import JSZip from 'jszip';
 import { useAppTheme } from '../../context/ThemeContext';
+import { getStoredApiKey } from '../../services/geminiService';
 import { SAPPHIRE_LEAD_DEVELOPER } from '../../data/constants';
 
 interface ClonedResult {
@@ -36,7 +43,7 @@ interface ClonedResult {
     'script.js': string;
     'README.md': string;
   };
-  stats: {
+  stats?: {
     durationMs: number;
     htmlBytes: number;
     cssBytes: number;
@@ -46,10 +53,21 @@ interface ClonedResult {
   };
 }
 
+interface ClonedRevision {
+  timestamp: number;
+  prompt: string;
+  files: {
+    'index.html': string;
+    'style.css': string;
+    'script.js': string;
+    'README.md': string;
+  };
+}
+
 const PRESET_SITES = [
-  { name: 'Linear App', url: 'https://linear.app' },
+  { name: 'Linear', url: 'https://linear.app' },
+  { name: 'Notion', url: 'https://notion.so' },
   { name: 'Tailwind CSS', url: 'https://tailwindcss.com' },
-  { name: 'Stripe', url: 'https://stripe.com' },
   { name: 'Vercel', url: 'https://vercel.com' },
   { name: 'GitHub', url: 'https://github.com' }
 ];
@@ -66,21 +84,44 @@ export const WebClonerTool: React.FC<{ onOpenInCodex?: (files: Record<string, st
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [clonedData, setClonedData] = useState<ClonedResult | null>(null);
 
+  // Revisions & Undo State
+  const [history, setHistory] = useState<ClonedRevision[]>([]);
+  const [historyIndex, setHistoryIndex] = useState<number>(-1);
+
+  // AI Editor State
+  const [aiPrompt, setAiPrompt] = useState<string>('');
+  const [isAiEditing, setIsAiEditing] = useState<boolean>(false);
+  const [aiEditStatus, setAiEditStatus] = useState<string | null>(null);
+  const [isAiPanelOpen, setIsAiPanelOpen] = useState<boolean>(true);
+  const [aiMessageLog, setAiMessageLog] = useState<{ role: 'user' | 'assistant'; text: string }[]>([]);
+
   // Preview & Code State
-  const [previewDevice, setPreviewDevice] = useState<'desktop' | 'laptop' | 'tablet' | 'mobile'>('desktop');
+  const [previewDevice, setPreviewDevice] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
   const [activeCodeTab, setActiveCodeTab] = useState<'index.html' | 'style.css' | 'script.js' | 'README.md'>('index.html');
+  const [activeWorkspaceView, setActiveWorkspaceView] = useState<'preview' | 'code' | 'split'>('preview');
   const [copiedTab, setCopiedTab] = useState<string | null>(null);
   const [previewKey, setPreviewKey] = useState<number>(0);
   const [isExportingZip, setIsExportingZip] = useState<boolean>(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Theme Tokens
-  const bgMain = isMoon ? 'bg-[#0a0b0e]' : 'bg-[#faf9f7]';
-  const bgCard = isMoon ? 'bg-[#151722]' : 'bg-white';
-  const bgSubtle = isMoon ? 'bg-[#1e202d]' : 'bg-slate-50';
-  const border = isMoon ? 'border-[#292c3d]' : 'border-slate-200';
-  const textBright = isMoon ? 'text-white' : 'text-slate-900';
-  const textSub = isMoon ? 'text-zinc-400' : 'text-slate-600';
+  // Theme Styling (Clean Black and White, No Garish Blue)
+  const bgMain = isMoon ? 'bg-[#090a0f]' : 'bg-[#faf9f7]';
+  const bgCard = isMoon ? 'bg-[#12131a]' : 'bg-white';
+  const bgInput = isMoon ? 'bg-[#181922]' : 'bg-[#f4f3ef]';
+  const border = isMoon ? 'border-[#222430]' : 'border-[#e5e5e0]';
+  const textBright = isMoon ? 'text-white' : 'text-zinc-900';
+  const textSub = isMoon ? 'text-zinc-400' : 'text-zinc-600';
+  const btnPrimary = isMoon
+    ? 'bg-white hover:bg-zinc-200 text-black font-bold'
+    : 'bg-zinc-900 hover:bg-zinc-800 text-white font-bold';
 
+  // Trigger toast
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 2500);
+  };
+
+  // Start Cloner
   const handleStartClone = async (overrideUrl?: string) => {
     const target = (overrideUrl || inputUrl).trim();
     if (!target) {
@@ -90,7 +131,7 @@ export const WebClonerTool: React.FC<{ onOpenInCodex?: (files: Record<string, st
 
     setIsCloning(true);
     setErrorMsg(null);
-    setCloneStage('Connecting to target host & analyzing DOM structure...');
+    setCloneStage('Analyzing DOM structure & harvesting assets...');
 
     try {
       const res = await fetch('/api/tools/web-clone', {
@@ -104,11 +145,26 @@ export const WebClonerTool: React.FC<{ onOpenInCodex?: (files: Record<string, st
         throw new Error(errJson.error || `Cloning failed with status ${res.status}`);
       }
 
-      setCloneStage('Harvesting stylesheets, inlining assets & cleaning trackers...');
+      setCloneStage('Inlining stylesheets & purging telemetry...');
       const data: ClonedResult = await res.json();
 
       setClonedData(data);
+      setHistory([
+        {
+          timestamp: Date.now(),
+          prompt: 'Initial Clone',
+          files: { ...data.files }
+        }
+      ]);
+      setHistoryIndex(0);
+      setAiMessageLog([
+        {
+          role: 'assistant',
+          text: `Website "${data.siteTitle || data.domain}" cloned! You can ask me to change copy, dark mode, layout, or add new sections.`
+        }
+      ]);
       setPreviewKey((k) => k + 1);
+      showToast(`Cloned ${data.domain} successfully`);
     } catch (err: any) {
       console.error('Clone failed:', err);
       setErrorMsg(err.message || 'Could not clone target website. Please check URL.');
@@ -118,102 +174,244 @@ export const WebClonerTool: React.FC<{ onOpenInCodex?: (files: Record<string, st
     }
   };
 
+  // AI Chat Website Editor
+  const handleAiEdit = async (customPrompt?: string) => {
+    const prompt = (customPrompt || aiPrompt).trim();
+    if (!prompt || !clonedData || isAiEditing) return;
+
+    setIsAiEditing(true);
+    setAiEditStatus('AI Architect editing website...');
+    setAiMessageLog((prev) => [...prev, { role: 'user', text: prompt }]);
+    setAiPrompt('');
+
+    try {
+      const currentHtml = clonedData.files['index.html'] || '';
+      const currentCss = clonedData.files['style.css'] || '';
+      const currentJs = clonedData.files['script.js'] || '';
+
+      const systemInstruction = `You are Sapphire AI Website Architect.
+You are directly modifying an existing cloned web application.
+MANDATORY CONSTITUTION:
+1. Preserve the structure and styling of the existing page while applying the user's requested changes cleanly and professionally.
+2. Output your modifications using clean Markdown code blocks with filenames:
+\`\`\`html index.html
+<!DOCTYPE html>
+...
+\`\`\`
+\`\`\`css style.css
+...
+\`\`\`
+\`\`\`javascript script.js
+...
+\`\`\`
+3. Do NOT output commentary or chat filler outside the code blocks. Make sure HTML, CSS, and JS are fully implemented and bug-free.`;
+
+      const response = await fetch('/api/chat/stream', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-gemini-api-key': getStoredApiKey()
+        },
+        body: JSON.stringify({
+          contents: [
+            {
+              role: 'user',
+              parts: [
+                {
+                  text: `User Request: "${prompt}"\n\nCurrent index.html:\n${currentHtml.slice(0, 14000)}\n\nCurrent style.css:\n${currentCss.slice(0, 8000)}\n\nCurrent script.js:\n${currentJs.slice(0, 4000)}`
+                }
+              ]
+            }
+          ],
+          systemInstruction,
+          model: 'gemini-flash-latest'
+        })
+      });
+
+      if (!response.ok || !response.body) throw new Error('AI Stream connection failed');
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let accumulated = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split('\n');
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const jsonStr = line.slice(6).trim();
+            if (jsonStr === '[DONE]') break;
+            try {
+              const parsed = JSON.parse(jsonStr);
+              const piece = parsed.candidates?.[0]?.content?.parts?.[0]?.text || '';
+              accumulated += piece;
+            } catch {}
+          }
+        }
+      }
+
+      // Parse updated code blocks
+      const blockRegex = /```([a-zA-Z0-9_-]+)?(?:\s+([\w\.\-\/]+))?\n([\s\S]*?)```/g;
+      let match;
+      const updatedFiles: Partial<ClonedResult['files']> = {};
+
+      while ((match = blockRegex.exec(accumulated)) !== null) {
+        const lang = (match[1] || 'html').toLowerCase();
+        let fileName = match[2];
+        const content = match[3].trim();
+
+        if (!fileName) {
+          if (lang === 'html') fileName = 'index.html';
+          else if (lang === 'css') fileName = 'style.css';
+          else if (lang === 'js' || lang === 'javascript') fileName = 'script.js';
+        }
+
+        if (fileName === 'index.html' || fileName === 'style.css' || fileName === 'script.js') {
+          updatedFiles[fileName] = content;
+        }
+      }
+
+      if (updatedFiles['index.html'] || updatedFiles['style.css'] || updatedFiles['script.js']) {
+        const newFiles = {
+          ...clonedData.files,
+          ...(updatedFiles['index.html'] ? { 'index.html': updatedFiles['index.html'] } : {}),
+          ...(updatedFiles['style.css'] ? { 'style.css': updatedFiles['style.css'] } : {}),
+          ...(updatedFiles['script.js'] ? { 'script.js': updatedFiles['script.js'] } : {})
+        };
+
+        setClonedData((prev) => (prev ? { ...prev, files: newFiles } : prev));
+
+        // Append to history
+        const newRev: ClonedRevision = {
+          timestamp: Date.now(),
+          prompt,
+          files: { ...newFiles }
+        };
+        setHistory((prev) => [...prev.slice(0, historyIndex + 1), newRev]);
+        setHistoryIndex((prev) => prev + 1);
+
+        setAiMessageLog((prev) => [
+          ...prev,
+          {
+            role: 'assistant',
+            text: `Applied: "${prompt}". Live preview updated.`
+          }
+        ]);
+        setPreviewKey((k) => k + 1);
+        showToast('Website updated with AI');
+      } else {
+        setAiMessageLog((prev) => [
+          ...prev,
+          { role: 'assistant', text: 'Changes processed. Preview re-rendered.' }
+        ]);
+      }
+    } catch (err: any) {
+      console.error('AI Edit Error:', err);
+      setAiMessageLog((prev) => [
+        ...prev,
+        { role: 'assistant', text: `Notice: ${err.message || 'Could not complete modification.'}` }
+      ]);
+    } finally {
+      setIsAiEditing(false);
+      setAiEditStatus(null);
+    }
+  };
+
+  // Revert / Undo
+  const handleUndo = () => {
+    if (historyIndex > 0) {
+      const prevIdx = historyIndex - 1;
+      const targetRev = history[prevIdx];
+      setClonedData((prev) => (prev ? { ...prev, files: { ...targetRev.files } } : prev));
+      setHistoryIndex(prevIdx);
+      setPreviewKey((k) => k + 1);
+      showToast(`Reverted to: "${targetRev.prompt}"`);
+    }
+  };
+
+  // Copy code
   const handleCopyCode = (filename: keyof ClonedResult['files']) => {
     if (!clonedData) return;
-    const content = clonedData.files[filename];
-    navigator.clipboard.writeText(content);
+    navigator.clipboard.writeText(clonedData.files[filename]);
     setCopiedTab(filename);
     setTimeout(() => setCopiedTab(null), 2000);
   };
 
+  // Export as Clean ZIP
   const handleExportZip = async () => {
     if (!clonedData) return;
     setIsExportingZip(true);
     try {
-      const res = await fetch('/api/tools/web-clone/export-zip', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          files: clonedData.files,
-          siteTitle: clonedData.siteTitle || clonedData.domain
-        })
-      });
+      const zip = new JSZip();
+      zip.file('index.html', clonedData.files['index.html']);
+      zip.file('style.css', clonedData.files['style.css']);
+      zip.file('script.js', clonedData.files['script.js']);
+      zip.file('README.md', clonedData.files['README.md'] || `# Cloned ${clonedData.domain}\nExported from Sapphire.`);
 
-      if (!res.ok) throw new Error('Failed to generate zip archive');
-
-      const blob = await res.blob();
+      const blob = await zip.generateAsync({ type: 'blob' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${(clonedData.siteTitle || clonedData.domain).replace(/[^a-zA-Z0-9_-]/g, '_')}-ClonedWebsite.zip`;
+      a.download = `${(clonedData.siteTitle || clonedData.domain).replace(/[^a-zA-Z0-9_-]/g, '_')}-clean.zip`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      setTimeout(() => URL.revokeObjectURL(url), 1500);
-    } catch (err: any) {
-      alert(err.message || 'ZIP export failed');
+      URL.revokeObjectURL(url);
+      showToast('Downloaded clean ZIP archive');
+    } catch {
+      alert('Error creating ZIP archive');
     } finally {
       setIsExportingZip(false);
     }
   };
 
-  const getDeviceWidth = () => {
-    switch (previewDevice) {
-      case 'mobile': return 'max-w-[375px]';
-      case 'tablet': return 'max-w-[768px]';
-      case 'laptop': return 'max-w-[1024px]';
-      default: return 'w-full';
-    }
-  };
-
-  // Build standalone iframe HTML srcDoc with CSS and JS injected
+  // Build clean inlined iframe doc
   const getIframeSrcDoc = () => {
     if (!clonedData) return '';
     const { 'index.html': html, 'style.css': css, 'script.js': js } = clonedData.files;
     let doc = html;
-    // Replace link style.css with real inline style for instant sandbox rendering
-    if (doc.includes('<link rel="stylesheet" href="style.css">')) {
-      doc = doc.replace('<link rel="stylesheet" href="style.css">', `<style>\n${css}\n</style>`);
-    } else if (doc.includes('</head>')) {
+
+    if (doc.includes('</head>')) {
       doc = doc.replace('</head>', `<style>\n${css}\n</style>\n</head>`);
+    } else {
+      doc = `<style>\n${css}\n</style>\n${doc}`;
     }
-    // Inject JS into sandbox
-    if (doc.includes('<script src="script.js" defer></script>')) {
-      doc = doc.replace('<script src="script.js" defer></script>', `<script>\n${js}\n</script>`);
-    } else if (doc.includes('</body>')) {
+
+    if (doc.includes('</body>')) {
       doc = doc.replace('</body>', `<script>\n${js}\n</script>\n</body>`);
+    } else {
+      doc = `${doc}\n<script>\n${js}\n</script>`;
     }
     return doc;
   };
 
   return (
     <div className={`flex-1 flex flex-col h-full overflow-hidden ${bgMain} font-['Plus_Jakarta_Sans',sans-serif]`}>
-      {/* Top Banner & Control Bar */}
-      <div className={`px-4 sm:px-6 py-4 border-b ${border} ${bgCard} shrink-0`}>
-        <div className="max-w-7xl mx-auto space-y-3">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+      {/* Top Search & Actions Bar (Clean, Minimal, No Blue) */}
+      <div className={`px-4 sm:px-6 py-3 border-b ${border} ${bgCard} shrink-0`}>
+        <div className="max-w-7xl mx-auto space-y-2.5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center text-white shadow-md shadow-cyan-500/20">
-                <Globe className="w-5 h-5" />
+              <div className="w-8 h-8 rounded-xl bg-zinc-800 text-white flex items-center justify-center shadow-xs">
+                <Globe className="w-4 h-4" />
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <h2 className={`text-base sm:text-lg font-black ${textBright}`}>
-                    Sapphire Ultra Web Cloner
+                  <h2 className={`text-sm sm:text-base font-bold ${textBright}`}>
+                    Ultra Web Cloner & AI Editor
                   </h2>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-cyan-500/15 text-cyan-400 border border-cyan-500/30">
-                    High Fidelity
-                  </span>
                 </div>
-                <p className={`text-xs ${textSub}`}>
-                  Deep DOM harvesting, unified CSS bundle, tracker-purged JS & instant ZIP export · Lead Architect: <span className="font-bold text-cyan-400">{SAPPHIRE_LEAD_DEVELOPER}</span>
+                <p className={`text-[11px] ${textSub}`}>
+                  Deep DOM scraper with interactive AI chat editing and clean ZIP export.
                 </p>
               </div>
             </div>
 
-            {/* Presets */}
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
-              <span className={`text-[11px] font-bold ${textSub} shrink-0 mr-1`}>Try Sample:</span>
+            {/* Quick Samples */}
+            <div className="flex items-center gap-1.5 overflow-x-auto">
+              <span className={`text-[10px] font-semibold ${textSub} shrink-0`}>Samples:</span>
               {PRESET_SITES.map((site) => (
                 <button
                   key={site.name}
@@ -222,7 +420,7 @@ export const WebClonerTool: React.FC<{ onOpenInCodex?: (files: Record<string, st
                     setInputUrl(site.url);
                     handleStartClone(site.url);
                   }}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold ${bgSubtle} ${border} border ${textSub} hover:${textBright} hover:border-cyan-500/40 transition-all shrink-0 cursor-pointer`}
+                  className={`px-2 py-0.5 rounded-lg text-[11px] font-medium ${bgInput} ${border} border ${textSub} hover:${textBright} transition-colors shrink-0 cursor-pointer`}
                 >
                   {site.name}
                 </button>
@@ -230,16 +428,16 @@ export const WebClonerTool: React.FC<{ onOpenInCodex?: (files: Record<string, st
             </div>
           </div>
 
-          {/* Input & Action Bar */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
-            <div className={`flex-1 flex items-center gap-2 px-3 py-2.5 rounded-2xl border ${border} ${bgSubtle} focus-within:border-cyan-500 transition-all`}>
-              <Globe className="w-4 h-4 text-cyan-400 shrink-0" />
+          {/* URL Input & Clone Action */}
+          <div className="flex items-center gap-2">
+            <div className={`flex-1 flex items-center gap-2 px-3 py-2 rounded-xl border ${border} ${bgInput}`}>
+              <Globe className="w-4 h-4 text-zinc-400 shrink-0" />
               <input
                 type="url"
                 value={inputUrl}
                 onChange={(e) => setInputUrl(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleStartClone()}
-                placeholder="Enter any website URL to clone (e.g., https://linear.app)"
+                placeholder="Enter any website URL (e.g., https://linear.app)"
                 className={`w-full bg-transparent text-xs sm:text-sm font-medium ${textBright} focus:outline-none placeholder:text-zinc-500`}
               />
             </div>
@@ -248,238 +446,323 @@ export const WebClonerTool: React.FC<{ onOpenInCodex?: (files: Record<string, st
               type="button"
               onClick={() => handleStartClone()}
               disabled={isCloning}
-              className="py-2.5 px-6 rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white text-xs sm:text-sm font-bold flex items-center justify-center gap-2 shadow-lg shadow-cyan-500/25 transition-all cursor-pointer active:scale-95 disabled:opacity-50"
+              className={`py-2 px-5 rounded-xl ${btnPrimary} text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-50 shrink-0`}
             >
               {isCloning ? (
                 <>
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                  <span>Cloning Deep Assets...</span>
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  <span>Cloning...</span>
                 </>
               ) : (
                 <>
-                  <Zap className="w-4 h-4 fill-white" />
-                  <span>Clone Website Now</span>
+                  <Zap className="w-3.5 h-3.5 fill-current" />
+                  <span>Clone Site</span>
                 </>
               )}
             </button>
           </div>
 
-          {/* Progress / Error Feedback */}
+          {/* Status feedback */}
           {isCloning && (
-            <motion.div
-              initial={{ opacity: 0, y: -4 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="p-2.5 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center gap-2 text-xs text-cyan-300"
-            >
-              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+            <div className="text-xs text-zinc-400 flex items-center gap-2 animate-pulse pt-0.5">
+              <RefreshCw className="w-3 h-3 animate-spin" />
               <span>{cloneStage}</span>
-            </motion.div>
+            </div>
           )}
 
           {errorMsg && (
-            <motion.div
-              initial={{ opacity: 0, y: -4 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/30 flex items-center gap-2 text-xs text-rose-400"
-            >
-              <AlertCircle className="w-4 h-4 shrink-0" />
+            <div className="p-2 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs flex items-center gap-2">
+              <AlertCircle className="w-3.5 h-3.5 shrink-0" />
               <span>{errorMsg}</span>
-            </motion.div>
+            </div>
           )}
         </div>
       </div>
 
-      {/* Main Workspace (Preview & Code) */}
-      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
-        {clonedData ? (
-          <>
-            {/* Left / Top: Interactive Live Preview */}
-            <div className="flex-1 flex flex-col border-b lg:border-b-0 lg:border-r border-zinc-500/20 overflow-hidden bg-black/5 dark:bg-black/30">
-              {/* Preview Bar */}
-              <div className={`h-11 px-4 border-b ${border} ${bgCard} flex items-center justify-between shrink-0 text-xs`}>
-                <div className="flex items-center gap-2">
-                  <span className="font-bold text-emerald-400 flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                    <span>Live Cloned Preview</span>
-                  </span>
-                  <span className={`text-[10px] font-medium ${textSub} hidden sm:inline`}>
-                    ({clonedData.siteTitle || clonedData.domain})
-                  </span>
-                </div>
+      {/* Main Workspace Body */}
+      {clonedData ? (
+        <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+          {/* Main Left: Live Preview Sandbox & Code Toggle */}
+          <div className="flex-1 flex flex-col overflow-hidden border-r border-[#1a1b24]">
+            {/* Viewport & View Mode Bar */}
+            <div className={`h-10 px-4 border-b ${border} ${bgCard} flex items-center justify-between text-xs shrink-0 select-none`}>
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-emerald-400 flex items-center gap-1.5 text-xs">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Live Sandbox</span>
+                </span>
+                <span className={`text-[10px] ${textSub} truncate max-w-[140px]`}>
+                  ({clonedData.siteTitle || clonedData.domain})
+                </span>
+              </div>
 
-                {/* Device Switcher */}
-                <div className="flex items-center gap-1 bg-black/10 dark:bg-white/5 p-1 rounded-xl border border-zinc-500/20">
+              {/* View Switcher: Preview vs Code */}
+              <div className={`flex items-center gap-1 ${bgInput} p-0.5 rounded-lg border ${border}`}>
+                <button
+                  type="button"
+                  onClick={() => setActiveWorkspaceView('preview')}
+                  className={`px-2.5 py-0.5 rounded-md text-[11px] font-semibold transition-all cursor-pointer ${
+                    activeWorkspaceView === 'preview' ? 'bg-zinc-800 text-white' : 'text-zinc-400 hover:text-white'
+                  }`}
+                >
+                  Preview
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveWorkspaceView('code')}
+                  className={`px-2.5 py-0.5 rounded-md text-[11px] font-semibold transition-all cursor-pointer ${
+                    activeWorkspaceView === 'code' ? 'bg-zinc-800 text-white' : 'text-zinc-400 hover:text-white'
+                  }`}
+                >
+                  Code
+                </button>
+              </div>
+
+              {/* Responsive Device Frames */}
+              <div className="flex items-center gap-1">
+                <div className={`flex items-center ${bgInput} p-0.5 rounded-lg border ${border}`}>
                   <button
                     type="button"
                     onClick={() => setPreviewDevice('desktop')}
-                    className={`p-1.5 rounded-lg transition-all ${
-                      previewDevice === 'desktop' ? 'bg-cyan-500 text-white' : 'text-zinc-400 hover:text-white'
-                    }`}
-                    title="Desktop (100%)"
+                    className={`p-1 rounded ${previewDevice === 'desktop' ? 'bg-zinc-800 text-white' : 'text-zinc-400'}`}
+                    title="Desktop 100%"
                   >
-                    <Monitor className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPreviewDevice('laptop')}
-                    className={`p-1.5 rounded-lg transition-all ${
-                      previewDevice === 'laptop' ? 'bg-cyan-500 text-white' : 'text-zinc-400 hover:text-white'
-                    }`}
-                    title="Laptop (1024px)"
-                  >
-                    <Laptop className="w-3.5 h-3.5" />
+                    <Monitor className="w-3 h-3" />
                   </button>
                   <button
                     type="button"
                     onClick={() => setPreviewDevice('tablet')}
-                    className={`p-1.5 rounded-lg transition-all ${
-                      previewDevice === 'tablet' ? 'bg-cyan-500 text-white' : 'text-zinc-400 hover:text-white'
-                    }`}
-                    title="Tablet (768px)"
+                    className={`p-1 rounded ${previewDevice === 'tablet' ? 'bg-zinc-800 text-white' : 'text-zinc-400'}`}
+                    title="Tablet 768px"
                   >
-                    <Tablet className="w-3.5 h-3.5" />
+                    <Tablet className="w-3 h-3" />
                   </button>
                   <button
                     type="button"
                     onClick={() => setPreviewDevice('mobile')}
-                    className={`p-1.5 rounded-lg transition-all ${
-                      previewDevice === 'mobile' ? 'bg-cyan-500 text-white' : 'text-zinc-400 hover:text-white'
-                    }`}
-                    title="Mobile (375px)"
+                    className={`p-1 rounded ${previewDevice === 'mobile' ? 'bg-zinc-800 text-white' : 'text-zinc-400'}`}
+                    title="Mobile 375px"
                   >
-                    <Smartphone className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPreviewKey((k) => k + 1)}
-                    className="p-1.5 rounded-lg text-zinc-400 hover:text-white transition-all ml-1 border-l border-zinc-500/20"
-                    title="Reload Sandbox"
-                  >
-                    <RefreshCw className="w-3.5 h-3.5" />
+                    <Smartphone className="w-3 h-3" />
                   </button>
                 </div>
-              </div>
 
-              {/* Viewport Frame */}
-              <div className="flex-1 overflow-auto p-4 flex items-center justify-center">
-                <div className={`h-full ${getDeviceWidth()} transition-all duration-300 rounded-2xl overflow-hidden shadow-2xl border ${border} bg-white flex flex-col`}>
+                <button
+                  type="button"
+                  onClick={() => setPreviewKey((k) => k + 1)}
+                  className="p-1 rounded text-zinc-400 hover:text-white cursor-pointer"
+                  title="Reload"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                </button>
+
+                {historyIndex > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleUndo}
+                    className="p-1 rounded text-zinc-400 hover:text-white cursor-pointer ml-1"
+                    title="Undo AI edit"
+                  >
+                    <Undo2 className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Sandbox Frame or Code View */}
+            {activeWorkspaceView === 'preview' ? (
+              <div className="flex-1 bg-black/40 flex items-center justify-center p-3 overflow-auto">
+                <div
+                  className={`h-full bg-white transition-all duration-200 rounded-xl overflow-hidden shadow-2xl border ${border}`}
+                  style={{
+                    width:
+                      previewDevice === 'mobile'
+                        ? '375px'
+                        : previewDevice === 'tablet'
+                        ? '768px'
+                        : '100%'
+                  }}
+                >
                   <iframe
                     key={previewKey}
-                    title="Cloned Preview Sandbox"
+                    title="Cloned Preview"
                     srcDoc={getIframeSrcDoc()}
                     sandbox="allow-scripts allow-same-origin allow-forms"
-                    className="w-full h-full border-0"
+                    className="w-full h-full border-none"
                   />
+                </div>
+              </div>
+            ) : (
+              /* Code Editor / Inspector */
+              <div className="flex-1 flex flex-col bg-[#0b0c10] overflow-hidden font-mono text-xs">
+                <div className={`h-8 px-3 border-b ${border} ${bgCard} flex items-center justify-between`}>
+                  <div className="flex items-center gap-1">
+                    {(['index.html', 'style.css', 'script.js', 'README.md'] as const).map((tab) => (
+                      <button
+                        key={tab}
+                        type="button"
+                        onClick={() => setActiveCodeTab(tab)}
+                        className={`px-2.5 py-1 rounded text-[11px] cursor-pointer ${
+                          activeCodeTab === tab ? 'bg-zinc-800 text-white font-bold' : 'text-zinc-400 hover:text-white'
+                        }`}
+                      >
+                        {tab}
+                      </button>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleCopyCode(activeCodeTab)}
+                    className="text-[11px] text-zinc-400 hover:text-white flex items-center gap-1 cursor-pointer"
+                  >
+                    {copiedTab === activeCodeTab ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                    <span>{copiedTab === activeCodeTab ? 'Copied' : 'Copy Code'}</span>
+                  </button>
+                </div>
+                <div className="flex-1 p-3 overflow-auto text-zinc-300">
+                  <pre className="whitespace-pre-wrap break-all leading-relaxed">
+                    {clonedData.files[activeCodeTab]}
+                  </pre>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Right Column: AI Website Editor Assistant (~360px) */}
+          <div className="w-full lg:w-96 flex flex-col shrink-0 bg-[#0c0d12] border-t lg:border-t-0 border-[#1e202a]">
+            {/* AI Header */}
+            <div className={`h-10 px-3.5 border-b ${border} ${bgCard} flex items-center justify-between text-xs shrink-0 select-none`}>
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-3.5 h-3.5 text-zinc-300" />
+                <span className="font-bold text-white text-xs">AI Website Editor</span>
+              </div>
+              <span className="text-[10px] text-zinc-500 font-mono">
+                Rev {historyIndex + 1}/{history.length}
+              </span>
+            </div>
+
+            {/* AI Messages & Quick Presets Feed */}
+            <div className="flex-1 overflow-y-auto p-3 space-y-2.5 text-xs">
+              {aiMessageLog.map((msg, i) => (
+                <div
+                  key={i}
+                  className={`p-2.5 rounded-xl leading-relaxed ${
+                    msg.role === 'user'
+                      ? 'bg-zinc-800 text-white ml-2'
+                      : 'bg-[#15161f] border border-[#232532] text-zinc-300 mr-2 shadow-xs'
+                  }`}
+                >
+                  <p>{msg.text}</p>
+                </div>
+              ))}
+
+              {isAiEditing && (
+                <div className="p-2.5 rounded-xl bg-zinc-800/60 border border-zinc-700 text-zinc-300 text-xs flex items-center gap-2 animate-pulse">
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  <span>{aiEditStatus || 'Modifying website components...'}</span>
+                </div>
+              )}
+
+              {/* Quick AI Action Suggestions */}
+              <div className="pt-2 border-t border-zinc-800/80 space-y-1.5">
+                <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider block">
+                  Quick Prompts:
+                </span>
+                <div className="flex flex-col gap-1">
+                  {[
+                    'Switch to dark obsidian theme with clean cards',
+                    'Modernize hero typography and CTA button',
+                    'Make all buttons pill-shaped with smooth hover effects',
+                    'Add a clean testimonials section to the page'
+                  ].map((preset, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => handleAiEdit(preset)}
+                      disabled={isAiEditing}
+                      className="text-left px-2.5 py-1.5 rounded-lg bg-[#141620] hover:bg-zinc-800 text-zinc-400 hover:text-white text-[11px] border border-[#222432] transition-colors cursor-pointer disabled:opacity-50"
+                    >
+                      {preset}
+                    </button>
+                  ))}
                 </div>
               </div>
             </div>
 
-            {/* Right / Bottom: Extracted Clean Code Inspector & Actions */}
-            <div className="w-full lg:w-[480px] xl:w-[540px] flex flex-col overflow-hidden bg-black/10 dark:bg-black/50">
-              {/* Code Tabs Header */}
-              <div className={`h-11 px-3 border-b ${border} ${bgCard} flex items-center justify-between shrink-0`}>
-                <div className="flex items-center gap-1 overflow-x-auto text-xs font-bold">
-                  {(['index.html', 'style.css', 'script.js', 'README.md'] as const).map((tab) => (
-                    <button
-                      key={tab}
-                      type="button"
-                      onClick={() => setActiveCodeTab(tab)}
-                      className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
-                        activeCodeTab === tab
-                          ? 'bg-cyan-500 text-white shadow-sm'
-                          : 'text-zinc-400 hover:text-zinc-200'
-                      }`}
-                    >
-                      {tab}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="flex items-center gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => handleCopyCode(activeCodeTab)}
-                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold ${bgSubtle} ${border} border text-zinc-300 hover:text-white flex items-center gap-1 transition-all cursor-pointer`}
-                    title="Copy File Code"
-                  >
-                    {copiedTab === activeCodeTab ? (
-                      <>
-                        <Check className="w-3.5 h-3.5 text-emerald-400" />
-                        <span className="text-emerald-400">Copied</span>
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="w-3.5 h-3.5" />
-                        <span>Copy</span>
-                      </>
-                    )}
-                  </button>
-                </div>
+            {/* AI Prompt Input Bar */}
+            <div className={`p-2.5 border-t ${border} ${bgCard} space-y-2 shrink-0`}>
+              <div className="flex items-center gap-1.5 bg-[#15161f] border border-[#232532] rounded-xl px-2.5 py-1.5">
+                <input
+                  type="text"
+                  value={aiPrompt}
+                  onChange={(e) => setAiPrompt(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleAiEdit();
+                  }}
+                  placeholder="Ask AI to modify copy, colors, sections..."
+                  className="w-full bg-transparent text-xs text-white outline-none placeholder:text-zinc-500"
+                />
+                <button
+                  type="button"
+                  onClick={() => handleAiEdit()}
+                  disabled={isAiEditing || !aiPrompt.trim()}
+                  className="p-1 rounded-lg bg-white text-black hover:bg-zinc-200 disabled:opacity-40 transition-colors cursor-pointer shrink-0"
+                  title="Send modification to AI"
+                >
+                  <Send className="w-3 h-3" />
+                </button>
               </div>
 
-              {/* Code Content */}
-              <div className="flex-1 overflow-auto p-3 font-mono text-xs leading-relaxed text-zinc-300 bg-[#0d0e15] select-text">
-                <pre className="whitespace-pre-wrap break-all">
-                  {clonedData.files[activeCodeTab]}
-                </pre>
-              </div>
-
-              {/* Bottom Actions Bar */}
-              <div className={`p-3 border-t ${border} ${bgCard} flex items-center gap-2.5 shrink-0`}>
+              {/* Export ZIP and Open in Codex actions */}
+              <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={handleExportZip}
                   disabled={isExportingZip}
-                  className="flex-1 py-2.5 px-4 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-md shadow-cyan-600/20 transition-all cursor-pointer active:scale-95 disabled:opacity-50"
+                  className="flex-1 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
                 >
-                  <FolderDown className="w-4 h-4" />
-                  <span>{isExportingZip ? 'Packaging ZIP...' : 'Download Clean ZIP'}</span>
+                  <FolderDown className="w-3.5 h-3.5" />
+                  <span>Download ZIP</span>
                 </button>
 
                 {onOpenInCodex && (
                   <button
                     type="button"
                     onClick={() => onOpenInCodex(clonedData.files)}
-                    className="py-2.5 px-4 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-md shadow-purple-600/20 transition-all cursor-pointer active:scale-95"
-                    title="Edit and code this site in Codex Studio"
+                    className="flex-1 py-1.5 rounded-xl bg-white text-black hover:bg-zinc-200 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                   >
-                    <Code2 className="w-4 h-4" />
+                    <Code2 className="w-3.5 h-3.5" />
                     <span>Open in Codex</span>
                   </button>
                 )}
               </div>
             </div>
-          </>
-        ) : (
-          /* Empty / Hero State */
-          <div className="flex-1 flex items-center justify-center p-6 sm:p-12">
-            <div className="max-w-md text-center space-y-4">
-              <div className="w-16 h-16 rounded-3xl bg-cyan-500/15 border border-cyan-500/30 text-cyan-400 flex items-center justify-center mx-auto shadow-xl shadow-cyan-500/10">
-                <Globe className="w-8 h-8" />
-              </div>
-              <div className="space-y-1.5">
-                <h3 className={`text-xl font-black ${textBright}`}>
-                  Ultra High-Fidelity Web Cloning
-                </h3>
-                <p className={`text-xs sm:text-sm ${textSub} leading-relaxed`}>
-                  Enter any website URL above or click one of the quick presets. Sapphire will extract the full DOM, resolve all remote stylesheets, purge tracking telemetry, and provide live responsive preview and clean ZIP download!
-                </p>
-              </div>
-              <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
-                <span className="px-3 py-1 rounded-full text-[11px] font-bold bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 flex items-center gap-1.5">
-                  <ShieldCheck className="w-3.5 h-3.5" /> 100% Tracker Purged
-                </span>
-                <span className="px-3 py-1 rounded-full text-[11px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1.5">
-                  <Zap className="w-3.5 h-3.5" /> Sub-Second Scrape
-                </span>
-                <span className="px-3 py-1 rounded-full text-[11px] font-bold bg-purple-500/10 text-purple-400 border border-purple-500/20 flex items-center gap-1.5">
-                  <FileCode className="w-3.5 h-3.5" /> Multi-File Bundle
-                </span>
-              </div>
-            </div>
           </div>
-        )}
-      </div>
+        </div>
+      ) : (
+        /* Empty / Hero State */
+        <div className="flex-1 flex items-center justify-center p-6 sm:p-12">
+          <div className="max-w-md text-center space-y-3">
+            <div className="w-14 h-14 rounded-2xl bg-zinc-800/80 border border-zinc-700/60 text-white flex items-center justify-center mx-auto shadow-xl">
+              <Globe className="w-7 h-7" />
+            </div>
+            <h3 className={`text-lg font-bold ${textBright}`}>
+              High-Fidelity Web Cloner & AI Editor
+            </h3>
+            <p className={`text-xs ${textSub} leading-relaxed`}>
+              Enter any target URL above or select a sample. The engine clones the full DOM, inlines styles, cleans tracking telemetry, and lets you edit the website live with our AI chat.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 bg-white text-black text-xs font-bold px-4 py-2 rounded-xl shadow-2xl z-50 animate-fade-in flex items-center gap-2">
+          <Check className="w-3.5 h-3.5" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
     </div>
   );
 };

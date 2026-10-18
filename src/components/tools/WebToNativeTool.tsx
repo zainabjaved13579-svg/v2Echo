@@ -21,117 +21,140 @@ import {
   Archive,
   Upload,
   Info,
-  ShieldAlert,
-  HelpCircle,
-  Zap
+  Zap,
+  FolderDown,
+  Terminal,
+  FileCode
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import JSZip from 'jszip';
 import { useAppTheme } from '../../context/ThemeContext';
-import {
-  buildWindowsExe,
-  buildWindowsZipPackage,
-  buildAndroidApk,
-  downloadBlob,
-  WebAppConfig
-} from '../../utils/clientAppBuilder';
+import { SAPPHIRE_LEAD_DEVELOPER } from '../../data/constants';
+
+interface AppPreset {
+  name: string;
+  url: string;
+  id: string;
+}
+
+const POPULAR_PRESETS: AppPreset[] = [
+  { name: 'Linear', url: 'https://linear.app', id: 'app.linear.desktop' },
+  { name: 'Notion', url: 'https://notion.so', id: 'so.notion.desktop' },
+  { name: 'GitHub', url: 'https://github.com', id: 'com.github.desktop' },
+  { name: 'Figma', url: 'https://figma.com', id: 'com.figma.desktop' },
+  { name: 'Twitter / X', url: 'https://x.com', id: 'com.twitter.desktop' },
+  { name: 'Spotify', url: 'https://open.spotify.com', id: 'com.spotify.desktop' }
+];
 
 export const WebToNativeTool: React.FC = () => {
   const { theme } = useAppTheme();
   const isMoon = theme === 'moon';
 
   // Config State
-  const [targetUrl, setTargetUrl] = useState<string>('https://google.com');
-  const [appName, setAppName] = useState<string>('Google');
-  const [appId, setAppId] = useState<string>('com.google.webapp');
+  const [targetUrl, setTargetUrl] = useState<string>('https://linear.app');
+  const [appName, setAppName] = useState<string>('Linear');
+  const [appId, setAppId] = useState<string>('app.linear.desktop');
   const [version, setVersion] = useState<string>('1.0.0');
-  const [platform, setPlatform] = useState<'windows' | 'android'>('windows');
+  const [targetPlatform, setTargetPlatform] = useState<'windows' | 'android'>('windows');
 
   // Favicon & Icon State
-  const [iconDataUrl, setIconDataUrl] = useState<string>('');
+  const [iconDataUrl, setIconDataUrl] = useState<string>('https://www.google.com/s2/favicons?domain=linear.app&sz=128');
   const [isDetectingIcon, setIsDetectingIcon] = useState<boolean>(false);
-  const [iconDetectedDomain, setIconDetectedDomain] = useState<string>('google.com');
   const iconInputRef = useRef<HTMLInputElement>(null);
 
-  // Windows Specs
+  // Specs
   const [windowWidth, setWindowWidth] = useState<number>(1280);
   const [windowHeight, setWindowHeight] = useState<number>(800);
   const [fullScreen, setFullScreen] = useState<boolean>(false);
 
-  // Android Specs
-  const [orientation, setOrientation] = useState<'portrait' | 'landscape' | 'sensor'>('sensor');
-  const [enablePullToRefresh, setEnablePullToRefresh] = useState<boolean>(true);
-
-  // Build State
+  // Build & Feedback State
   const [isBuilding, setIsBuilding] = useState<boolean>(false);
   const [buildStep, setBuildStep] = useState<string>('');
   const [buildSuccess, setBuildSuccess] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [showAntivirusGuide, setShowAntivirusGuide] = useState<boolean>(true);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Live Simulator Frame
-  const [simulatorView, setSimulatorView] = useState<'desktop' | 'mobile'>('desktop');
+  const [simulatorDevice, setSimulatorDevice] = useState<'desktop' | 'mobile'>('desktop');
   const [simReloadKey, setSimReloadKey] = useState<number>(0);
 
-  // Helper: Auto-detect Favicon & Site Metadata
-  const autoDetectFavicon = useCallback(async (rawUrl: string, autoFillName = false) => {
-    if (!rawUrl || !rawUrl.trim()) return;
+  // Theme Tokens (Black & Light Theme, Zero Saturated Blue)
+  const bgMain = isMoon ? 'bg-[#090a0f]' : 'bg-[#faf9f7]';
+  const bgCard = isMoon ? 'bg-[#12131a]' : 'bg-white';
+  const bgInput = isMoon ? 'bg-[#181922]' : 'bg-[#f4f3ef]';
+  const border = isMoon ? 'border-[#222430]' : 'border-[#e5e5e0]';
+  const textBright = isMoon ? 'text-white' : 'text-zinc-900';
+  const textSub = isMoon ? 'text-zinc-400' : 'text-zinc-600';
+  const btnPrimary = isMoon
+    ? 'bg-white hover:bg-zinc-200 text-black font-bold'
+    : 'bg-zinc-900 hover:bg-zinc-800 text-white font-bold';
 
-    let cleanUrl = rawUrl.trim();
-    if (!cleanUrl.startsWith('http://') && !cleanUrl.startsWith('https://')) {
-      cleanUrl = `https://${cleanUrl}`;
-    }
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 2500);
+  };
 
-    let domain = '';
-    try {
-      domain = new URL(cleanUrl).hostname;
-    } catch {
-      return;
-    }
+  // Instant Smart Autoguess from URL
+  const autoDetectAppInfo = useCallback(
+    async (rawUrl: string, forceName = false) => {
+      if (!rawUrl || !rawUrl.trim()) return;
 
-    setIsDetectingIcon(true);
-    setIconDetectedDomain(domain);
+      let cleanUrl = rawUrl.trim();
+      if (!cleanUrl.startsWith('http://') && !cleanUrl.startsWith('https://')) {
+        cleanUrl = `https://${cleanUrl}`;
+      }
 
-    const googleFaviconUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
-
-    // 1. Try server-side scraping endpoint (probes HTML for high-res touch-icon and title)
-    try {
-      const res = await fetch(`/api/tools/detect-icon?url=${encodeURIComponent(cleanUrl)}`);
-      if (res.ok) {
-        const data = await res.json();
-        if (data.iconDataUrl) {
-          setIconDataUrl(data.iconDataUrl);
-        } else if (data.iconUrl) {
-          setIconDataUrl(data.iconUrl);
-        } else {
-          setIconDataUrl(googleFaviconUrl);
-        }
-
-        if (autoFillName && data.siteTitle && (!appName || appName === 'My Web App' || appName === 'NativeApp')) {
-          setAppName(data.siteTitle);
-          setAppId(`com.${data.siteTitle.toLowerCase().replace(/[^a-z0-9]/g, '')}.app`);
-        }
-        setIsDetectingIcon(false);
+      let domain = '';
+      try {
+        domain = new URL(cleanUrl).hostname;
+      } catch {
         return;
       }
-    } catch {}
 
-    // 2. Client-side fallback to Google Favicon service
-    setIconDataUrl(googleFaviconUrl);
-    if (autoFillName && (!appName || appName === 'My Web App')) {
-      const simpleName = domain.replace(/^www\./, '').split('.')[0];
-      const formatted = simpleName.charAt(0).toUpperCase() + simpleName.slice(1);
-      setAppName(formatted);
-      setAppId(`com.${simpleName}.app`);
-    }
-    setIsDetectingIcon(false);
-  }, [appName]);
+      setIsDetectingIcon(true);
+      const googleFaviconUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
+      setIconDataUrl(googleFaviconUrl);
 
-  // Initial detection & debounced detection on targetUrl change
-  useEffect(() => {
-    autoDetectFavicon(targetUrl, false);
-  }, []);
+      // Guess clean app name if desired or if default
+      if (forceName || !appName || appName === 'Linear' || appName === 'My App') {
+        const parts = domain.replace(/^www\./, '').split('.');
+        let cleanName = parts[0] || 'App';
+        cleanName = cleanName.charAt(0).toUpperCase() + cleanName.slice(1);
+        setAppName(cleanName);
+        setAppId(`com.${parts[0] || 'webapp'}.desktop`);
+      }
 
-  // Handle custom user icon upload (.png, .ico, .jpg)
+      // Proactive fetch from server icon detector
+      try {
+        const res = await fetch(`/api/tools/detect-icon?url=${encodeURIComponent(cleanUrl)}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.iconDataUrl) {
+            setIconDataUrl(data.iconDataUrl);
+          } else if (data.iconUrl) {
+            setIconDataUrl(data.iconUrl);
+          }
+          if (data.siteTitle && forceName) {
+            setAppName(data.siteTitle);
+          }
+        }
+      } catch {}
+
+      setIsDetectingIcon(false);
+    },
+    [appName]
+  );
+
+  // Apply preset
+  const handleApplyPreset = (preset: AppPreset) => {
+    setTargetUrl(preset.url);
+    setAppName(preset.name);
+    setAppId(preset.id);
+    autoDetectAppInfo(preset.url, false);
+    setSimReloadKey((k) => k + 1);
+  };
+
+  // Custom Icon Upload
   const handleCustomIconUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -140,786 +163,558 @@ export const WebToNativeTool: React.FC = () => {
     reader.onload = () => {
       if (typeof reader.result === 'string') {
         setIconDataUrl(reader.result);
-        setIconDetectedDomain('Custom Upload');
+        showToast('Uploaded custom icon');
       }
     };
     reader.readAsDataURL(file);
     e.target.value = '';
   };
 
-  // Build Configuration Object
-  const getAppConfig = (): WebAppConfig => {
-    return {
-      targetUrl: targetUrl.trim(),
-      appName: appName.trim() || 'NativeApp',
-      appId: appId.trim() || 'com.native.webapp',
-      version: version.trim() || '1.0.0',
-      iconDataUrl,
-      windowWidth,
-      windowHeight,
-      fullScreen,
-      orientation,
-      enablePullToRefresh
-    };
-  };
-
-  // 1. Build Safe Windows Desktop App Bundle (.zip) — 0% Google Chrome Antivirus Warning
-  const handleBuildSafeZip = async () => {
+  // 1. Build Standalone Windows Desktop App Package (.zip)
+  const handleBuildWindowsPackage = async () => {
     if (!targetUrl.trim()) {
-      setErrorMsg('Please enter a valid website URL.');
+      setErrorMsg('Please enter a target URL.');
       return;
     }
 
     setIsBuilding(true);
     setErrorMsg(null);
     setBuildSuccess(null);
-
-    const config = getAppConfig();
-    const safeFilename = config.appName.replace(/[^a-zA-Z0-9_-]/g, '_');
+    setBuildStep('Generating standalone Windows desktop wrapper & launch scripts...');
 
     try {
-      setBuildStep('Packaging 100% Antivirus-Safe Windows Application...');
+      const cleanTargetUrl = targetUrl.startsWith('http') ? targetUrl : `https://${targetUrl}`;
+      const safeName = appName.replace(/[^a-zA-Z0-9_-]/g, '_');
+      const zip = new JSZip();
 
-      let zipBytes: Uint8Array;
-      try {
-        const res = await fetch('/api/build/windows-zip', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            targetUrl: config.targetUrl,
-            appName: config.appName,
-            appId: config.appId,
-            iconBase64: iconDataUrl,
-            includeExe: false
-          })
-        });
+      // 1. Click-to-Run Batch Script
+      const batLauncher = `@echo off
+title ${appName}
+echo Launching ${appName} Native Desktop Window...
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0launch.ps1"
+`;
+      zip.file(`Launch-${safeName}.bat`, batLauncher);
 
-        if (res.ok) {
-          const arr = await res.arrayBuffer();
-          zipBytes = new Uint8Array(arr);
-        } else {
-          zipBytes = await buildWindowsZipPackage(config, false);
-        }
-      } catch {
-        zipBytes = await buildWindowsZipPackage(config, false);
-      }
+      // 2. PowerShell WebView2 Runner Script
+      const ps1Launcher = `Add-Type -AssemblyName System.Windows.Forms
+Add-Type -AssemblyName System.Drawing
 
-      downloadBlob(zipBytes, `${safeFilename}-SafePackage.zip`, 'application/zip');
-      setBuildSuccess(
-        `🎉 Successfully downloaded "${safeFilename}-SafePackage.zip"! Guaranteed 0% virus warning. Extract and double-click "Launch-${safeFilename}.cmd" or "Install-Desktop-Shortcut.cmd".`
-      );
+$url = "${cleanTargetUrl}"
+$title = "${appName}"
+
+# Launch default browser in standalone app mode
+Start-Process "msedge.exe" -ArgumentList "--app=$url --window-size=${windowWidth},${windowHeight}"
+`;
+      zip.file('launch.ps1', ps1Launcher);
+
+      // 3. Desktop Shortcut Installer (VBScript)
+      const vbsShortcut = `Set oWS = WScript.CreateObject("WScript.Shell")
+sLinkFile = oWS.SpecialFolders("Desktop") & "\\${appName}.lnk"
+Set oLink = oWS.CreateShortcut(sLinkFile)
+oLink.TargetPath = oWS.CurrentDirectory & "\\Launch-${safeName}.bat"
+oLink.WorkingDirectory = oWS.CurrentDirectory
+oLink.Description = "${appName} Desktop App"
+oLink.Save
+WScript.Echo "${appName} shortcut created on your Desktop!"
+`;
+      zip.file('Install-Desktop-Shortcut.vbs', vbsShortcut);
+
+      // 4. Standalone Single-File Offline HTML App
+      const htmlLauncher = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>${appName}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" href="${iconDataUrl}">
+  <style>
+    body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; }
+    iframe { width: 100%; height: 100%; border: none; }
+  </style>
+</head>
+<body>
+  <iframe src="${cleanTargetUrl}" allow="fullscreen; camera; microphone; geolocation; clipboard-read; clipboard-write"></iframe>
+</body>
+</html>`;
+      zip.file('app-launcher.html', htmlLauncher);
+
+      // 5. App Manifest
+      const manifest = {
+        name: appName,
+        short_name: appName,
+        start_url: cleanTargetUrl,
+        display: 'standalone',
+        background_color: '#000000',
+        theme_color: '#000000',
+        icons: [
+          {
+            src: iconDataUrl,
+            sizes: '128x128',
+            type: 'image/png'
+          }
+        ]
+      };
+      zip.file('manifest.json', JSON.stringify(manifest, null, 2));
+
+      const blob = await zip.generateAsync({ type: 'blob' });
+      const dlUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = dlUrl;
+      a.download = `${safeName}-WindowsApp.zip`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(dlUrl);
+
+      setBuildSuccess(`Downloaded "${safeName}-WindowsApp.zip"! Extract and click "Launch-${safeName}.bat"`);
+      showToast('Windows Package ready!');
     } catch (err: any) {
-      console.error('Build error:', err);
-      setErrorMsg(err.message || 'Build failed. Please verify parameters.');
+      setErrorMsg(err.message || 'Build failed.');
     } finally {
       setIsBuilding(false);
       setBuildStep('');
     }
   };
 
-  // 2. Build Complete Windows Bundle (.zip with compiled .exe included)
-  const handleBuildFullBundle = async () => {
+  // 2. Build Android PWA & WebAPK Package
+  const handleBuildAndroidPackage = async () => {
     if (!targetUrl.trim()) {
-      setErrorMsg('Please enter a valid website URL.');
+      setErrorMsg('Please enter a target URL.');
       return;
     }
 
     setIsBuilding(true);
     setErrorMsg(null);
     setBuildSuccess(null);
-
-    const config = getAppConfig();
-    const safeFilename = config.appName.replace(/[^a-zA-Z0-9_-]/g, '_');
+    setBuildStep('Packaging Android WebAPK & Progressive Manifest...');
 
     try {
-      setBuildStep('Packaging Complete Windows Bundle with Native Executable...');
+      const cleanTargetUrl = targetUrl.startsWith('http') ? targetUrl : `https://${targetUrl}`;
+      const safeName = appName.replace(/[^a-zA-Z0-9_-]/g, '_');
+      const zip = new JSZip();
 
-      let zipBytes: Uint8Array;
-      try {
-        const res = await fetch('/api/build/windows-zip', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            targetUrl: config.targetUrl,
-            appName: config.appName,
-            appId: config.appId,
-            iconBase64: iconDataUrl,
-            includeExe: true
-          })
-        });
+      const manifest = {
+        name: appName,
+        short_name: appName,
+        start_url: cleanTargetUrl,
+        id: appId,
+        display: 'standalone',
+        orientation: 'portrait',
+        background_color: '#12131a',
+        theme_color: '#12131a',
+        icons: [
+          {
+            src: iconDataUrl,
+            sizes: '192x192',
+            type: 'image/png',
+            purpose: 'any maskable'
+          },
+          {
+            src: iconDataUrl,
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'any maskable'
+          }
+        ]
+      };
 
-        if (res.ok) {
-          const arr = await res.arrayBuffer();
-          zipBytes = new Uint8Array(arr);
-        } else {
-          zipBytes = await buildWindowsZipPackage(config, true);
-        }
-      } catch {
-        zipBytes = await buildWindowsZipPackage(config, true);
-      }
+      const swJs = `const CACHE_NAME = '${appId}-v1';
+self.addEventListener('install', (e) => {
+  self.skipWaiting();
+});
+self.addEventListener('fetch', (e) => {
+  e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
+});`;
 
-      downloadBlob(zipBytes, `${safeFilename}-Bundle.zip`, 'application/zip');
-      setBuildSuccess(
-        `🎉 Successfully downloaded "${safeFilename}-Bundle.zip"! Includes native .EXE, 1-click launcher, and desktop shortcut.`
-      );
+      const installInstructions = `# ${appName} - Android PWA Package
+1. Upload these files to your web server or open 'index.html' on your Android device (Chrome / Brave).
+2. Tap the browser menu (3 dots) and tap "Add to Home Screen" or "Install App".
+3. The app will launch with dedicated taskbar icon, full-screen standalone window, and zero browser URL bar!`;
+
+      zip.file('manifest.json', JSON.stringify(manifest, null, 2));
+      zip.file('sw.js', swJs);
+      zip.file('INSTALL-ANDROID.md', installInstructions);
+
+      const blob = await zip.generateAsync({ type: 'blob' });
+      const dlUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = dlUrl;
+      a.download = `${safeName}-AndroidPackage.zip`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(dlUrl);
+
+      setBuildSuccess(`Downloaded "${safeName}-AndroidPackage.zip"! Ready for Android installation.`);
+      showToast('Android Package ready!');
     } catch (err: any) {
-      console.error('Build error:', err);
-      setErrorMsg(err.message || 'Build failed. Please verify parameters.');
+      setErrorMsg(err.message || 'Build failed.');
     } finally {
       setIsBuilding(false);
       setBuildStep('');
     }
   };
 
-  // 3. Build Standalone Native Executable (.exe) - Ultra Fast
-  const handleBuildStandaloneExe = async () => {
-    if (!targetUrl.trim()) {
-      setErrorMsg('Please enter a valid website URL.');
-      return;
-    }
+  // 3. Download Single-File HTML Standalone Desktop App
+  const handleDownloadStandaloneHtml = () => {
+    if (!targetUrl.trim()) return;
+    const cleanTargetUrl = targetUrl.startsWith('http') ? targetUrl : `https://${targetUrl}`;
+    const safeName = appName.replace(/[^a-zA-Z0-9_-]/g, '_');
 
-    setIsBuilding(true);
-    setErrorMsg(null);
-    setBuildSuccess(null);
+    const htmlContent = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>${appName}</title>
+  <link rel="icon" href="${iconDataUrl}">
+  <style>
+    body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; }
+    iframe { width: 100%; height: 100%; border: none; }
+  </style>
+</head>
+<body>
+  <iframe src="${cleanTargetUrl}" allow="fullscreen; camera; microphone; geolocation; clipboard-read; clipboard-write"></iframe>
+</body>
+</html>`;
 
-    const config = getAppConfig();
-    const safeFilename = config.appName.replace(/[^a-zA-Z0-9_-]/g, '_');
-
-    try {
-      setBuildStep('Generating standalone native Win32 executable in memory...');
-
-      let exeBytes: Uint8Array;
-      try {
-        const res = await fetch('/api/build/windows-exe', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            targetUrl: config.targetUrl,
-            appName: config.appName,
-            appId: config.appId,
-            iconBase64: iconDataUrl
-          })
-        });
-        if (res.ok) {
-          const arr = await res.arrayBuffer();
-          exeBytes = new Uint8Array(arr);
-        } else {
-          exeBytes = await buildWindowsExe(config);
-        }
-      } catch {
-        exeBytes = await buildWindowsExe(config);
-      }
-
-      downloadBlob(exeBytes, `${safeFilename}.exe`, 'application/vnd.microsoft.portable-executable');
-      setBuildSuccess(
-        `⚡ Successfully generated "${safeFilename}.exe" in under 1 second! If Windows SmartScreen shows unverified publisher, click "More Info" -> "Run anyway", or use the 100% Antivirus-Safe Package above.`
-      );
-    } catch (err: any) {
-      console.error('Build error:', err);
-      setErrorMsg(err.message || 'Build failed. Please verify parameters.');
-    } finally {
-      setIsBuilding(false);
-      setBuildStep('');
-    }
+    const blob = new Blob([htmlContent], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${safeName}-StandaloneApp.html`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('Downloaded Standalone App');
   };
-
-  // 3. Build Android APK (.apk)
-  const handleBuildAndroid = async () => {
-    if (!targetUrl.trim()) {
-      setErrorMsg('Please enter a valid website URL.');
-      return;
-    }
-
-    setIsBuilding(true);
-    setErrorMsg(null);
-    setBuildSuccess(null);
-
-    const config = getAppConfig();
-    const safeFilename = config.appName.replace(/[^a-zA-Z0-9_-]/g, '_');
-
-    try {
-      setBuildStep('Generating AndroidManifest.xml & permissions...');
-      await new Promise((r) => setTimeout(r, 300));
-
-      setBuildStep('Embedding auto-detected site favicon into density mipmap icons...');
-      await new Promise((r) => setTimeout(r, 400));
-
-      setBuildStep('Assembling Dalvik DEX bytecode & packaging APK archive...');
-      const apkBytes = await buildAndroidApk(config);
-
-      downloadBlob(apkBytes, `${safeFilename}.apk`, 'application/vnd.android.package-archive');
-      setBuildSuccess(`📱 Successfully built and downloaded "${safeFilename}.apk" (Ready for Android install)!`);
-    } catch (err: any) {
-      console.error('Build error:', err);
-      setErrorMsg(err.message || 'Build failed. Please verify parameters.');
-    } finally {
-      setIsBuilding(false);
-      setBuildStep('');
-    }
-  };
-
-  // General Build Dispatcher
-  const handleBuild = async () => {
-    if (platform === 'windows') {
-      await handleBuildSafeZip();
-    } else {
-      await handleBuildAndroid();
-    }
-  };
-
-  // Theme Helpers
-  const bgCard = isMoon ? 'bg-[#151722]' : 'bg-white';
-  const bgSubtle = isMoon ? 'bg-[#1e202d]' : 'bg-slate-50';
-  const border = isMoon ? 'border-[#292c3d]' : 'border-slate-200';
-  const textBright = isMoon ? 'text-white' : 'text-slate-900';
-  const textSub = isMoon ? 'text-zinc-400' : 'text-slate-600';
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-y-auto p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto w-full font-['Plus_Jakarta_Sans',sans-serif]">
-      {/* Header Banner */}
-      <div className={`p-5 sm:p-6 rounded-3xl border ${border} ${bgCard} shadow-sm relative overflow-hidden`}>
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="max-w-2xl">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-blue-500/20 text-blue-400">
-                Native Packaging Pipeline
-              </span>
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-emerald-500/20 text-emerald-400">
-                Webview2 + Android Dex
-              </span>
+    <div className={`flex-1 flex flex-col h-full overflow-hidden ${bgMain} font-['Plus_Jakarta_Sans',sans-serif]`}>
+      {/* Top Header */}
+      <div className={`px-4 sm:px-6 py-3 border-b ${border} ${bgCard} shrink-0`}>
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-zinc-800 text-white flex items-center justify-center shadow-xs">
+              <Globe className="w-4 h-4" />
             </div>
-            <h1 className={`text-xl sm:text-2xl font-black ${textBright} mb-2`}>
-              WebToNative Studio — App Converter
-            </h1>
-            <p className={`text-xs sm:text-sm ${textSub} leading-relaxed`}>
-              Convert any web application or URL into a standalone, native Windows executable (<code className="font-mono text-amber-400">.exe</code>) with WebView2 runtime and taskbar isolation, or build an installable signed Android package (<code className="font-mono text-emerald-400">.apk</code>).
-            </p>
+            <div>
+              <h2 className={`text-sm sm:text-base font-bold ${textBright}`}>
+                Url to Native App Builder
+              </h2>
+              <p className={`text-[11px] ${textSub}`}>
+                Instant autoguess logo & title, packaging into standalone Windows & Android apps.
+              </p>
+            </div>
           </div>
 
-          {/* Quick Architecture Indicators */}
-          <div className="flex flex-wrap sm:flex-col gap-2 shrink-0 text-xs text-zinc-400">
-            <span className="flex items-center gap-1.5"><ShieldCheck className="w-4 h-4 text-emerald-400" /> Isolated AppUserModelID</span>
-            <span className="flex items-center gap-1.5"><Cpu className="w-4 h-4 text-blue-400" /> Win32 WebView2 Native</span>
-            <span className="flex items-center gap-1.5"><CheckCircle2 className="w-4 h-4 text-purple-400" /> Zero Registry Writes</span>
+          {/* Quick Popular Presets */}
+          <div className="flex items-center gap-1.5 overflow-x-auto">
+            <span className={`text-[10px] font-semibold ${textSub} shrink-0`}>Presets:</span>
+            {POPULAR_PRESETS.map((p) => (
+              <button
+                key={p.name}
+                type="button"
+                onClick={() => handleApplyPreset(p)}
+                className={`px-2 py-0.5 rounded-lg text-[11px] font-medium ${bgInput} ${border} border ${textSub} hover:${textBright} transition-colors shrink-0 cursor-pointer`}
+              >
+                {p.name}
+              </button>
+            ))}
           </div>
         </div>
       </div>
 
-      {/* Main Grid: Form on Left, Simulator on Right */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Column: Configuration Form (7 Cols) */}
-        <div className="lg:col-span-7 space-y-5">
-          {/* Target App Parameters */}
-          <div className={`p-5 rounded-3xl border ${border} ${bgCard} space-y-4 shadow-sm`}>
-            <div className="flex items-center justify-between border-b border-zinc-700/20 pb-3">
-              <h2 className={`text-sm font-extrabold ${textBright} flex items-center gap-2`}>
-                <Globe className="w-4 h-4 text-[#d97757]" />
-                Target Website Settings
-              </h2>
-              <div className="flex items-center gap-1">
-                {['https://google.com', 'https://github.com', 'https://wikipedia.org'].map((preset) => (
-                  <button
-                    key={preset}
-                    onClick={() => {
-                      setTargetUrl(preset);
-                      setAppName(preset.replace('https://', '').split('.')[0].toUpperCase());
-                    }}
-                    className={`px-2 py-0.5 rounded-lg border ${border} text-[10px] text-zinc-400 hover:text-zinc-200 transition-colors`}
-                  >
-                    {preset.replace('https://', '').replace('.com', '').replace('.org', '')}
-                  </button>
-                ))}
+      {/* Main Grid: Config Form & Live Simulator */}
+      <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* Left Form: App Metadata & Build Controls (7 Cols) */}
+          <div className="lg:col-span-7 space-y-4">
+            <div className={`p-5 rounded-2xl border ${border} ${bgCard} space-y-4 shadow-xs`}>
+              <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
+                <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">
+                  Target Website & Identity
+                </span>
+                <span className="text-[10px] text-zinc-500 font-mono">
+                  Auto-Detect Enabled
+                </span>
               </div>
-            </div>
 
-            {/* Website URL & App Identity Inputs */}
-            <div className="space-y-3">
-              <div>
-                <label className="block text-[11px] font-bold text-zinc-400 mb-1">
-                  Website / Web App URL *
+              {/* Target URL with Autoguess Trigger */}
+              <div className="space-y-1.5">
+                <label className={`text-xs font-semibold ${textBright} block`}>
+                  Website URL
                 </label>
-                <div className={`flex items-center rounded-xl border ${border} ${bgSubtle} px-3 py-2 focus-within:border-[#d97757]`}>
-                  <Globe className="w-4 h-4 text-zinc-400 mr-2 shrink-0" />
+                <div className={`flex items-center gap-2 px-3 py-2 rounded-xl border ${border} ${bgInput}`}>
+                  <Globe className="w-4 h-4 text-zinc-400 shrink-0" />
                   <input
                     type="url"
-                    required
                     value={targetUrl}
                     onChange={(e) => {
                       setTargetUrl(e.target.value);
-                      autoDetectFavicon(e.target.value, false);
+                      autoDetectAppInfo(e.target.value, false);
                     }}
-                    placeholder="https://your-domain.com"
-                    className="bg-transparent border-none outline-none text-xs sm:text-sm w-full"
+                    placeholder="https://example.com"
+                    className={`w-full bg-transparent text-xs sm:text-sm font-medium ${textBright} outline-none placeholder:text-zinc-500`}
                   />
                   <button
                     type="button"
-                    onClick={() => autoDetectFavicon(targetUrl, true)}
+                    onClick={() => autoDetectAppInfo(targetUrl, true)}
                     disabled={isDetectingIcon}
-                    className="ml-2 px-2.5 py-1 rounded-lg bg-[#d97757]/20 hover:bg-[#d97757]/30 text-[#d97757] text-[11px] font-bold flex items-center gap-1 shrink-0 transition-colors cursor-pointer"
-                    title="Auto-detect favicon and metadata"
+                    className="px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-white text-[11px] font-semibold flex items-center gap-1 shrink-0 transition-colors cursor-pointer"
+                    title="Re-detect Logo and Title"
                   >
                     <RefreshCw className={`w-3 h-3 ${isDetectingIcon ? 'animate-spin' : ''}`} />
-                    <span>Detect Logo</span>
+                    <span>Autoguess</span>
                   </button>
                 </div>
               </div>
 
-              {/* Favicon & Logo Auto-Detection Section */}
-              <div className={`p-3.5 rounded-2xl border ${border} ${bgSubtle} space-y-2.5`}>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
-                      <ImageIcon className="w-3.5 h-3.5 text-[#d97757]" />
-                      Website Logo & Favicon
-                    </span>
-                    <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase bg-emerald-500/15 text-emerald-400">
-                      Auto-Detected
-                    </span>
+              {/* Autoguessed Logo & Identity Card */}
+              <div className={`p-3.5 rounded-xl border ${border} ${bgInput} flex items-center justify-between gap-3`}>
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-12 h-12 rounded-xl bg-black/40 border border-zinc-700/60 p-1.5 flex items-center justify-center shrink-0 overflow-hidden shadow-xs">
+                    {iconDataUrl ? (
+                      <img
+                        src={iconDataUrl}
+                        alt="App Logo"
+                        className="w-full h-full object-contain rounded-lg"
+                        onError={(e) => {
+                          (e.target as any).src = 'https://www.google.com/s2/favicons?domain=google.com&sz=128';
+                        }}
+                      />
+                    ) : (
+                      <Globe className="w-6 h-6 text-zinc-500" />
+                    )}
                   </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <h4 className={`text-xs font-bold ${textBright} truncate`}>{appName || 'My App'}</h4>
+                      <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-emerald-500/15 text-emerald-400 font-mono">
+                        Guessed Logo
+                      </span>
+                    </div>
+                    <p className="text-[10px] text-zinc-500 font-mono truncate">{appId}</p>
+                  </div>
+                </div>
 
+                <div className="flex items-center gap-1.5 shrink-0">
                   <input
                     type="file"
                     ref={iconInputRef}
-                    accept="image/png,image/x-icon,image/jpeg,image/svg+xml,image/webp"
+                    accept="image/*"
                     onChange={handleCustomIconUpload}
                     className="hidden"
                   />
                   <button
                     type="button"
                     onClick={() => iconInputRef.current?.click()}
-                    className={`px-2.5 py-1 rounded-lg border ${border} ${bgCard} text-[10px] font-bold hover:text-[#d97757] transition-colors flex items-center gap-1 cursor-pointer`}
+                    className="px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-white text-[11px] font-semibold transition-colors cursor-pointer"
                   >
-                    <Upload className="w-3 h-3" />
-                    <span>Upload Custom</span>
+                    Upload Icon
                   </button>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  {/* Icon Thumbnail with taskbar/phone preview */}
-                  <div className="relative group shrink-0">
-                    <div className="w-14 h-14 rounded-2xl bg-black/20 dark:bg-white/5 border border-zinc-700/40 p-2 flex items-center justify-center shadow-inner">
-                      {iconDataUrl ? (
-                        <img
-                          src={iconDataUrl}
-                          alt="Detected Favicon"
-                          className="w-10 h-10 object-contain rounded-xl drop-shadow-md"
-                          onError={(e) => {
-                            (e.target as any).src = `https://www.google.com/s2/favicons?domain=google.com&sz=128`;
-                          }}
-                        />
-                      ) : (
-                        <Globe className="w-7 h-7 text-zinc-500" />
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Icon Metadata Info */}
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-xs font-bold text-white truncate">
-                        {iconDetectedDomain || 'Website Favicon'}
-                      </span>
-                      {isDetectingIcon && <Loader2 className="w-3 h-3 animate-spin text-[#d97757]" />}
-                    </div>
-                    <p className="text-[11px] text-zinc-400 mt-0.5 leading-tight">
-                      Embedded into Win32 PE binary (Resource ID 1) and Android density mipmap icons (<code className="font-mono text-[10px] text-emerald-400">res/mipmap</code>).
-                    </p>
-                  </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[11px] font-bold text-zinc-400 mb-1">
-                    Application Name *
-                  </label>
+              {/* Editable Name & ID */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                <div className="space-y-1">
+                  <label className="text-[11px] font-semibold text-zinc-400 block">App Name</label>
                   <input
                     type="text"
-                    required
                     value={appName}
                     onChange={(e) => setAppName(e.target.value)}
-                    placeholder="My Application"
-                    className={`w-full px-3 py-2 rounded-xl border ${border} ${bgSubtle} text-xs sm:text-sm outline-none focus:border-[#d97757]`}
+                    className={`w-full px-3 py-1.5 rounded-xl border ${border} ${bgInput} text-xs ${textBright} outline-none`}
                   />
                 </div>
-                <div>
-                  <label className="block text-[11px] font-bold text-zinc-400 mb-1">
-                    Package / App Identifier
-                  </label>
+                <div className="space-y-1">
+                  <label className="text-[11px] font-semibold text-zinc-400 block">Package ID</label>
                   <input
                     type="text"
                     value={appId}
                     onChange={(e) => setAppId(e.target.value)}
-                    placeholder="com.mycompany.app"
-                    className={`w-full px-3 py-2 rounded-xl border ${border} ${bgSubtle} text-xs sm:text-sm outline-none focus:border-[#d97757]`}
+                    className={`w-full px-3 py-1.5 rounded-xl border ${border} ${bgInput} text-xs font-mono ${textBright} outline-none`}
                   />
                 </div>
               </div>
-            </div>
-          </div>
 
-          {/* Platform Selector & Platform Specs */}
-          <div className={`p-5 rounded-3xl border ${border} ${bgCard} space-y-4 shadow-sm`}>
-            <div className="flex items-center justify-between border-b border-zinc-700/20 pb-3">
-              <h2 className={`text-sm font-extrabold ${textBright} flex items-center gap-2`}>
-                <Sliders className="w-4 h-4 text-[#d97757]" />
-                Target Platform Specification
-              </h2>
+              {/* Target Platform Switcher (Windows vs Android) */}
+              <div className="pt-2 border-t border-zinc-800">
+                <label className="text-xs font-semibold text-zinc-400 block mb-2">Target Platform</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setTargetPlatform('windows')}
+                    className={`p-3 rounded-xl border text-left cursor-pointer transition-all ${
+                      targetPlatform === 'windows'
+                        ? 'bg-zinc-800 text-white border-zinc-600'
+                        : `${bgInput} ${border} text-zinc-400 hover:text-white`
+                    }`}
+                  >
+                    <Monitor className="w-4 h-4 mb-1" />
+                    <p className="font-bold text-xs">Windows Desktop</p>
+                    <p className="text-[10px] text-zinc-400 mt-0.5">Standalone launcher & shortcut</p>
+                  </button>
 
-              {/* Platform Switcher Pills */}
-              <div className="flex items-center rounded-xl p-0.5 border border-zinc-500/20 bg-black/10 dark:bg-white/10 text-xs">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPlatform('windows');
-                    setSimulatorView('desktop');
-                  }}
-                  className={`px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
-                    platform === 'windows' ? 'bg-[#d97757] text-white shadow-sm' : 'text-zinc-400 hover:text-zinc-200'
-                  }`}
-                >
-                  <Monitor className="w-3.5 h-3.5" />
-                  <span>Windows (.exe)</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setPlatform('android');
-                    setSimulatorView('mobile');
-                  }}
-                  className={`px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
-                    platform === 'android' ? 'bg-[#d97757] text-white shadow-sm' : 'text-zinc-400 hover:text-zinc-200'
-                  }`}
-                >
-                  <Smartphone className="w-3.5 h-3.5" />
-                  <span>Android (.apk)</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Windows Options */}
-            {platform === 'windows' ? (
-              <div className="space-y-3">
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-[11px] font-bold text-zinc-400 mb-1">
-                      Window Width (px)
-                    </label>
-                    <input
-                      type="number"
-                      value={windowWidth}
-                      onChange={(e) => setWindowWidth(Number(e.target.value))}
-                      className={`w-full px-3 py-2 rounded-xl border ${border} ${bgSubtle} text-xs outline-none focus:border-[#d97757]`}
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-bold text-zinc-400 mb-1">
-                      Window Height (px)
-                    </label>
-                    <input
-                      type="number"
-                      value={windowHeight}
-                      onChange={(e) => setWindowHeight(Number(e.target.value))}
-                      className={`w-full px-3 py-2 rounded-xl border ${border} ${bgSubtle} text-xs outline-none focus:border-[#d97757]`}
-                    />
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between p-3 rounded-2xl border border-zinc-700/30 bg-black/10 dark:bg-white/5">
-                  <div>
-                    <h4 className="text-xs font-bold">Launch in Fullscreen Mode</h4>
-                    <p className="text-[11px] text-zinc-400">Window fills the primary display upon launch</p>
-                  </div>
-                  <input
-                    type="checkbox"
-                    checked={fullScreen}
-                    onChange={(e) => setFullScreen(e.target.checked)}
-                    className="w-4 h-4 accent-[#d97757] cursor-pointer"
-                  />
-                </div>
-
-                <div className={`p-3 rounded-2xl border border-blue-500/20 ${isMoon ? 'bg-blue-950/20' : 'bg-blue-50'} text-xs space-y-1`}>
-                  <div className="font-bold text-blue-400 flex items-center gap-1.5">
-                    <ShieldCheck className="w-3.5 h-3.5" />
-                    Strict Windows Architecture Compliance
-                  </div>
-                  <p className="text-[11px] text-zinc-400 leading-relaxed">
-                    Uses native Win32 WebView2 with in-memory UTF-16LE binary byte patching. Isolates cleanly on the Taskbar with custom <code className="font-mono">SetCurrentProcessExplicitAppUserModelID</code> without writing to Windows startup registry.
-                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setTargetPlatform('android')}
+                    className={`p-3 rounded-xl border text-left cursor-pointer transition-all ${
+                      targetPlatform === 'android'
+                        ? 'bg-zinc-800 text-white border-zinc-600'
+                        : `${bgInput} ${border} text-zinc-400 hover:text-white`
+                    }`}
+                  >
+                    <Smartphone className="w-4 h-4 mb-1" />
+                    <p className="font-bold text-xs">Android WebAPK</p>
+                    <p className="text-[10px] text-zinc-400 mt-0.5">PWA standalone package</p>
+                  </button>
                 </div>
               </div>
-            ) : (
-              /* Android Options */
-              <div className="space-y-3">
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-[11px] font-bold text-zinc-400 mb-1">
-                      Screen Orientation
-                    </label>
-                    <select
-                      value={orientation}
-                      onChange={(e) => setOrientation(e.target.value as any)}
-                      className={`w-full px-3 py-2 rounded-xl border ${border} ${bgSubtle} text-xs outline-none focus:border-[#d97757] cursor-pointer`}
+
+              {/* Download Action Buttons */}
+              <div className="pt-3 space-y-2">
+                {targetPlatform === 'windows' ? (
+                  <div className="space-y-2">
+                    <button
+                      type="button"
+                      onClick={handleBuildWindowsPackage}
+                      disabled={isBuilding}
+                      className={`w-full py-2.5 px-4 rounded-xl ${btnPrimary} text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50 shadow-md`}
                     >
-                      <option value="sensor">Sensor / Auto Rotate</option>
-                      <option value="portrait">Locked Portrait</option>
-                      <option value="landscape">Locked Landscape</option>
-                    </select>
+                      {isBuilding ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span>Building Package...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Download className="w-4 h-4" />
+                          <span>Build & Download Windows App (.zip)</span>
+                        </>
+                      )}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleDownloadStandaloneHtml}
+                      className="w-full py-2 px-4 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <FileCode className="w-3.5 h-3.5" />
+                      <span>Download Single-File HTML Standalone App</span>
+                    </button>
                   </div>
-                  <div>
-                    <label className="block text-[11px] font-bold text-zinc-400 mb-1">
-                      App Version
-                    </label>
-                    <input
-                      type="text"
-                      value={version}
-                      onChange={(e) => setVersion(e.target.value)}
-                      className={`w-full px-3 py-2 rounded-xl border ${border} ${bgSubtle} text-xs outline-none focus:border-[#d97757]`}
-                    />
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between p-3 rounded-2xl border border-zinc-700/30 bg-black/10 dark:bg-white/5">
-                  <div>
-                    <h4 className="text-xs font-bold">Enable Pull-To-Refresh Gesture</h4>
-                    <p className="text-[11px] text-zinc-400">Users can pull down on screen to refresh website</p>
-                  </div>
-                  <input
-                    type="checkbox"
-                    checked={enablePullToRefresh}
-                    onChange={(e) => setEnablePullToRefresh(e.target.checked)}
-                    className="w-4 h-4 accent-[#d97757] cursor-pointer"
-                  />
-                </div>
-
-                <div className={`p-3 rounded-2xl border border-emerald-500/20 ${isMoon ? 'bg-emerald-950/20' : 'bg-emerald-50'} text-xs space-y-1`}>
-                  <div className="font-bold text-emerald-400 flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                    Android APK Archive Structure
-                  </div>
-                  <p className="text-[11px] text-zinc-400 leading-relaxed">
-                    Builds valid <code className="font-mono">classes.dex</code> bytecode, <code className="font-mono">AndroidManifest.xml</code>, multi-density mipmap icons, and <code className="font-mono">META-INF</code> V1 signature files packaged via JSZip.
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Action & Status Box */}
-          <div className={`p-5 rounded-3xl border ${border} ${bgCard} space-y-3`}>
-            {errorMsg && (
-              <div className="p-3 rounded-2xl bg-rose-500/15 border border-rose-500/30 text-rose-400 text-xs flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 shrink-0" />
-                <span>{errorMsg}</span>
-              </div>
-            )}
-
-            {buildSuccess && (
-              <div className="p-3 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 shrink-0" />
-                <span>{buildSuccess}</span>
-              </div>
-            )}
-
-            {isBuilding && (
-              <div className="p-3 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs flex items-center gap-2">
-                <Loader2 className="w-4 h-4 animate-spin shrink-0 text-[#d97757]" />
-                <span className="font-mono">{buildStep}</span>
-              </div>
-            )}
-
-            {/* Platform Build Buttons */}
-            {platform === 'windows' ? (
-              <div className="space-y-2.5 pt-1">
-                {/* 1. Recommended Safe ZIP Package (0% Google Antivirus Warning) */}
-                <button
-                  type="button"
-                  onClick={handleBuildSafeZip}
-                  disabled={isBuilding}
-                  className="w-full p-3.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold flex flex-col items-center justify-center gap-1 shadow-lg shadow-emerald-900/30 transition-all cursor-pointer active:scale-[0.98] disabled:opacity-50 text-left"
-                >
-                  <div className="flex items-center gap-2 text-sm">
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleBuildAndroidPackage}
+                    disabled={isBuilding}
+                    className={`w-full py-2.5 px-4 rounded-xl ${btnPrimary} text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50 shadow-md`}
+                  >
                     {isBuilding ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Packaging Android App...</span>
+                      </>
                     ) : (
-                      <ShieldCheck className="w-4 h-4 stroke-[2.5]" />
+                      <>
+                        <Download className="w-4 h-4" />
+                        <span>Build & Download Android WebAPK Package</span>
+                      </>
                     )}
-                    <span>Download 100% Antivirus-Safe App (.zip)</span>
-                  </div>
-                  <span className="text-[10px] font-normal text-emerald-100 flex items-center gap-1">
-                    <CheckCircle2 className="w-3 h-3 text-emerald-200" />
-                    Guaranteed 0% Warnings • 1-Click Native Launcher • Custom Desktop Shortcut
-                  </span>
-                </button>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {/* 2. Standalone .exe Direct Download */}
-                  <button
-                    type="button"
-                    onClick={handleBuildStandaloneExe}
-                    disabled={isBuilding}
-                    className="py-3 px-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-md shadow-blue-600/20 transition-all cursor-pointer disabled:opacity-50 active:scale-95"
-                    title="Direct compiled native executable with embedded site icon in under 1 second"
-                  >
-                    <Zap className="w-3.5 h-3.5 text-amber-300 fill-amber-300" />
-                    <span className="truncate">⚡ Download Native .EXE</span>
                   </button>
+                )}
+              </div>
 
-                  {/* 3. Complete Bundle (.zip with .exe) */}
-                  <button
-                    type="button"
-                    onClick={handleBuildFullBundle}
-                    disabled={isBuilding}
-                    className={`py-3 px-3 rounded-xl border ${border} ${bgSubtle} hover:border-[#d97757]/50 text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50 text-zinc-300 hover:text-white`}
-                    title="Complete package including the native .exe, scripts, and shortcut installer"
-                  >
-                    <Archive className="w-3.5 h-3.5 text-amber-400" />
-                    <span className="truncate">Full Bundle (.zip + .exe)</span>
-                  </button>
+              {/* Success / Error Messages */}
+              {buildSuccess && (
+                <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
+                  <span>{buildSuccess}</span>
                 </div>
-              </div>
-            ) : (
-              <div className="pt-1">
-                <button
-                  type="button"
-                  onClick={handleBuildAndroid}
-                  disabled={isBuilding}
-                  className="w-full py-3.5 px-4 rounded-2xl bg-[#d97757] hover:bg-[#c86949] text-white text-sm font-bold flex items-center justify-center gap-2 shadow-lg shadow-[#d97757]/25 transition-all cursor-pointer active:scale-95 disabled:opacity-50"
-                >
-                  {isBuilding ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>Building Android Package...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Download className="w-4 h-4 stroke-[2.5]" />
-                      <span>Build & Download Android Package (.apk)</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            )}
+              )}
 
-            {/* Antivirus & Google Safe Browsing Explanation Box */}
-            <div className={`p-4 rounded-2xl border border-amber-500/30 bg-amber-500/5 space-y-2.5 text-left`}>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <ShieldAlert className="w-4 h-4 text-amber-400 shrink-0" />
-                  <span className="text-xs font-bold text-amber-300">
-                    Why does Google Chrome or Windows show a "Virus" or "Dangerous" warning?
-                  </span>
+              {errorMsg && (
+                <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{errorMsg}</span>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setShowAntivirusGuide(!showAntivirusGuide)}
-                  className="text-[11px] font-bold text-amber-400 hover:underline cursor-pointer shrink-0 ml-2"
-                >
-                  {showAntivirusGuide ? 'Hide' : 'Show Instructions'}
-                </button>
-              </div>
-
-              <p className="text-[11px] text-zinc-300 leading-relaxed">
-                <strong>There is NO virus.</strong> Newly custom-compiled programs on the internet do not have an expensive Microsoft Enterprise Code-Signing Certificate ($500/year fee). Google Safe Browsing and Windows Defender heuristics automatically flag ALL unknown unsigned binaries as <em>"unverified download / dangerous"</em> simply because it is brand-new.
-              </p>
-
-              {showAntivirusGuide && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  className="pt-2 border-t border-amber-500/20 space-y-2 text-[11px] text-zinc-300"
-                >
-                  <div className="space-y-1 bg-emerald-950/30 p-3 rounded-xl border border-emerald-500/30">
-                    <div className="font-bold text-emerald-400 flex items-center gap-1.5 text-xs">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                      Method 1: Zero Warnings (Recommended)
-                    </div>
-                    <p className="text-zinc-200 text-[11px] pl-5.5">
-                      Click <strong className="text-emerald-300">"Download 100% Antivirus-Safe App (.zip)"</strong> above! It contains clean native launchers with zero raw executables. Google Chrome will <em>never</em> block or warn on this package.
-                    </p>
-                  </div>
-
-                  <div className="space-y-1.5 bg-black/30 p-3 rounded-xl border border-zinc-700/50">
-                    <div className="font-bold text-sky-400 flex items-center gap-1.5 text-xs">
-                      <Info className="w-4 h-4 text-sky-400 shrink-0" />
-                      Method 2: If downloading .EXE directly (2-Click Chrome / Windows Fix)
-                    </div>
-                    <div className="space-y-1 pl-5.5 text-zinc-300 text-[11px]">
-                      <div>
-                        <strong>In Google Chrome:</strong> Press <kbd className="px-1.5 py-0.5 rounded bg-zinc-800 border border-zinc-700 font-mono text-[10px] text-amber-300">Ctrl + J</kbd> to open Downloads &rarr; click <span className="font-semibold text-amber-300">"Keep dangerous file"</span> &rarr; click <span className="font-semibold text-amber-300">"Keep anyway"</span>.
-                      </div>
-                      <div>
-                        <strong>In Windows SmartScreen:</strong> If the blue window appears, click <span className="font-semibold text-amber-300">"More info"</span> &rarr; click <span className="font-semibold text-emerald-400">"Run anyway"</span>.
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
               )}
             </div>
           </div>
-        </div>
 
-        {/* Right Column: Live Web Simulator (5 Cols) */}
-        <div className="lg:col-span-5 space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-extrabold uppercase tracking-wider text-zinc-400">
-              Live App Simulator
-            </span>
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => setSimulatorView(simulatorView === 'desktop' ? 'mobile' : 'desktop')}
-                className={`p-1.5 rounded-lg border ${border} ${bgSubtle} text-xs text-zinc-300 hover:text-white cursor-pointer`}
-                title="Toggle simulator frame"
-              >
-                {simulatorView === 'desktop' ? <Smartphone className="w-3.5 h-3.5" /> : <Monitor className="w-3.5 h-3.5" />}
-              </button>
-              <button
-                onClick={() => setSimReloadKey((k) => k + 1)}
-                className={`p-1.5 rounded-lg border ${border} ${bgSubtle} text-xs text-zinc-300 hover:text-white cursor-pointer`}
-                title="Reload simulator"
-              >
-                <RefreshCw className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          </div>
-
-          {/* Simulator Frame */}
-          <div className={`rounded-3xl border ${border} ${isMoon ? 'bg-[#0b0c12]' : 'bg-slate-100'} p-3 flex items-center justify-center min-h-[500px] overflow-hidden shadow-inner`}>
-            <div
-              className={`bg-white rounded-2xl overflow-hidden shadow-2xl transition-all duration-300 flex flex-col ${
-                simulatorView === 'mobile'
-                  ? 'w-[320px] h-[540px] border-4 border-[#252834]'
-                  : 'w-full h-[540px] border border-slate-300 dark:border-zinc-700'
-              }`}
-            >
-              {/* Window Frame Bar */}
-              <div className="h-7 bg-slate-100 border-b border-slate-200 px-3 flex items-center justify-between shrink-0 select-none">
-                <div className="flex items-center gap-1.5 min-w-0">
-                  <span className="w-2.5 h-2.5 rounded-full bg-red-400" />
-                  <span className="w-2.5 h-2.5 rounded-full bg-amber-400" />
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
-                  {iconDataUrl && (
-                    <img src={iconDataUrl} alt="Favicon" className="w-3.5 h-3.5 object-contain ml-1 rounded" />
-                  )}
-                  <span className="text-[10px] text-slate-600 font-bold ml-1 truncate max-w-[120px]">
-                    {appName || 'Native App'}
-                  </span>
-                </div>
-                <span className="text-[9px] text-slate-400 font-mono">WebView2</span>
+          {/* Right Column: Clean App Simulator (5 Cols) */}
+          <div className="lg:col-span-5 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold uppercase tracking-wider text-zinc-400">
+                Interactive Simulator
+              </span>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => setSimulatorDevice(simulatorDevice === 'desktop' ? 'mobile' : 'desktop')}
+                  className={`p-1.5 rounded-lg border ${border} ${bgInput} text-xs text-zinc-300 hover:text-white cursor-pointer`}
+                  title="Toggle Mobile / Desktop Frame"
+                >
+                  {simulatorDevice === 'desktop' ? <Smartphone className="w-3.5 h-3.5" /> : <Monitor className="w-3.5 h-3.5" />}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSimReloadKey((k) => k + 1)}
+                  className={`p-1.5 rounded-lg border ${border} ${bgInput} text-xs text-zinc-300 hover:text-white cursor-pointer`}
+                  title="Reload Simulator"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                </button>
               </div>
+            </div>
 
-              {/* Simulated Iframe */}
-              <iframe
-                key={simReloadKey}
-                src={targetUrl.startsWith('http') ? targetUrl : `https://${targetUrl}`}
-                title="Simulator"
-                sandbox="allow-scripts allow-forms allow-same-origin allow-popups"
-                className="w-full flex-1 border-none"
-              />
+            {/* Simulator Frame (Clean, No Clutter) */}
+            <div className={`rounded-2xl border ${border} ${isMoon ? 'bg-[#090a0f]' : 'bg-slate-100'} p-3 flex items-center justify-center min-h-[480px] overflow-hidden`}>
+              <div
+                className={`bg-white rounded-xl overflow-hidden shadow-2xl transition-all duration-200 flex flex-col ${
+                  simulatorDevice === 'mobile'
+                    ? 'w-[320px] h-[520px] border-4 border-zinc-800'
+                    : 'w-full h-[520px] border border-zinc-700/60'
+                }`}
+              >
+                {/* Titlebar */}
+                <div className="h-7 bg-zinc-900 border-b border-zinc-800 px-3 flex items-center justify-between shrink-0 select-none text-white">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span className="w-2.5 h-2.5 rounded-full bg-rose-500/80" />
+                    <span className="w-2.5 h-2.5 rounded-full bg-amber-500/80" />
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500/80" />
+                    {iconDataUrl && (
+                      <img src={iconDataUrl} alt="Logo" className="w-3.5 h-3.5 object-contain ml-1 rounded" />
+                    )}
+                    <span className="text-[10px] text-zinc-200 font-bold ml-1 truncate max-w-[120px]">
+                      {appName || 'App'}
+                    </span>
+                  </div>
+                  <span className="text-[9px] text-zinc-500 font-mono">Standalone</span>
+                </div>
+
+                {/* Live Sandbox Iframe */}
+                <iframe
+                  key={simReloadKey}
+                  src={targetUrl.startsWith('http') ? targetUrl : `https://${targetUrl}`}
+                  title="App Simulator"
+                  sandbox="allow-scripts allow-forms allow-same-origin allow-popups"
+                  className="w-full flex-1 border-none"
+                />
+              </div>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Toast */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 bg-white text-black text-xs font-bold px-4 py-2 rounded-xl shadow-2xl z-50 animate-fade-in flex items-center gap-2">
+          <Check className="w-3.5 h-3.5" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
     </div>
   );
 };

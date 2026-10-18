@@ -186,14 +186,14 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
               ? `${bgCard} ${text} shadow-sm font-semibold`
               : `${textSub} ${bgHover} hover:${text}`
           }`}
-          title="Sapphire Tools Suite (File Manager & Url to App)"
+          title="Sapphire Developer Tools Suite"
         >
           <div className="flex items-center gap-2.5">
             <Wrench className="w-4 h-4 text-[#d97757]" />
             <span>Tools</span>
           </div>
           <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#d97757]/20 text-[#d97757] font-bold tracking-wider">
-            2 READY
+            5 TOOLS
           </span>
         </button>
 
@@ -209,14 +209,14 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
               ? `${bgCard} ${text} shadow-sm font-semibold`
               : `${textSub} ${bgHover} hover:${text}`
           }`}
-          title="Sapphire Codex Studio"
+          title="Sapphire Codex IDE"
         >
           <div className="flex items-center gap-2.5">
             <Code2 className="w-4 h-4 text-[#d97757]" />
             <span>Codex</span>
           </div>
-          <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#d97757]/20 text-[#d97757] font-bold tracking-wider">
-            STUDIO
+          <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 font-bold tracking-wider">
+            VS CODE
           </span>
         </button>
 
