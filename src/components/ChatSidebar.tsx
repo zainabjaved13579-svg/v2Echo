@@ -193,7 +193,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
             <span>Tools</span>
           </div>
           <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#d97757]/20 text-[#d97757] font-bold tracking-wider">
-            5 TOOLS
+            3 TOOLS
           </span>
         </button>
 
@@ -215,8 +215,8 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
             <Code2 className="w-4 h-4 text-[#d97757]" />
             <span>Codex</span>
           </div>
-          <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 font-bold tracking-wider">
-            VS CODE
+          <span className="text-[9px] px-1.5 py-0.5 rounded bg-[#d97757]/20 text-[#d97757] font-bold tracking-wider">
+            IDE
           </span>
         </button>
 

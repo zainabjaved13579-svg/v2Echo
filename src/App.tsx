@@ -1085,6 +1085,11 @@ ${promptText || 'Please analyze, remake, or update these files cleanly according
                   setActiveNavTab('chat');
                   setIsStartingScreen(false);
                 }}
+                onSendToChat={(promptText) => {
+                  handleSendMessage(promptText);
+                  setActiveNavTab('chat');
+                  setIsStartingScreen(false);
+                }}
               />
             </motion.div>
           ) : activeNavTab === 'codex' ? (

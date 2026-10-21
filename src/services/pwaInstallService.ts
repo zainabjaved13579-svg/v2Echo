@@ -50,16 +50,24 @@ export function initPwaInstallListener(): void {
     notifyListeners(false);
   });
 
-  // Ensure Service Worker is registered
+  // Ensure Service Worker is registered safely on load
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker
-      .register('/sw.js', { updateViaCache: 'none' })
-      .then((reg) => {
-        reg.update();
-      })
-      .catch((err) => {
-        console.warn('SW registration warning:', err);
-      });
+    const registerSw = () => {
+      navigator.serviceWorker
+        .register('/sw.js', { scope: '/' })
+        .then((reg) => {
+          if (reg && reg.update) {
+            reg.update().catch(() => {});
+          }
+        })
+        .catch(() => {});
+    };
+
+    if (document.readyState === 'complete') {
+      registerSw();
+    } else {
+      window.addEventListener('load', registerSw);
+    }
   }
 }
 

@@ -1,9 +1,8 @@
-// Service Worker for Sapphire AI PWA (v5)
-const CACHE_NAME = 'sapphire-pwa-cache-v5';
+// Service Worker for Sapphire AI PWA (v6)
+const CACHE_NAME = 'sapphire-pwa-cache-v6';
 
 const STATIC_ASSETS = [
   '/',
-  '/index.html',
   '/manifest.json',
   '/favicon.ico',
   '/favicon.png',
@@ -20,9 +19,17 @@ self.addEventListener('install', (event) => {
   self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(STATIC_ASSETS).catch((err) => {
-        console.warn('Pre-cache error:', err);
-      });
+      return Promise.allSettled(
+        STATIC_ASSETS.map((url) =>
+          fetch(url)
+            .then((res) => {
+              if (res && res.ok) {
+                return cache.put(url, res);
+              }
+            })
+            .catch(() => {})
+        )
+      );
     })
   );
 });
@@ -33,7 +40,6 @@ self.addEventListener('activate', (event) => {
       return Promise.all(
         keys.map((key) => {
           if (key !== CACHE_NAME) {
-            console.log('Purging old cache:', key);
             return caches.delete(key);
           }
         })
@@ -43,8 +49,27 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Only handle GET requests and skip API or WebSocket requests
-  if (event.request.method !== 'GET' || event.request.url.includes('/api/')) {
+  // Only handle GET requests
+  if (event.request.method !== 'GET') {
+    return;
+  }
+
+  let url;
+  try {
+    url = new URL(event.request.url);
+  } catch {
+    return;
+  }
+
+  // Do not intercept non-http(s), API endpoints, dev server files, or HMR sockets
+  if (
+    (url.protocol !== 'http:' && url.protocol !== 'https:') ||
+    url.pathname.startsWith('/api/') ||
+    url.pathname.startsWith('/@') ||
+    url.pathname.includes('vite') ||
+    url.pathname.endsWith('.hot-update.json') ||
+    url.pathname.endsWith('.hot-update.js')
+  ) {
     return;
   }
 
@@ -59,16 +84,16 @@ self.addEventListener('fetch', (event) => {
           }
           return networkResponse;
         })
-        .catch(() => caches.match('/index.html'))
+        .catch(() => caches.match('/'))
     );
     return;
   }
 
-  // Cache-first with network refresh for static assets
+  // Cache-first with background network refresh for static assets
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       if (cachedResponse) {
-        // Fetch in background to update cache
+        // Background refresh
         fetch(event.request)
           .then((networkResponse) => {
             if (networkResponse && networkResponse.status === 200) {

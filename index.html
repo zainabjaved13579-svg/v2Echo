@@ -381,11 +381,15 @@
       });
 
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' })
-          .then(function(reg) {
-            reg.update();
-          })
-          .catch(function() {});
+        window.addEventListener('load', function() {
+          navigator.serviceWorker.register('/sw.js', { scope: '/' })
+            .then(function(reg) {
+              if (reg && reg.update) {
+                reg.update().catch(function() {});
+              }
+            })
+            .catch(function() {});
+        });
       }
     </script>
   </body>

@@ -627,6 +627,17 @@ ${htmlContent}
         } catch(err) {
           console.warn('Sapphire auto-mount notice:', err);
         }
+        // Intercept external redirects so clicking buttons or links does not redirect outside
+        document.addEventListener('click', function(e) {
+          var a = e.target && typeof e.target.closest === 'function' ? e.target.closest('a') : null;
+          if (a) {
+            var href = a.getAttribute('href');
+            if (href && !href.startsWith('#') && !href.startsWith('javascript:') && !href.startsWith('mailto:') && !href.startsWith('tel:')) {
+              e.preventDefault();
+              console.log('[Sapphire Sandbox] Intercepted navigation link:', href);
+            }
+          }
+        }, true);
       }
 
       if (document.readyState === 'loading') {
