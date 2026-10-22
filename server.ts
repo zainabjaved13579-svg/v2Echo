@@ -1755,13 +1755,17 @@ ${effectiveSystemInstruction}`;
         systemInstruction: visionInstruction
       };
 
-      const requestedModel = (typeof model === 'string' && model.trim()) ? model.trim() : '';
+      const requestedModel = (typeof model === 'string' && model.trim()) ? model.trim().toLowerCase() : '';
+      let primaryVisionModel = 'gemini-3.5-flash';
+      if (requestedModel.includes('pro')) primaryVisionModel = 'gemini-3.1-pro-preview';
+      else if (requestedModel.includes('3.8')) primaryVisionModel = 'gemini-3.8-flash';
+
       const visionModels = [
-        ...(requestedModel ? [requestedModel] : []),
-        'gemini-flash-latest',
+        primaryVisionModel,
+        'gemini-3.5-flash',
         'gemini-3.8-flash',
-        'gemini-4-argon',
-        'gemini-2.5-flash'
+        'gemini-3.1-pro-preview',
+        'gemini-flash-latest'
       ].filter((m, i, arr) => arr.indexOf(m) === i);
       let streamedAny = false;
 
@@ -1907,15 +1911,21 @@ Be fast, clear, and articulate.`;
         config.tools = [{ googleSearch: {} }];
       }
 
-      // Fast, new Gemini models
-      const requestedModel = (typeof model === 'string' && model.trim()) ? model.trim() : '';
+      // Fast, valid Gemini models mapped to official API model IDs
+      const requestedModel = (typeof model === 'string' && model.trim()) ? model.trim().toLowerCase() : '';
+      let primaryModel = 'gemini-3.5-flash';
+      if (requestedModel.includes('pro')) {
+        primaryModel = 'gemini-3.1-pro-preview';
+      } else if (requestedModel.includes('3.8')) {
+        primaryModel = 'gemini-3.8-flash';
+      }
+
       const candidateModels = [
-        ...(requestedModel ? [requestedModel] : []),
-        'gemini-flash-latest',
+        primaryModel,
+        'gemini-3.5-flash',
         'gemini-3.8-flash',
-        'gemini-4-argon',
         'gemini-3.1-pro-preview',
-        'gemini-2.5-flash'
+        'gemini-flash-latest'
       ].filter((m, i, arr) => arr.indexOf(m) === i);
 
       let streamedAny = false;
@@ -2171,7 +2181,7 @@ app.post('/api/chat', async (req, res) => {
       }
 
       // Fast, resilient models
-      const candidateModels = ['gemini-2.5-flash', 'gemini-3.1-pro-preview', 'gemini-flash-latest', 'gemini-3.8-flash', 'gemini-2.5-pro'];
+      const candidateModels = ['gemini-3.5-flash', 'gemini-3.8-flash', 'gemini-3.1-pro-preview', 'gemini-flash-latest'];
 
       for (const currModel of candidateModels) {
         try {

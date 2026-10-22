@@ -925,9 +925,13 @@ export function extractCodeFilesFromMarkdown(markdown: string): ExtractedCodeFil
     const codeContent = match[3] || '';
     if (!codeContent.trim()) continue;
 
+    // Strict filter: require explicit programming language and multi-line substantial code content
+    if (!rawLang || ['text', 'txt', 'markdown', 'md', 'code', ''].includes(rawLang) || codeContent.trim().split('\n').length < 2) {
+      continue;
+    }
+
     // Do not extract exam paper patterns, questionnaires, or general text documents as code files
     const isExamOrPattern =
-      ['markdown', 'md', 'text', 'txt', 'exam', 'paper', 'pattern'].includes(rawLang) &&
       /(###\s*section|section\s+[a-c]:|paper\s*pattern|question\s*paper|total\s*marks|attempt\s*any)/i.test(codeContent);
     if (isExamOrPattern) continue;
 

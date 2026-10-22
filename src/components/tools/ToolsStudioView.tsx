@@ -5,7 +5,8 @@ import {
   ChevronLeft,
   Zap,
   Sparkles,
-  ArrowRight
+  ArrowRight,
+  Image as ImageIcon
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAppTheme } from '../../context/ThemeContext';
@@ -13,8 +14,9 @@ import { AppSettings, UserProfile } from '../../types';
 import WebToNativeTool from './WebToNativeTool';
 import WebClonerTool from './WebClonerTool';
 import PromptGeneratorTool from './PromptGeneratorTool';
+import ImageGeneratorTool from './ImageGeneratorTool';
 
-export type ToolTab = 'overview' | 'web-cloner' | 'url-to-app' | 'prompt-generator';
+export type ToolTab = 'overview' | 'web-cloner' | 'url-to-app' | 'prompt-generator' | 'image-generator';
 
 interface ToolsStudioViewProps {
   onClose?: () => void;
@@ -64,6 +66,13 @@ export const ToolsStudioView: React.FC<ToolsStudioViewProps> = ({
       icon: Zap
     },
     {
+      id: 'image-generator',
+      name: 'AI Image Generator & Editor',
+      tag: 'Vision Studio',
+      desc: 'Create photorealistic art, cinematic visuals, and edit images instantly using advanced AI diffusion.',
+      icon: ImageIcon
+    },
+    {
       id: 'url-to-app',
       name: 'Url to App (.exe & APK)',
       tag: 'Windows & Android',
@@ -103,7 +112,7 @@ export const ToolsStudioView: React.FC<ToolsStudioViewProps> = ({
           </div>
         </div>
 
-        {/* Tab Switcher (Monochrome/Coral, Matches Chat Exactly) */}
+        {/* Tab Switcher */}
         <div className={`flex items-center ${isMoon ? 'bg-[#181818]' : 'bg-slate-100'} rounded-xl p-0.5 border ${border} text-xs overflow-x-auto max-w-[70%] sm:max-w-none`}>
           <button
             type="button"
@@ -123,6 +132,16 @@ export const ToolsStudioView: React.FC<ToolsStudioViewProps> = ({
           >
             <Zap className="w-3.5 h-3.5 text-[#d97757]" />
             <span>Web Cloner</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTool('image-generator')}
+            className={`px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer shrink-0 ${
+              activeTool === 'image-generator' ? tabActiveCls : tabInactiveCls
+            }`}
+          >
+            <ImageIcon className="w-3.5 h-3.5 text-[#d97757]" />
+            <span>Image Studio</span>
           </button>
           <button
             type="button"
@@ -162,15 +181,15 @@ export const ToolsStudioView: React.FC<ToolsStudioViewProps> = ({
               <div className="max-w-5xl mx-auto space-y-6">
                 <div>
                   <h1 className={`text-xl sm:text-2xl font-bold ${textBright} tracking-tight`}>
-                    Developer Suite
+                    Developer Suite & Vision Studio
                   </h1>
                   <p className={`text-xs sm:text-sm ${textSub} mt-1`}>
-                    Essential utilities built for zero-lag workflow: website cloning with AI editing, native app packaging, and structured prompt engineering.
+                    Essential utilities built for zero-lag workflow: website cloning with AI editing, native app packaging, image generation, and structured prompt engineering.
                   </p>
                 </div>
 
-                {/* 3 Core Tools Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* Core Tools Grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                   {toolsList.map((tool) => {
                     const Icon = tool.icon;
                     return (
@@ -189,7 +208,7 @@ export const ToolsStudioView: React.FC<ToolsStudioViewProps> = ({
                             </span>
                           </div>
                           <div>
-                            <h3 className={`text-sm sm:text-base font-bold ${textBright} group-hover:text-[#d97757] transition-colors`}>
+                            <h3 className={`text-sm font-bold ${textBright} group-hover:text-[#d97757] transition-colors`}>
                               {tool.name}
                             </h3>
                             <p className={`text-xs ${textSub} mt-1 leading-relaxed`}>
@@ -221,6 +240,24 @@ export const ToolsStudioView: React.FC<ToolsStudioViewProps> = ({
                 settings={settings}
                 userProfile={userProfile}
                 onOpenInCodex={onOpenInCodex}
+              />
+            </motion.div>
+          ) : activeTool === 'image-generator' ? (
+            <motion.div
+              key="image-generator"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+              className="h-full w-full overflow-hidden"
+            >
+              <ImageGeneratorTool
+                onSendToChat={(text) => {
+                  if (onSendToChat) {
+                    onSendToChat(text);
+                  }
+                  if (onClose) onClose();
+                }}
               />
             </motion.div>
           ) : activeTool === 'url-to-app' ? (

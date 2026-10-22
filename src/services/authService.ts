@@ -485,7 +485,12 @@ export function getStoredActiveUser(): SapphireUser | null {
   try {
     const raw = localStorage.getItem(CURRENT_USER_KEY);
     if (raw) {
-      return JSON.parse(raw);
+      const parsed = JSON.parse(raw);
+      if (parsed?.provider === 'guest') {
+        localStorage.removeItem(CURRENT_USER_KEY);
+        return null;
+      }
+      return parsed;
     }
   } catch {}
   return null;
@@ -493,7 +498,7 @@ export function getStoredActiveUser(): SapphireUser | null {
 
 export function saveActiveUser(user: SapphireUser | null) {
   try {
-    if (user) {
+    if (user && user.provider !== 'guest') {
       localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user));
     } else {
       localStorage.removeItem(CURRENT_USER_KEY);

@@ -40,6 +40,7 @@ import { loadWorkspaceFiles } from './services/fileStorageService';
 import { speechService, detectScriptLanguage } from './services/speechService';
 import { SAPPHIRE_LOGO_URL } from './data/constants';
 import { useAppTheme } from './context/ThemeContext';
+import { generateAiImage, isImageGenerationPrompt } from './services/imageService';
 
 const STORAGE_KEY_SETTINGS = 'sapphire_ai_chat_settings_v1';
 const STORAGE_KEY_CURRENT = 'sapphire_ai_chat_current_session_id';
@@ -564,6 +565,78 @@ export default function App() {
         promptText = `Please analyze, review, and process these ${effectiveFiles.length} uploaded files.`;
       } else if (effectiveImages.length > 0) {
         promptText = 'Please analyze this screenshot / image.';
+      }
+    }
+
+    // Inline image generation handler for chat
+    const isImgReq = promptText.startsWith('/image') || isImageGenerationPrompt(promptText);
+    if (isImgReq && effectiveImages.length === 0) {
+      const imgPrompt = promptText.replace(/^\/image\s*/i, '').replace(/^(generate|create|make|draw|paint|show|give)\s+(me\s+)?(an?\s+)?(image|picture|photo|pic|wallpaper|portrait)?\s*(of|with|showing|for)?\s*/i, '').trim() || promptText;
+
+      const newUserMessage: ChatMessage = {
+        id: userMessageId,
+        role: 'user',
+        text: promptText,
+        timestamp: Date.now()
+      };
+
+      const isFromStarting = isStartingScreen;
+      let targetSession = currentSession;
+      let baseHistory = currentSession.messages;
+
+      if (isFromStarting) {
+        const newSession = createNewSession(settings);
+        newSession.title = promptText.slice(0, 36) || 'Image Generation';
+        targetSession = newSession;
+        baseHistory = [];
+        setSessions((prev) => [newSession, ...prev]);
+        setCurrentSessionId(newSession.id);
+        setIsStartingScreen(false);
+      } else {
+        setIsStartingScreen(false);
+      }
+
+      const loadingMsg: ChatMessage = {
+        id: modelMessageId,
+        role: 'model',
+        text: `🎨 Generating AI image for: "${imgPrompt}"...`,
+        timestamp: Date.now() + 1,
+        isThinking: true
+      };
+
+      targetSession.messages = [...baseHistory, newUserMessage, loadingMsg];
+      setSessions((prev) => prev.map((s) => (s.id === targetSession.id ? { ...targetSession } : s)));
+
+      isAutoScrollRef.current = true;
+      scrollToBottom('smooth', true);
+
+      try {
+        const res = await generateAiImage({ prompt: imgPrompt });
+        const imageUrl = res.images[0];
+        const finalMsg: ChatMessage = {
+          id: modelMessageId,
+          role: 'model',
+          text: `![${imgPrompt}](${imageUrl})\n\n✨ **Generated AI Image**: "${imgPrompt}"`,
+          timestamp: Date.now() + 1,
+          isStreaming: false,
+          isThinking: false,
+          modelUsed: targetSession.model
+        };
+        targetSession.messages = [...baseHistory, newUserMessage, finalMsg];
+        setSessions((prev) => prev.map((s) => (s.id === targetSession.id ? { ...targetSession } : s)));
+        return;
+      } catch (err: any) {
+        const errMsg: ChatMessage = {
+          id: modelMessageId,
+          role: 'model',
+          text: `❌ Failed to generate image: ${err.message || 'Unknown error'}`,
+          timestamp: Date.now() + 1,
+          isStreaming: false,
+          isThinking: false
+        };
+        targetSession.messages = [...baseHistory, newUserMessage, errMsg];
+        setSessions((prev) => prev.map((s) => (s.id === targetSession.id ? { ...targetSession } : s)));
+        return;
       }
     }
 

@@ -210,6 +210,51 @@ Yes! Your name is **${currentUserName}**. How can I assist you today, ${currentU
     }
   }
 
+  // Natural Conversational Greetings & Check-ins (English & General)
+  if (/^(how are you|how r u|how are u|how do you do|how's it going|how is it going|hows it going|how do you feel)\b/i.test(lower)) {
+    return `### ⚡ I'm doing great, thank you for asking!
+
+I'm **Sapphire AI**, your advanced software engineering assistant and intelligent companion.
+
+Everything is running smoothly and I'm ready to help you with:
+- 💻 **Full-Stack Coding**: Building apps, websites, scripts, and debugging
+- 🎨 **Creative Design & Image Studio**: Generating visuals and UI assets
+- ⚡ **Problem Solving & Q&A**: Science, tech, mathematics, and architecture
+
+How are you doing today? What would you like to build or discuss?`;
+  }
+
+  if (/^(hi|hello|hey|greetings|good morning|good afternoon|good evening|yo|sup|what's up|whats up)\b/i.test(lower) && !isUrduScript && !isHindiScript) {
+    return `### ⚡ Hello! Welcome to Sapphire AI
+
+I'm ready to assist you with high-speed intelligence, coding, and creative development.
+
+**Here's what we can do together:**
+- 🚀 **Full-Stack Engineering**: HTML5, CSS, modern JavaScript, React, and Python apps
+- 🎨 **Image Studio**: Create high-resolution artwork and visual designs
+- 💡 **Deep Explanations**: Concepts, technical breakdowns, guides, and problem solving
+
+What are you working on today? Let me know how I can help!`;
+  }
+
+  if (/^(who are you|what are you|what can you do|introduce yourself|tell me about yourself)\b/i.test(lower)) {
+    return `### 💎 I am Sapphire AI
+
+I am an elite, full-stack AI engineering platform and intelligent assistant, created and developed by **Shaheer Hassan** (\`shaheerhassan\`).
+
+**Key Capabilities:**
+- **Code & App Development**: Build complete HTML, CSS, JavaScript, React, and Python applications with live preview and instant downloads.
+- **Web Cloning & Native Converter**: Clone web applications and convert them to standalone native packages.
+- **Image Generation Studio**: Create and restyle visual art with generative AI.
+- **Conversational Intelligence**: Fast, human-like answers across mathematics, science, writing, and engineering.
+
+Feel free to ask me anything or tell me what to build!`;
+  }
+
+  if (/^(thank you|thanks|thx|thank u|great job|awesome|nice|cool|perfect|good job)\b/i.test(lower)) {
+    return `You're very welcome! Always happy to assist. Let me know if you need any adjustments, extra features, or further answers!`;
+  }
+
   // Urdu Language Response (Human-like, respectful, warm)
   if (isUrduScript || (isRomanUrdu && !isHindiScript)) {
     if (/^(hi|hello|hey|salam|assalam|aoa|kese ho|kaise ho|kia hal|kya haal)\b/i.test(lower) || /^(سلام|السلام|ہیلو|کیسے)/.test(userText.trim())) {
@@ -1994,16 +2039,18 @@ To create or edit high-resolution images:
 *Tip: You can also upload any existing photo into the Image Studio to edit, modify, or restyle it with AI commands.*`;
   }
 
-  // General questions (History, Science, Philosophy, General Knowledge)
+  // General questions (History, Science, Philosophy, General Knowledge, Discussions)
   const title = userText.length > 50 ? `${userText.slice(0, 50)}...` : userText;
-  return `### 💎 Sapphire Intelligence: ${title || 'Inquiry Analysis'}
+  return `### 💎 Sapphire Insight: ${title || 'Response'}
 
-Regarding **"${userText}"**:
+Here is a clear, structured overview regarding **"${userText}"**:
 
-Here is a direct, detailed synthesis:
-- **Core Concept**: This topic centers around dynamic systems, practical implementation, and foundational principles in contemporary practice.
-- **Key Takeaway**: Approaching this with first-principles thinking, verified empirical data, and iterative execution yields the most reliable outcomes.
-- **Next Steps**: Let me know if you would like code examples, historical context, technical breakdowns, or further exploration on any specific angle!`;
+- **Key Insight**: To approach this effectively, break the subject down into fundamental building blocks, verify assumptions, and apply practical solutions.
+- **Actionable Takeaways**:
+  1. Clearly define the goal and desired outcome.
+  2. Implement solutions step-by-step with structured logic.
+  3. Validate results with real test cases and refine where necessary.
+- **How I can help further**: Let me know if you would like complete runnable code, detailed step-by-step guidance, creative writing, or technical architecture for this!`;
 }
 
 

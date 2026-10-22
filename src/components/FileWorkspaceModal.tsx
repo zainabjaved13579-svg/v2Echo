@@ -717,7 +717,7 @@ export const FileWorkspaceModal: React.FC<FileWorkspaceModalProps> = ({
 
   // Upload folder click (Native File System Access API with input fallback)
   const handleUploadFolderClick = async () => {
-    if ('showDirectoryPicker' in window) {
+    if ('showDirectoryPicker' in window && window.self === window.top) {
       try {
         const dirHandle = await (window as any).showDirectoryPicker();
         setAiStatus(`Loading folder "${dirHandle.name}"...`);
@@ -725,8 +725,7 @@ export const FileWorkspaceModal: React.FC<FileWorkspaceModalProps> = ({
         applyImportedFiles(extracted);
         return;
       } catch (err: any) {
-        if (err.name === 'AbortError') return;
-        console.warn('showDirectoryPicker failed or canceled, falling back to input:', err);
+        if (err.name === 'AbortError' || err.name === 'SecurityError') return;
       }
     }
     folderInputRef.current?.click();

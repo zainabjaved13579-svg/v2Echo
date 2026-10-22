@@ -519,7 +519,7 @@ export const CodexWorkspaceView: React.FC<CodexWorkspaceViewProps> = ({
   // Open laptop folder
   const handleOpenLaptopFolder = async () => {
     try {
-      if ('showDirectoryPicker' in window) {
+      if ('showDirectoryPicker' in window && window.self === window.top) {
         const dirHandle = await (window as any).showDirectoryPicker({
           mode: 'readwrite'
         });
@@ -587,14 +587,14 @@ export const CodexWorkspaceView: React.FC<CodexWorkspaceViewProps> = ({
         setSelectedFileId(loadedFiles[0]?.id || '');
         setOpenTabIds(loadedFiles.slice(0, 3).map((f) => f.id));
         showToast(`Opened laptop folder "${dirHandle.name}" with ${loadedFiles.length} files`);
-      } else {
-        folderInputRef.current?.click();
+        return;
       }
     } catch (err: any) {
-      if (err.name !== 'AbortError') {
-        showToast('Could not open laptop folder: ' + err.message);
+      if (err.name === 'AbortError' || err.name === 'SecurityError') {
+        return;
       }
     }
+    folderInputRef.current?.click();
   };
 
   // Upload folder via file input

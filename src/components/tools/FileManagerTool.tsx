@@ -953,7 +953,7 @@ Apr,115000,22000,93000,40%`,
   // Native showDirectoryPicker attempt
   const handleConnectDirectory = async () => {
     try {
-      if ('showDirectoryPicker' in window) {
+      if ('showDirectoryPicker' in window && window.self === window.top) {
         setIsLoadingDir(true);
         const handle = await (window as any).showDirectoryPicker({ mode: 'readwrite' });
         if (!handle) {
@@ -1006,8 +1006,7 @@ Apr,115000,22000,93000,40%`,
       }
     } catch (err: any) {
       setIsLoadingDir(false);
-      if (err.name === 'AbortError') return;
-      showToast('Opening folder upload dialog...');
+      if (err.name === 'AbortError' || err.name === 'SecurityError') return;
     }
 
     folderInputRef.current?.click();

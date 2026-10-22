@@ -946,18 +946,33 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
             )}
 
             {/* Action Bar */}
-            {!message.isStreaming && !message.error && message.text && !isUser && (
+            {!message.isStreaming && !message.error && message.text && (
               <div className={`flex items-center gap-1.5 pt-2 select-none ${textMuted}`}>
-                <button
-                  type="button"
-                  id={`copy-msg-${message.id}`}
-                  onClick={handleCopy}
-                  className={`p-1.5 transition-colors cursor-pointer rounded-xl ${textMuted} hover:${textBright} ${hoverBg}`}
-                  title={copied ? 'Copied' : 'Copy'}
-                  aria-label="Copy"
-                >
-                  {copied ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
-                </button>
+                {onReply && (
+                  <button
+                    type="button"
+                    id={`reply-msg-${message.id}`}
+                    onClick={() => onReply(message)}
+                    className={`p-1.5 transition-colors cursor-pointer rounded-xl ${textMuted} hover:${textBright} ${hoverBg}`}
+                    title="Reply to this message"
+                    aria-label="Reply"
+                  >
+                    <Reply className="w-4 h-4" />
+                  </button>
+                )}
+
+                {!isUser && (
+                  <>
+                    <button
+                      type="button"
+                      id={`copy-msg-${message.id}`}
+                      onClick={handleCopy}
+                      className={`p-1.5 transition-colors cursor-pointer rounded-xl ${textMuted} hover:${textBright} ${hoverBg}`}
+                      title={copied ? 'Copied' : 'Copy'}
+                      aria-label="Copy"
+                    >
+                      {copied ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
+                    </button>
 
                 <button
                   type="button"
@@ -1031,6 +1046,8 @@ export const ChatMessageItem: React.FC<ChatMessageItemProps> = ({
                     </span>
                     <span className="text-[10px] text-[#d97757]">Playing voice</span>
                   </div>
+                )}
+                  </>
                 )}
               </div>
             )}

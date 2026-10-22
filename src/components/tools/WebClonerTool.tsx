@@ -90,7 +90,7 @@ export const WebClonerTool: React.FC<{
   // Preview & Code State
   const [previewDevice, setPreviewDevice] = useState<'desktop' | 'tablet' | 'mobile'>('desktop');
   const [activeCodeTab, setActiveCodeTab] = useState<'index.html' | 'style.css' | 'script.js' | 'README.md'>('index.html');
-  const [activeWorkspaceView, setActiveWorkspaceView] = useState<'preview' | 'code' | 'split'>('code');
+  const [activeWorkspaceView, setActiveWorkspaceView] = useState<'preview' | 'code'>('code');
   const [copiedTab, setCopiedTab] = useState<string | null>(null);
   const [previewKey, setPreviewKey] = useState<number>(0);
   const [isExportingZip, setIsExportingZip] = useState<boolean>(false);
@@ -887,12 +887,12 @@ Ensure all code works cleanly, links don't redirect away, and theme matches.`;
           {/* Sub-header Controls */}
           <div className={`px-4 py-2 border-b ${border} ${bgCard} flex items-center justify-between gap-3 text-xs shrink-0 overflow-x-auto`}>
             <div className="flex items-center gap-2 shrink-0">
-              {/* View Switcher: Live Preview | Edit Code | Split View */}
+              {/* View Switcher: Live Preview | Edit Code */}
               <div className={`flex items-center ${bgInput} rounded-lg p-0.5 border ${border}`}>
                 <button
                   type="button"
                   onClick={() => setActiveWorkspaceView('preview')}
-                  className={`px-2.5 py-1 rounded-md font-medium cursor-pointer transition-colors ${
+                  className={`px-3 py-1 rounded-md font-medium cursor-pointer transition-colors ${
                     activeWorkspaceView === 'preview'
                       ? 'bg-[#d97757] text-white shadow-xs font-semibold'
                       : `${textSub} hover:${textBright}`
@@ -906,7 +906,7 @@ Ensure all code works cleanly, links don't redirect away, and theme matches.`;
                     setActiveWorkspaceView('code');
                     setIsAiPanelOpen(true);
                   }}
-                  className={`px-2.5 py-1 rounded-md font-medium cursor-pointer transition-colors flex items-center gap-1.5 ${
+                  className={`px-3 py-1 rounded-md font-medium cursor-pointer transition-colors flex items-center gap-1.5 ${
                     activeWorkspaceView === 'code'
                       ? 'bg-[#d97757] text-white shadow-xs font-semibold'
                       : `${textSub} hover:${textBright}`
@@ -915,24 +915,10 @@ Ensure all code works cleanly, links don't redirect away, and theme matches.`;
                   <Code2 className="w-3.5 h-3.5" />
                   <span>Edit Code</span>
                 </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActiveWorkspaceView('split');
-                    setIsAiPanelOpen(true);
-                  }}
-                  className={`px-2.5 py-1 rounded-md font-medium cursor-pointer transition-colors ${
-                    activeWorkspaceView === 'split'
-                      ? 'bg-[#d97757] text-white shadow-xs font-semibold'
-                      : `${textSub} hover:${textBright}`
-                  }`}
-                >
-                  Split View
-                </button>
               </div>
 
               {/* Viewport controls for preview */}
-              {activeWorkspaceView !== 'code' && (
+              {activeWorkspaceView === 'preview' && (
                 <div className={`hidden sm:flex items-center ${bgInput} rounded-lg p-0.5 border ${border}`}>
                   <button
                     type="button"
@@ -982,6 +968,31 @@ Ensure all code works cleanly, links don't redirect away, and theme matches.`;
                 </button>
               )}
 
+              <button
+                type="button"
+                onClick={() => {
+                  try {
+                    const list = JSON.parse(localStorage.getItem('sapphire_saved_clones') || '[]');
+                    list.unshift({
+                      id: `clone_${Date.now()}`,
+                      title: clonedData.siteTitle,
+                      url: clonedData.url,
+                      timestamp: Date.now(),
+                      files: clonedData.files
+                    });
+                    localStorage.setItem('sapphire_saved_clones', JSON.stringify(list));
+                    showToast(`✨ Saved project "${clonedData.siteTitle}" successfully!`);
+                  } catch {
+                    showToast('Failed to save project');
+                  }
+                }}
+                className={`px-2.5 py-1 rounded-lg ${bgInput} border ${border} ${textSub} hover:${textBright} transition-colors flex items-center gap-1 text-[11px] font-semibold cursor-pointer`}
+                title="Save cloned project"
+              >
+                <Check className="w-3 h-3 text-emerald-400" />
+                <span>Save Project</span>
+              </button>
+
               {onOpenInCodex && (
                 <button
                   type="button"
@@ -1018,15 +1029,13 @@ Ensure all code works cleanly, links don't redirect away, and theme matches.`;
             </div>
           </div>
 
-          {/* Body: Split or Single View */}
+          {/* Body: Single View */}
           <div className="flex-1 flex min-h-0 overflow-hidden">
-            {/* Center Area: Preview and/or Code */}
+            {/* Center Area: Preview or Code */}
             <div className="flex-1 flex min-h-0 min-w-0 overflow-hidden">
               {/* Preview Container */}
-              {(activeWorkspaceView === 'preview' || activeWorkspaceView === 'split') && (
-                <div className={`flex-1 flex flex-col h-full bg-[#111111] overflow-hidden ${
-                  activeWorkspaceView === 'split' ? 'border-r ' + border : ''
-                }`}>
+              {activeWorkspaceView === 'preview' && (
+                <div className="flex-1 flex flex-col h-full bg-[#111111] overflow-hidden">
                   <div className="flex-1 p-2 sm:p-4 flex items-center justify-center overflow-auto">
                     <div
                       className={`h-full bg-white transition-all duration-300 rounded-xl overflow-hidden shadow-2xl ${
@@ -1050,7 +1059,7 @@ Ensure all code works cleanly, links don't redirect away, and theme matches.`;
               )}
 
               {/* Code Container */}
-              {(activeWorkspaceView === 'code' || activeWorkspaceView === 'split') && (
+              {activeWorkspaceView === 'code' && (
                 <div className={`flex-1 flex flex-col h-full ${bgCard} overflow-hidden`}>
                   {/* File Tabs */}
                   <div className={`px-3 py-1.5 border-b ${border} flex items-center justify-between shrink-0 bg-inherit`}>

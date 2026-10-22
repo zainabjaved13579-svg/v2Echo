@@ -95,6 +95,7 @@ export const Auth: React.FC<AuthProps> = ({ onLoginSuccess, onContinueAsGuest })
   };
 
   const handleGuestAccess = () => {
+    saveActiveUser(null);
     const guestUser: SapphireUser = {
       uid: `guest_${Date.now()}`,
       email: '',
@@ -103,7 +104,6 @@ export const Auth: React.FC<AuthProps> = ({ onLoginSuccess, onContinueAsGuest })
       provider: 'guest',
       createdAt: Date.now()
     };
-    saveActiveUser(guestUser);
     if (onContinueAsGuest) {
       onContinueAsGuest();
     } else if (onLoginSuccess) {
